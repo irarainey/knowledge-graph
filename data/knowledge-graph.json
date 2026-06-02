@@ -1,0 +1,1087 @@
+{
+  "nodes": [
+    {
+      "id": "G-ECHO",
+      "labels": [
+        "Aircraft",
+        "LightAircraft"
+      ],
+      "properties": {
+        "name": "G-ECHO",
+        "registration": "G-ECHO",
+        "mtow_kg": 1111,
+        "engineCount": 1
+      }
+    },
+    {
+      "id": "airframe",
+      "labels": [
+        "System",
+        "AirframeSystem"
+      ],
+      "properties": {
+        "name": "Airframe"
+      }
+    },
+    {
+      "id": "powerplant",
+      "labels": [
+        "System",
+        "PowerplantSystem"
+      ],
+      "properties": {
+        "name": "Powerplant"
+      }
+    },
+    {
+      "id": "fuel",
+      "labels": [
+        "System",
+        "FuelSystem"
+      ],
+      "properties": {
+        "name": "Fuel System"
+      }
+    },
+    {
+      "id": "electrical",
+      "labels": [
+        "System",
+        "ElectricalSystem"
+      ],
+      "properties": {
+        "name": "Electrical"
+      }
+    },
+    {
+      "id": "avionics",
+      "labels": [
+        "System",
+        "AvionicsSystem"
+      ],
+      "properties": {
+        "name": "Avionics"
+      }
+    },
+    {
+      "id": "flightControls",
+      "labels": [
+        "System",
+        "FlightControlSystem"
+      ],
+      "properties": {
+        "name": "Flight Controls"
+      }
+    },
+    {
+      "id": "landingGear",
+      "labels": [
+        "System",
+        "LandingGearSystem"
+      ],
+      "properties": {
+        "name": "Landing Gear"
+      }
+    },
+    {
+      "id": "io360",
+      "labels": [
+        "Component",
+        "PistonEngine"
+      ],
+      "properties": {
+        "name": "Lycoming IO-360",
+        "ratedHorsepower": 180,
+        "totalTime_hours": 1240.5
+      }
+    },
+    {
+      "id": "propeller",
+      "labels": [
+        "Component",
+        "Propeller"
+      ],
+      "properties": {
+        "name": "Propeller"
+      }
+    },
+    {
+      "id": "carburetor",
+      "labels": [
+        "Component",
+        "Carburetor"
+      ],
+      "properties": {
+        "name": "Carburetor"
+      }
+    },
+    {
+      "id": "exhaust",
+      "labels": [
+        "Component",
+        "ExhaustSystem"
+      ],
+      "properties": {
+        "name": "Exhaust"
+      }
+    },
+    {
+      "id": "leftTank",
+      "labels": [
+        "Component",
+        "FuelTank"
+      ],
+      "properties": {
+        "name": "Left Tank",
+        "fuelCapacity_litres": 95
+      }
+    },
+    {
+      "id": "rightTank",
+      "labels": [
+        "Component",
+        "FuelTank"
+      ],
+      "properties": {
+        "name": "Right Tank",
+        "fuelCapacity_litres": 95
+      }
+    },
+    {
+      "id": "fuelSelector",
+      "labels": [
+        "Component",
+        "FuelSelector"
+      ],
+      "properties": {
+        "name": "Fuel Selector"
+      }
+    },
+    {
+      "id": "fuelGauge",
+      "labels": [
+        "Component",
+        "FuelGauge"
+      ],
+      "properties": {
+        "name": "Fuel Gauge"
+      }
+    },
+    {
+      "id": "fuselage",
+      "labels": [
+        "Component",
+        "Fuselage"
+      ],
+      "properties": {
+        "name": "Fuselage"
+      }
+    },
+    {
+      "id": "leftWing",
+      "labels": [
+        "Component",
+        "Wing"
+      ],
+      "properties": {
+        "name": "Left Wing"
+      }
+    },
+    {
+      "id": "rightWing",
+      "labels": [
+        "Component",
+        "Wing"
+      ],
+      "properties": {
+        "name": "Right Wing"
+      }
+    },
+    {
+      "id": "empennage",
+      "labels": [
+        "Component",
+        "EmpennageAssembly"
+      ],
+      "properties": {
+        "name": "Empennage"
+      }
+    },
+    {
+      "id": "horizStab",
+      "labels": [
+        "Component",
+        "HorizontalStabiliser"
+      ],
+      "properties": {
+        "name": "Horiz. Stab."
+      }
+    },
+    {
+      "id": "vertStab",
+      "labels": [
+        "Component",
+        "VerticalStabiliser"
+      ],
+      "properties": {
+        "name": "Vert. Stab. (Fin)"
+      }
+    },
+    {
+      "id": "leftAileron",
+      "labels": [
+        "Component",
+        "Aileron"
+      ],
+      "properties": {
+        "name": "Left Aileron"
+      }
+    },
+    {
+      "id": "rightAileron",
+      "labels": [
+        "Component",
+        "Aileron"
+      ],
+      "properties": {
+        "name": "Right Aileron"
+      }
+    },
+    {
+      "id": "elevator",
+      "labels": [
+        "Component",
+        "Elevator"
+      ],
+      "properties": {
+        "name": "Elevator"
+      }
+    },
+    {
+      "id": "rudder",
+      "labels": [
+        "Component",
+        "Rudder"
+      ],
+      "properties": {
+        "name": "Rudder"
+      }
+    },
+    {
+      "id": "flaps",
+      "labels": [
+        "Component",
+        "Flap"
+      ],
+      "properties": {
+        "name": "Flaps (0–30°)"
+      }
+    },
+    {
+      "id": "yoke",
+      "labels": [
+        "Component",
+        "ControlYoke"
+      ],
+      "properties": {
+        "name": "Control Yoke"
+      }
+    },
+    {
+      "id": "rudderPedals",
+      "labels": [
+        "Component",
+        "RudderPedals"
+      ],
+      "properties": {
+        "name": "Rudder Pedals"
+      }
+    },
+    {
+      "id": "g1000",
+      "labels": [
+        "Component",
+        "GPSUnit"
+      ],
+      "properties": {
+        "name": "Garmin G1000 PFD"
+      }
+    },
+    {
+      "id": "xpdr",
+      "labels": [
+        "Component",
+        "Transponder"
+      ],
+      "properties": {
+        "name": "Transponder"
+      }
+    },
+    {
+      "id": "vhf",
+      "labels": [
+        "Component",
+        "VHFRadio"
+      ],
+      "properties": {
+        "name": "VHF Radio"
+      }
+    },
+    {
+      "id": "altimeter",
+      "labels": [
+        "Component",
+        "AltimeterInstrument"
+      ],
+      "properties": {
+        "name": "Altimeter"
+      }
+    },
+    {
+      "id": "asi",
+      "labels": [
+        "Component",
+        "AirspeedIndicator"
+      ],
+      "properties": {
+        "name": "Airspeed Indicator"
+      }
+    },
+    {
+      "id": "ai",
+      "labels": [
+        "Component",
+        "AttitudeIndicator"
+      ],
+      "properties": {
+        "name": "Attitude Indicator"
+      }
+    },
+    {
+      "id": "noseWheel",
+      "labels": [
+        "Component",
+        "NoseWheel"
+      ],
+      "properties": {
+        "name": "Nose Wheel"
+      }
+    },
+    {
+      "id": "mainGear",
+      "labels": [
+        "Component",
+        "MainGear"
+      ],
+      "properties": {
+        "name": "Main Gear"
+      }
+    },
+    {
+      "id": "brakes",
+      "labels": [
+        "Component",
+        "Brake"
+      ],
+      "properties": {
+        "name": "Brakes"
+      }
+    },
+    {
+      "id": "battery",
+      "labels": [
+        "Component",
+        "Battery"
+      ],
+      "properties": {
+        "name": "Battery"
+      }
+    },
+    {
+      "id": "alternator",
+      "labels": [
+        "Component",
+        "Alternator"
+      ],
+      "properties": {
+        "name": "Alternator"
+      }
+    },
+    {
+      "id": "pic",
+      "labels": [
+        "Person",
+        "PilotInCommand"
+      ],
+      "properties": {
+        "name": "Pilot-in-Command",
+        "licenceNumber": "PPL-12345"
+      }
+    },
+    {
+      "id": "ame",
+      "labels": [
+        "Person",
+        "MaintenanceEngineer"
+      ],
+      "properties": {
+        "name": "Maint. Engineer"
+      }
+    },
+    {
+      "id": "atc",
+      "labels": [
+        "Person",
+        "ATC"
+      ],
+      "properties": {
+        "name": "Air Traffic Control"
+      }
+    },
+    {
+      "id": "poh",
+      "labels": [
+        "Document",
+        "POH"
+      ],
+      "properties": {
+        "name": "POH — C172S"
+      }
+    },
+    {
+      "id": "maintManual",
+      "labels": [
+        "Document",
+        "MaintenanceManual"
+      ],
+      "properties": {
+        "name": "Maintenance Manual"
+      }
+    },
+    {
+      "id": "typeCert",
+      "labels": [
+        "Document",
+        "TypeCertificate"
+      ],
+      "properties": {
+        "name": "Type Certificate"
+      }
+    },
+    {
+      "id": "ad",
+      "labels": [
+        "Document",
+        "AirworthinessDirective"
+      ],
+      "properties": {
+        "name": "Airworthiness Dir."
+      }
+    },
+    {
+      "id": "flight001",
+      "labels": [
+        "Flight"
+      ],
+      "properties": {
+        "name": "Flight 001",
+        "departureAerodrome": "EGTG",
+        "destinationAerodrome": "EGBJ",
+        "blockTime_minutes": 45
+      }
+    },
+    {
+      "id": "ph_preflight",
+      "labels": [
+        "FlightPhase",
+        "Preflight"
+      ],
+      "properties": {
+        "name": "Preflight"
+      }
+    },
+    {
+      "id": "ph_taxi",
+      "labels": [
+        "FlightPhase",
+        "Taxi"
+      ],
+      "properties": {
+        "name": "Taxi"
+      }
+    },
+    {
+      "id": "ph_takeoff",
+      "labels": [
+        "FlightPhase",
+        "Takeoff"
+      ],
+      "properties": {
+        "name": "Takeoff"
+      }
+    },
+    {
+      "id": "ph_climb",
+      "labels": [
+        "FlightPhase",
+        "Climb"
+      ],
+      "properties": {
+        "name": "Climb"
+      }
+    },
+    {
+      "id": "ph_cruise",
+      "labels": [
+        "FlightPhase",
+        "Cruise"
+      ],
+      "properties": {
+        "name": "Cruise"
+      }
+    },
+    {
+      "id": "ph_descent",
+      "labels": [
+        "FlightPhase",
+        "Descent"
+      ],
+      "properties": {
+        "name": "Descent"
+      }
+    },
+    {
+      "id": "ph_approach",
+      "labels": [
+        "FlightPhase",
+        "Approach"
+      ],
+      "properties": {
+        "name": "Approach"
+      }
+    },
+    {
+      "id": "ph_landing",
+      "labels": [
+        "FlightPhase",
+        "Landing"
+      ],
+      "properties": {
+        "name": "Landing"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "id": "r1",
+      "type": "HAS_SYSTEM",
+      "startNode": "G-ECHO",
+      "endNode": "airframe",
+      "properties": {}
+    },
+    {
+      "id": "r2",
+      "type": "HAS_SYSTEM",
+      "startNode": "G-ECHO",
+      "endNode": "powerplant",
+      "properties": {}
+    },
+    {
+      "id": "r3",
+      "type": "HAS_SYSTEM",
+      "startNode": "G-ECHO",
+      "endNode": "fuel",
+      "properties": {}
+    },
+    {
+      "id": "r4",
+      "type": "HAS_SYSTEM",
+      "startNode": "G-ECHO",
+      "endNode": "electrical",
+      "properties": {}
+    },
+    {
+      "id": "r5",
+      "type": "HAS_SYSTEM",
+      "startNode": "G-ECHO",
+      "endNode": "avionics",
+      "properties": {}
+    },
+    {
+      "id": "r6",
+      "type": "HAS_SYSTEM",
+      "startNode": "G-ECHO",
+      "endNode": "flightControls",
+      "properties": {}
+    },
+    {
+      "id": "r7",
+      "type": "HAS_SYSTEM",
+      "startNode": "G-ECHO",
+      "endNode": "landingGear",
+      "properties": {}
+    },
+    {
+      "id": "r8",
+      "type": "GOVERNED_BY",
+      "startNode": "G-ECHO",
+      "endNode": "poh",
+      "properties": {}
+    },
+    {
+      "id": "r9",
+      "type": "GOVERNED_BY",
+      "startNode": "G-ECHO",
+      "endNode": "typeCert",
+      "properties": {}
+    },
+    {
+      "id": "r10",
+      "type": "HAS_AD",
+      "startNode": "G-ECHO",
+      "endNode": "ad",
+      "properties": {}
+    },
+    {
+      "id": "r11",
+      "type": "HAS_COMPONENT",
+      "startNode": "powerplant",
+      "endNode": "io360",
+      "properties": {}
+    },
+    {
+      "id": "r12",
+      "type": "HAS_COMPONENT",
+      "startNode": "powerplant",
+      "endNode": "propeller",
+      "properties": {}
+    },
+    {
+      "id": "r13",
+      "type": "HAS_COMPONENT",
+      "startNode": "powerplant",
+      "endNode": "carburetor",
+      "properties": {}
+    },
+    {
+      "id": "r14",
+      "type": "HAS_COMPONENT",
+      "startNode": "powerplant",
+      "endNode": "exhaust",
+      "properties": {}
+    },
+    {
+      "id": "r15",
+      "type": "HAS_COMPONENT",
+      "startNode": "fuel",
+      "endNode": "leftTank",
+      "properties": {}
+    },
+    {
+      "id": "r16",
+      "type": "HAS_COMPONENT",
+      "startNode": "fuel",
+      "endNode": "rightTank",
+      "properties": {}
+    },
+    {
+      "id": "r17",
+      "type": "HAS_COMPONENT",
+      "startNode": "fuel",
+      "endNode": "fuelSelector",
+      "properties": {}
+    },
+    {
+      "id": "r18",
+      "type": "HAS_COMPONENT",
+      "startNode": "fuel",
+      "endNode": "fuelGauge",
+      "properties": {}
+    },
+    {
+      "id": "r19",
+      "type": "HAS_COMPONENT",
+      "startNode": "airframe",
+      "endNode": "fuselage",
+      "properties": {}
+    },
+    {
+      "id": "r20",
+      "type": "HAS_COMPONENT",
+      "startNode": "airframe",
+      "endNode": "leftWing",
+      "properties": {}
+    },
+    {
+      "id": "r21",
+      "type": "HAS_COMPONENT",
+      "startNode": "airframe",
+      "endNode": "rightWing",
+      "properties": {}
+    },
+    {
+      "id": "r22",
+      "type": "HAS_COMPONENT",
+      "startNode": "airframe",
+      "endNode": "empennage",
+      "properties": {}
+    },
+    {
+      "id": "r23",
+      "type": "HAS_PART",
+      "startNode": "empennage",
+      "endNode": "horizStab",
+      "properties": {}
+    },
+    {
+      "id": "r24",
+      "type": "HAS_PART",
+      "startNode": "empennage",
+      "endNode": "vertStab",
+      "properties": {}
+    },
+    {
+      "id": "r25",
+      "type": "HAS_COMPONENT",
+      "startNode": "flightControls",
+      "endNode": "leftAileron",
+      "properties": {}
+    },
+    {
+      "id": "r26",
+      "type": "HAS_COMPONENT",
+      "startNode": "flightControls",
+      "endNode": "rightAileron",
+      "properties": {}
+    },
+    {
+      "id": "r27",
+      "type": "HAS_COMPONENT",
+      "startNode": "flightControls",
+      "endNode": "elevator",
+      "properties": {}
+    },
+    {
+      "id": "r28",
+      "type": "HAS_COMPONENT",
+      "startNode": "flightControls",
+      "endNode": "rudder",
+      "properties": {}
+    },
+    {
+      "id": "r29",
+      "type": "HAS_COMPONENT",
+      "startNode": "flightControls",
+      "endNode": "flaps",
+      "properties": {}
+    },
+    {
+      "id": "r30",
+      "type": "HAS_COMPONENT",
+      "startNode": "flightControls",
+      "endNode": "yoke",
+      "properties": {}
+    },
+    {
+      "id": "r31",
+      "type": "HAS_COMPONENT",
+      "startNode": "flightControls",
+      "endNode": "rudderPedals",
+      "properties": {}
+    },
+    {
+      "id": "r32",
+      "type": "CONTROLS",
+      "startNode": "yoke",
+      "endNode": "leftAileron",
+      "properties": {}
+    },
+    {
+      "id": "r33",
+      "type": "CONTROLS",
+      "startNode": "yoke",
+      "endNode": "rightAileron",
+      "properties": {}
+    },
+    {
+      "id": "r34",
+      "type": "CONTROLS",
+      "startNode": "yoke",
+      "endNode": "elevator",
+      "properties": {}
+    },
+    {
+      "id": "r35",
+      "type": "CONTROLS",
+      "startNode": "rudderPedals",
+      "endNode": "rudder",
+      "properties": {}
+    },
+    {
+      "id": "r36",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "g1000",
+      "properties": {}
+    },
+    {
+      "id": "r37",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "xpdr",
+      "properties": {}
+    },
+    {
+      "id": "r38",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "vhf",
+      "properties": {}
+    },
+    {
+      "id": "r39",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "altimeter",
+      "properties": {}
+    },
+    {
+      "id": "r40",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "asi",
+      "properties": {}
+    },
+    {
+      "id": "r41",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "ai",
+      "properties": {}
+    },
+    {
+      "id": "r42",
+      "type": "HAS_COMPONENT",
+      "startNode": "landingGear",
+      "endNode": "noseWheel",
+      "properties": {}
+    },
+    {
+      "id": "r43",
+      "type": "HAS_COMPONENT",
+      "startNode": "landingGear",
+      "endNode": "mainGear",
+      "properties": {}
+    },
+    {
+      "id": "r44",
+      "type": "HAS_COMPONENT",
+      "startNode": "landingGear",
+      "endNode": "brakes",
+      "properties": {}
+    },
+    {
+      "id": "r45",
+      "type": "HAS_COMPONENT",
+      "startNode": "electrical",
+      "endNode": "battery",
+      "properties": {}
+    },
+    {
+      "id": "r46",
+      "type": "HAS_COMPONENT",
+      "startNode": "electrical",
+      "endNode": "alternator",
+      "properties": {}
+    },
+    {
+      "id": "r47",
+      "type": "FUELS_FROM",
+      "startNode": "io360",
+      "endNode": "leftTank",
+      "properties": {}
+    },
+    {
+      "id": "r48",
+      "type": "FUELS_FROM",
+      "startNode": "io360",
+      "endNode": "rightTank",
+      "properties": {}
+    },
+    {
+      "id": "r49",
+      "type": "POWERED_BY",
+      "startNode": "g1000",
+      "endNode": "electrical",
+      "properties": {}
+    },
+    {
+      "id": "r50",
+      "type": "POWERED_BY",
+      "startNode": "xpdr",
+      "endNode": "electrical",
+      "properties": {}
+    },
+    {
+      "id": "r51",
+      "type": "POWERED_BY",
+      "startNode": "vhf",
+      "endNode": "electrical",
+      "properties": {}
+    },
+    {
+      "id": "r52",
+      "type": "CHARGES",
+      "startNode": "alternator",
+      "endNode": "battery",
+      "properties": {}
+    },
+    {
+      "id": "r53",
+      "type": "OPERATES",
+      "startNode": "pic",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r54",
+      "type": "MAINTAINS",
+      "startNode": "ame",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r55",
+      "type": "REFERENCES",
+      "startNode": "ame",
+      "endNode": "maintManual",
+      "properties": {}
+    },
+    {
+      "id": "r56",
+      "type": "USES_AIRCRAFT",
+      "startNode": "flight001",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r57",
+      "type": "HAS_PIC",
+      "startNode": "flight001",
+      "endNode": "pic",
+      "properties": {}
+    },
+    {
+      "id": "r58",
+      "type": "HAS_PHASE",
+      "startNode": "flight001",
+      "endNode": "ph_preflight",
+      "properties": {}
+    },
+    {
+      "id": "r59",
+      "type": "HAS_PHASE",
+      "startNode": "flight001",
+      "endNode": "ph_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r60",
+      "type": "HAS_PHASE",
+      "startNode": "flight001",
+      "endNode": "ph_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r61",
+      "type": "HAS_PHASE",
+      "startNode": "flight001",
+      "endNode": "ph_climb",
+      "properties": {}
+    },
+    {
+      "id": "r62",
+      "type": "HAS_PHASE",
+      "startNode": "flight001",
+      "endNode": "ph_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r63",
+      "type": "HAS_PHASE",
+      "startNode": "flight001",
+      "endNode": "ph_descent",
+      "properties": {}
+    },
+    {
+      "id": "r64",
+      "type": "HAS_PHASE",
+      "startNode": "flight001",
+      "endNode": "ph_approach",
+      "properties": {}
+    },
+    {
+      "id": "r65",
+      "type": "HAS_PHASE",
+      "startNode": "flight001",
+      "endNode": "ph_landing",
+      "properties": {}
+    },
+    {
+      "id": "r66",
+      "type": "FOLLOWS",
+      "startNode": "ph_preflight",
+      "endNode": "ph_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r67",
+      "type": "FOLLOWS",
+      "startNode": "ph_taxi",
+      "endNode": "ph_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r68",
+      "type": "FOLLOWS",
+      "startNode": "ph_takeoff",
+      "endNode": "ph_climb",
+      "properties": {}
+    },
+    {
+      "id": "r69",
+      "type": "FOLLOWS",
+      "startNode": "ph_climb",
+      "endNode": "ph_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r70",
+      "type": "FOLLOWS",
+      "startNode": "ph_cruise",
+      "endNode": "ph_descent",
+      "properties": {}
+    },
+    {
+      "id": "r71",
+      "type": "FOLLOWS",
+      "startNode": "ph_descent",
+      "endNode": "ph_approach",
+      "properties": {}
+    },
+    {
+      "id": "r72",
+      "type": "FOLLOWS",
+      "startNode": "ph_approach",
+      "endNode": "ph_landing",
+      "properties": {}
+    },
+    {
+      "id": "r73",
+      "type": "HANDLED_BY",
+      "startNode": "flight001",
+      "endNode": "atc",
+      "properties": {}
+    }
+  ]
+}

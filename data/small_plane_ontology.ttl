@@ -1,0 +1,699 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix spo:  <https://ontology.example.org/small-plane#> .
+
+# ─────────────────────────────────────────────────────────────
+#  Ontology Declaration
+# ─────────────────────────────────────────────────────────────
+
+spo:SmallPlaneOntology a owl:Ontology ;
+    rdfs:label "Small Plane Ontology"@en ;
+    rdfs:comment "A lightweight domain ontology for a general aviation light aircraft."@en ;
+    owl:versionInfo "1.0.0" .
+
+
+# ═════════════════════════════════════════════════════════════
+#  CLASSES
+# ═════════════════════════════════════════════════════════════
+
+# ── Top-level ────────────────────────────────────────────────
+
+spo:Aircraft a owl:Class ;
+    rdfs:label "Aircraft"@en ;
+    rdfs:comment "The complete airworthy vehicle."@en .
+
+spo:System a owl:Class ;
+    rdfs:label "System"@en ;
+    rdfs:comment "A major functional grouping of components aboard the aircraft."@en .
+
+spo:Component a owl:Class ;
+    rdfs:label "Component"@en ;
+    rdfs:comment "A discrete, replaceable part or assembly within a system."@en .
+
+spo:Person a owl:Class ;
+    rdfs:label "Person"@en ;
+    rdfs:comment "A human actor with a role related to the aircraft."@en .
+
+spo:Flight a owl:Class ;
+    rdfs:label "Flight"@en ;
+    rdfs:comment "A single flight operation from departure to landing."@en .
+
+spo:Document a owl:Class ;
+    rdfs:label "Document"@en ;
+    rdfs:comment "An official document governing airworthiness or operations."@en .
+
+# ── Aircraft sub-types ────────────────────────────────────────
+
+spo:LightAircraft a owl:Class ;
+    rdfs:subClassOf spo:Aircraft ;
+    rdfs:label "Light Aircraft"@en ;
+    skos:definition "MTOW ≤ 5,700 kg; typically single or twin piston engine."@en .
+
+spo:Glider a owl:Class ;
+    rdfs:subClassOf spo:Aircraft ;
+    rdfs:label "Glider"@en .
+
+spo:Ultralight a owl:Class ;
+    rdfs:subClassOf spo:Aircraft ;
+    rdfs:label "Ultralight"@en .
+
+# ── Systems ──────────────────────────────────────────────────
+
+spo:AirframeSystem a owl:Class ;
+    rdfs:subClassOf spo:System ;
+    rdfs:label "Airframe System"@en ;
+    rdfs:comment "The structural skeleton and skin of the aircraft."@en .
+
+spo:PowerplantSystem a owl:Class ;
+    rdfs:subClassOf spo:System ;
+    rdfs:label "Powerplant System"@en ;
+    rdfs:comment "Engine, propeller, and associated engine management."@en .
+
+spo:FuelSystem a owl:Class ;
+    rdfs:subClassOf spo:System ;
+    rdfs:label "Fuel System"@en .
+
+spo:ElectricalSystem a owl:Class ;
+    rdfs:subClassOf spo:System ;
+    rdfs:label "Electrical System"@en .
+
+spo:AvionicsSystem a owl:Class ;
+    rdfs:subClassOf spo:System ;
+    rdfs:label "Avionics System"@en ;
+    rdfs:comment "Navigation, communication, and flight instruments."@en .
+
+spo:FlightControlSystem a owl:Class ;
+    rdfs:subClassOf spo:System ;
+    rdfs:label "Flight Control System"@en ;
+    rdfs:comment "Primary and secondary controls for attitude and lift management."@en .
+
+spo:LandingGearSystem a owl:Class ;
+    rdfs:subClassOf spo:System ;
+    rdfs:label "Landing Gear System"@en .
+
+# ── Components ───────────────────────────────────────────────
+
+#  Airframe components
+spo:Fuselage a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Fuselage"@en .
+
+spo:Wing a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Wing"@en .
+
+spo:EmpennageAssembly a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Empennage Assembly"@en ;
+    rdfs:comment "Tail assembly: horizontal and vertical stabilisers."@en .
+
+spo:HorizontalStabiliser a owl:Class ;
+    rdfs:subClassOf spo:EmpennageAssembly ;
+    rdfs:label "Horizontal Stabiliser"@en .
+
+spo:VerticalStabiliser a owl:Class ;
+    rdfs:subClassOf spo:EmpennageAssembly ;
+    rdfs:label "Vertical Stabiliser (Fin)"@en .
+
+#  Powerplant components
+spo:PistonEngine a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Piston Engine"@en .
+
+spo:Propeller a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Propeller"@en .
+
+spo:Carburetor a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Carburetor"@en .
+
+spo:ExhaustSystem a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Exhaust System"@en .
+
+#  Fuel system components
+spo:FuelTank a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Fuel Tank"@en .
+
+spo:FuelSelector a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Fuel Selector Valve"@en .
+
+spo:FuelGauge a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Fuel Gauge"@en .
+
+#  Flight controls
+spo:Aileron a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Aileron"@en ;
+    rdfs:comment "Controls roll about the longitudinal axis."@en .
+
+spo:Elevator a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Elevator"@en ;
+    rdfs:comment "Controls pitch about the lateral axis."@en .
+
+spo:Rudder a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Rudder"@en ;
+    rdfs:comment "Controls yaw about the vertical axis."@en .
+
+spo:Flap a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Flap"@en ;
+    rdfs:comment "High-lift device; increases lift and drag for landing."@en .
+
+spo:ControlYoke a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Control Yoke / Stick"@en .
+
+spo:RudderPedals a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Rudder Pedals"@en .
+
+#  Avionics
+spo:VHFRadio a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "VHF Comm Radio"@en .
+
+spo:GPSUnit a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "GPS Unit"@en .
+
+spo:Transponder a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Transponder"@en .
+
+spo:AltimeterInstrument a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Altimeter"@en .
+
+spo:AirspeedIndicator a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Airspeed Indicator"@en .
+
+spo:AttitudeIndicator a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Attitude Indicator (AI)"@en .
+
+#  Landing gear
+spo:NoseWheel a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Nose Wheel"@en .
+
+spo:MainGear a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Main Gear"@en .
+
+spo:Brake a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Brake Assembly"@en .
+
+#  Electrical
+spo:Battery a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Battery"@en .
+
+spo:Alternator a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Alternator"@en .
+
+# ── Persons ──────────────────────────────────────────────────
+
+spo:Pilot a owl:Class ;
+    rdfs:subClassOf spo:Person ;
+    rdfs:label "Pilot"@en .
+
+spo:PilotInCommand a owl:Class ;
+    rdfs:subClassOf spo:Pilot ;
+    rdfs:label "Pilot-in-Command (PIC)"@en .
+
+spo:CoPilot a owl:Class ;
+    rdfs:subClassOf spo:Pilot ;
+    rdfs:label "Co-Pilot"@en .
+
+spo:MaintenanceEngineer a owl:Class ;
+    rdfs:subClassOf spo:Person ;
+    rdfs:label "Maintenance Engineer (AME)"@en .
+
+spo:ATC a owl:Class ;
+    rdfs:subClassOf spo:Person ;
+    rdfs:label "Air Traffic Controller"@en .
+
+# ── Documents ────────────────────────────────────────────────
+
+spo:POH a owl:Class ;
+    rdfs:subClassOf spo:Document ;
+    rdfs:label "Pilot's Operating Handbook (POH)"@en .
+
+spo:MaintenanceManual a owl:Class ;
+    rdfs:subClassOf spo:Document ;
+    rdfs:label "Maintenance Manual"@en .
+
+spo:TypeCertificate a owl:Class ;
+    rdfs:subClassOf spo:Document ;
+    rdfs:label "Type Certificate"@en .
+
+spo:AirworthinessDirective a owl:Class ;
+    rdfs:subClassOf spo:Document ;
+    rdfs:label "Airworthiness Directive (AD)"@en .
+
+# ── Flight phases ─────────────────────────────────────────────
+
+spo:FlightPhase a owl:Class ;
+    rdfs:label "Flight Phase"@en .
+
+spo:Preflight a owl:Class ;
+    rdfs:subClassOf spo:FlightPhase ;
+    rdfs:label "Preflight Inspection"@en .
+
+spo:Taxi a owl:Class ;
+    rdfs:subClassOf spo:FlightPhase ;
+    rdfs:label "Taxi"@en .
+
+spo:Takeoff a owl:Class ;
+    rdfs:subClassOf spo:FlightPhase ;
+    rdfs:label "Takeoff"@en .
+
+spo:Climb a owl:Class ;
+    rdfs:subClassOf spo:FlightPhase ;
+    rdfs:label "Climb"@en .
+
+spo:Cruise a owl:Class ;
+    rdfs:subClassOf spo:FlightPhase ;
+    rdfs:label "Cruise"@en .
+
+spo:Descent a owl:Class ;
+    rdfs:subClassOf spo:FlightPhase ;
+    rdfs:label "Descent"@en .
+
+spo:Approach a owl:Class ;
+    rdfs:subClassOf spo:FlightPhase ;
+    rdfs:label "Approach"@en .
+
+spo:Landing a owl:Class ;
+    rdfs:subClassOf spo:FlightPhase ;
+    rdfs:label "Landing"@en .
+
+
+# ═════════════════════════════════════════════════════════════
+#  OBJECT PROPERTIES
+# ═════════════════════════════════════════════════════════════
+
+# Aircraft → System
+spo:hasSystem a owl:ObjectProperty ;
+    rdfs:domain spo:Aircraft ;
+    rdfs:range  spo:System ;
+    rdfs:label  "hasSystem"@en ;
+    rdfs:comment "Relates an aircraft to one of its onboard systems."@en .
+
+# System → Component
+spo:hasComponent a owl:ObjectProperty ;
+    rdfs:domain spo:System ;
+    rdfs:range  spo:Component ;
+    rdfs:label  "hasComponent"@en .
+
+# Component → Component  (part-of hierarchy)
+spo:isPartOf a owl:ObjectProperty, owl:TransitiveProperty ;
+    rdfs:domain spo:Component ;
+    rdfs:range  spo:Component ;
+    rdfs:label  "isPartOf"@en .
+
+spo:hasPart a owl:ObjectProperty, owl:TransitiveProperty ;
+    owl:inverseOf spo:isPartOf ;
+    rdfs:label "hasPart"@en .
+
+# Component → Component  (control linkage)
+spo:controls a owl:ObjectProperty ;
+    rdfs:domain spo:Component ;
+    rdfs:range  spo:Component ;
+    rdfs:label  "controls"@en ;
+    rdfs:comment "E.g. ControlYoke controls Aileron."@en .
+
+# Component functional dependency
+spo:dependsOn a owl:ObjectProperty ;
+    rdfs:domain spo:Component ;
+    rdfs:range  spo:Component ;
+    rdfs:label  "dependsOn"@en .
+
+spo:poweredBy a owl:ObjectProperty ;
+    rdfs:subPropertyOf spo:dependsOn ;
+    rdfs:domain spo:Component ;
+    rdfs:range  spo:Component ;
+    rdfs:label  "poweredBy"@en .
+
+spo:fuelsFrom a owl:ObjectProperty ;
+    rdfs:domain spo:PistonEngine ;
+    rdfs:range  spo:FuelTank ;
+    rdfs:label  "fuelsFrom"@en .
+
+# Aircraft → Document
+spo:governedBy a owl:ObjectProperty ;
+    rdfs:domain spo:Aircraft ;
+    rdfs:range  spo:Document ;
+    rdfs:label  "governedBy"@en .
+
+spo:hasAD a owl:ObjectProperty ;
+    rdfs:subPropertyOf spo:governedBy ;
+    rdfs:range  spo:AirworthinessDirective ;
+    rdfs:label  "hasAD"@en .
+
+# Person → Aircraft
+spo:operates a owl:ObjectProperty ;
+    rdfs:domain spo:Pilot ;
+    rdfs:range  spo:Aircraft ;
+    rdfs:label  "operates"@en .
+
+spo:maintains a owl:ObjectProperty ;
+    rdfs:domain spo:MaintenanceEngineer ;
+    rdfs:range  spo:Aircraft ;
+    rdfs:label  "maintains"@en .
+
+# Flight → Aircraft / Person / Phase
+spo:usesAircraft a owl:ObjectProperty ;
+    rdfs:domain spo:Flight ;
+    rdfs:range  spo:Aircraft ;
+    rdfs:label  "usesAircraft"@en .
+
+spo:hasPIC a owl:ObjectProperty ;
+    rdfs:domain spo:Flight ;
+    rdfs:range  spo:PilotInCommand ;
+    rdfs:label  "hasPIC"@en .
+
+spo:hasPhase a owl:ObjectProperty ;
+    rdfs:domain spo:Flight ;
+    rdfs:range  spo:FlightPhase ;
+    rdfs:label  "hasPhase"@en .
+
+spo:handledBy a owl:ObjectProperty ;
+    rdfs:domain spo:Flight ;
+    rdfs:range  spo:ATC ;
+    rdfs:label  "handledBy"@en ;
+    rdfs:comment "Air traffic control service handling the flight."@en .
+
+spo:follows a owl:ObjectProperty ;
+    rdfs:domain spo:FlightPhase ;
+    rdfs:range  spo:FlightPhase ;
+    rdfs:label  "follows"@en ;
+    rdfs:comment "Ordering relation between consecutive flight phases."@en .
+
+
+spo:charges a owl:ObjectProperty ;
+    rdfs:domain spo:Alternator ;
+    rdfs:range  spo:Battery ;
+    rdfs:label  "charges"@en ;
+    rdfs:comment "The alternator charges the battery."@en .
+
+spo:references a owl:ObjectProperty ;
+    rdfs:domain spo:Person ;
+    rdfs:range  spo:Document ;
+    rdfs:label  "references"@en ;
+    rdfs:comment "A person consults a governing document, e.g. an engineer references the maintenance manual."@en .
+
+
+# ═════════════════════════════════════════════════════════════
+#  DATATYPE PROPERTIES
+# ═════════════════════════════════════════════════════════════
+
+spo:registration a owl:DatatypeProperty ;
+    rdfs:domain spo:Aircraft ;
+    rdfs:range  xsd:string ;
+    rdfs:label  "registration"@en ;
+    rdfs:comment "ICAO/CAA registration mark, e.g. G-ABCD."@en .
+
+spo:mtow_kg a owl:DatatypeProperty ;
+    rdfs:domain spo:Aircraft ;
+    rdfs:range  xsd:decimal ;
+    rdfs:label  "MTOW (kg)"@en .
+
+spo:engineCount a owl:DatatypeProperty ;
+    rdfs:domain spo:Aircraft ;
+    rdfs:range  xsd:integer ;
+    rdfs:label  "engineCount"@en .
+
+spo:serialNumber a owl:DatatypeProperty ;
+    rdfs:domain spo:Component ;
+    rdfs:range  xsd:string ;
+    rdfs:label  "serialNumber"@en .
+
+spo:partNumber a owl:DatatypeProperty ;
+    rdfs:domain spo:Component ;
+    rdfs:range  xsd:string ;
+    rdfs:label  "partNumber"@en .
+
+spo:totalTime_hours a owl:DatatypeProperty ;
+    rdfs:domain spo:Component ;
+    rdfs:range  xsd:decimal ;
+    rdfs:label  "totalTime (hours)"@en .
+
+spo:ratedHorsepower a owl:DatatypeProperty ;
+    rdfs:domain spo:PistonEngine ;
+    rdfs:range  xsd:integer ;
+    rdfs:label  "ratedHorsepower"@en .
+
+spo:fuelCapacity_litres a owl:DatatypeProperty ;
+    rdfs:domain spo:FuelTank ;
+    rdfs:range  xsd:decimal ;
+    rdfs:label  "fuelCapacity (litres)"@en .
+
+spo:licenceNumber a owl:DatatypeProperty ;
+    rdfs:domain spo:Pilot ;
+    rdfs:range  xsd:string ;
+    rdfs:label  "licenceNumber"@en .
+
+spo:departureAerodrome a owl:DatatypeProperty ;
+    rdfs:domain spo:Flight ;
+    rdfs:range  xsd:string ;
+    rdfs:label  "departureAerodrome (ICAO)"@en .
+
+spo:destinationAerodrome a owl:DatatypeProperty ;
+    rdfs:domain spo:Flight ;
+    rdfs:range  xsd:string ;
+    rdfs:label  "destinationAerodrome (ICAO)"@en .
+
+spo:blockTime_minutes a owl:DatatypeProperty ;
+    rdfs:domain spo:Flight ;
+    rdfs:range  xsd:integer ;
+    rdfs:label  "blockTime (minutes)"@en .
+
+
+# ═════════════════════════════════════════════════════════════
+#  EXAMPLE INDIVIDUALS  (instance graph — mirrors knowledge-graph.json)
+# ═════════════════════════════════════════════════════════════
+
+spo:G-ECHO a spo:LightAircraft ;
+    rdfs:label "G-ECHO" ;
+    spo:registration "G-ECHO" ;
+    spo:mtow_kg "1111"^^xsd:decimal ;
+    spo:engineCount "1"^^xsd:integer ;
+    spo:hasSystem spo:airframe, spo:powerplant, spo:fuel, spo:electrical, spo:avionics, spo:flightControls, spo:landingGear ;
+    spo:governedBy spo:poh, spo:typeCert ;
+    spo:hasAD spo:ad .
+
+spo:airframe a spo:AirframeSystem ;
+    rdfs:label "Airframe" ;
+    spo:hasComponent spo:fuselage, spo:leftWing, spo:rightWing, spo:empennage .
+
+spo:powerplant a spo:PowerplantSystem ;
+    rdfs:label "Powerplant" ;
+    spo:hasComponent spo:io360, spo:propeller, spo:carburetor, spo:exhaust .
+
+spo:fuel a spo:FuelSystem ;
+    rdfs:label "Fuel System" ;
+    spo:hasComponent spo:leftTank, spo:rightTank, spo:fuelSelector, spo:fuelGauge .
+
+spo:electrical a spo:ElectricalSystem ;
+    rdfs:label "Electrical" ;
+    spo:hasComponent spo:battery, spo:alternator .
+
+spo:avionics a spo:AvionicsSystem ;
+    rdfs:label "Avionics" ;
+    spo:hasComponent spo:g1000, spo:xpdr, spo:vhf, spo:altimeter, spo:asi, spo:ai .
+
+spo:flightControls a spo:FlightControlSystem ;
+    rdfs:label "Flight Controls" ;
+    spo:hasComponent spo:leftAileron, spo:rightAileron, spo:elevator, spo:rudder, spo:flaps, spo:yoke, spo:rudderPedals .
+
+spo:landingGear a spo:LandingGearSystem ;
+    rdfs:label "Landing Gear" ;
+    spo:hasComponent spo:noseWheel, spo:mainGear, spo:brakes .
+
+spo:io360 a spo:PistonEngine ;
+    rdfs:label "Lycoming IO-360" ;
+    spo:ratedHorsepower "180"^^xsd:integer ;
+    spo:totalTime_hours "1240.5"^^xsd:decimal ;
+    spo:fuelsFrom spo:leftTank, spo:rightTank .
+
+spo:propeller a spo:Propeller ;
+    rdfs:label "Propeller" .
+
+spo:carburetor a spo:Carburetor ;
+    rdfs:label "Carburetor" .
+
+spo:exhaust a spo:ExhaustSystem ;
+    rdfs:label "Exhaust" .
+
+spo:leftTank a spo:FuelTank ;
+    rdfs:label "Left Tank" ;
+    spo:fuelCapacity_litres "95"^^xsd:decimal .
+
+spo:rightTank a spo:FuelTank ;
+    rdfs:label "Right Tank" ;
+    spo:fuelCapacity_litres "95"^^xsd:decimal .
+
+spo:fuelSelector a spo:FuelSelector ;
+    rdfs:label "Fuel Selector" .
+
+spo:fuelGauge a spo:FuelGauge ;
+    rdfs:label "Fuel Gauge" .
+
+spo:fuselage a spo:Fuselage ;
+    rdfs:label "Fuselage" .
+
+spo:leftWing a spo:Wing ;
+    rdfs:label "Left Wing" .
+
+spo:rightWing a spo:Wing ;
+    rdfs:label "Right Wing" .
+
+spo:empennage a spo:EmpennageAssembly ;
+    rdfs:label "Empennage" ;
+    spo:hasPart spo:horizStab, spo:vertStab .
+
+spo:horizStab a spo:HorizontalStabiliser ;
+    rdfs:label "Horiz. Stab." .
+
+spo:vertStab a spo:VerticalStabiliser ;
+    rdfs:label "Vert. Stab. (Fin)" .
+
+spo:leftAileron a spo:Aileron ;
+    rdfs:label "Left Aileron" .
+
+spo:rightAileron a spo:Aileron ;
+    rdfs:label "Right Aileron" .
+
+spo:elevator a spo:Elevator ;
+    rdfs:label "Elevator" .
+
+spo:rudder a spo:Rudder ;
+    rdfs:label "Rudder" .
+
+spo:flaps a spo:Flap ;
+    rdfs:label "Flaps (0–30°)" .
+
+spo:yoke a spo:ControlYoke ;
+    rdfs:label "Control Yoke" ;
+    spo:controls spo:leftAileron, spo:rightAileron, spo:elevator .
+
+spo:rudderPedals a spo:RudderPedals ;
+    rdfs:label "Rudder Pedals" ;
+    spo:controls spo:rudder .
+
+spo:g1000 a spo:GPSUnit ;
+    rdfs:label "Garmin G1000 PFD" ;
+    spo:poweredBy spo:electrical .
+
+spo:xpdr a spo:Transponder ;
+    rdfs:label "Transponder" ;
+    spo:poweredBy spo:electrical .
+
+spo:vhf a spo:VHFRadio ;
+    rdfs:label "VHF Radio" ;
+    spo:poweredBy spo:electrical .
+
+spo:altimeter a spo:AltimeterInstrument ;
+    rdfs:label "Altimeter" .
+
+spo:asi a spo:AirspeedIndicator ;
+    rdfs:label "Airspeed Indicator" .
+
+spo:ai a spo:AttitudeIndicator ;
+    rdfs:label "Attitude Indicator" .
+
+spo:noseWheel a spo:NoseWheel ;
+    rdfs:label "Nose Wheel" .
+
+spo:mainGear a spo:MainGear ;
+    rdfs:label "Main Gear" .
+
+spo:brakes a spo:Brake ;
+    rdfs:label "Brakes" .
+
+spo:battery a spo:Battery ;
+    rdfs:label "Battery" .
+
+spo:alternator a spo:Alternator ;
+    rdfs:label "Alternator" ;
+    spo:charges spo:battery .
+
+spo:pic a spo:PilotInCommand ;
+    rdfs:label "Pilot-in-Command" ;
+    spo:licenceNumber "PPL-12345" ;
+    spo:operates spo:G-ECHO .
+
+spo:ame a spo:MaintenanceEngineer ;
+    rdfs:label "Maint. Engineer" ;
+    spo:maintains spo:G-ECHO ;
+    spo:references spo:maintManual .
+
+spo:atc a spo:ATC ;
+    rdfs:label "Air Traffic Control" .
+
+spo:poh a spo:POH ;
+    rdfs:label "POH — C172S" .
+
+spo:maintManual a spo:MaintenanceManual ;
+    rdfs:label "Maintenance Manual" .
+
+spo:typeCert a spo:TypeCertificate ;
+    rdfs:label "Type Certificate" .
+
+spo:ad a spo:AirworthinessDirective ;
+    rdfs:label "Airworthiness Dir." .
+
+spo:flight001 a spo:Flight ;
+    rdfs:label "Flight 001" ;
+    spo:departureAerodrome "EGTG" ;
+    spo:destinationAerodrome "EGBJ" ;
+    spo:blockTime_minutes "45"^^xsd:integer ;
+    spo:usesAircraft spo:G-ECHO ;
+    spo:hasPIC spo:pic ;
+    spo:handledBy spo:atc ;
+    spo:hasPhase spo:ph_preflight, spo:ph_taxi, spo:ph_takeoff, spo:ph_climb, spo:ph_cruise, spo:ph_descent, spo:ph_approach, spo:ph_landing .
+
+spo:ph_preflight a spo:Preflight ;
+    rdfs:label "Preflight" ;
+    spo:follows spo:ph_taxi .
+
+spo:ph_taxi a spo:Taxi ;
+    rdfs:label "Taxi" ;
+    spo:follows spo:ph_takeoff .
+
+spo:ph_takeoff a spo:Takeoff ;
+    rdfs:label "Takeoff" ;
+    spo:follows spo:ph_climb .
+
+spo:ph_climb a spo:Climb ;
+    rdfs:label "Climb" ;
+    spo:follows spo:ph_cruise .
+
+spo:ph_cruise a spo:Cruise ;
+    rdfs:label "Cruise" ;
+    spo:follows spo:ph_descent .
+
+spo:ph_descent a spo:Descent ;
+    rdfs:label "Descent" ;
+    spo:follows spo:ph_approach .
+
+spo:ph_approach a spo:Approach ;
+    rdfs:label "Approach" ;
+    spo:follows spo:ph_landing .
+
+spo:ph_landing a spo:Landing ;
+    rdfs:label "Landing" .

@@ -1,0 +1,11 @@
+{
+  "nodeStyles": {
+    "Aircraft":    { "color": "#e8a020", "dimColor": "#7a4d08", "label": "AIRCRAFT",     "size": 18 },
+    "System":      { "color": "#22dd88", "dimColor": "#0d4a2c", "label": "SYSTEM",       "size": 12 },
+    "Component":   { "color": "#4ab8f0", "dimColor": "#0d3a55", "label": "COMPONENT",    "size": 8 },
+    "Person":      { "color": "#b070f8", "dimColor": "#3a1060", "label": "PERSON",       "size": 8 },
+    "Flight":      { "color": "#f05060", "dimColor": "#4a0d18", "label": "FLIGHT",       "size": 14 },
+    "Document":    { "color": "#20d8d0", "dimColor": "#084840", "label": "DOCUMENT",     "size": 8 },
+    "FlightPhase": { "color": "#f8a030", "dimColor": "#5a3008", "label": "FLIGHT PHASE", "size": 8 }
+  }
+}

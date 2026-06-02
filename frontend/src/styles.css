@@ -1,0 +1,123 @@
+:root {
+  --bg: #080c10;
+  --bg2: #0d1520;
+  --bg3: #111d2e;
+  --amber: #e8a020;
+  --amber-dim: #7a4d08;
+  --green: #22dd88;
+  --green-dim: #0d4a2c;
+  --blue: #4ab8f0;
+  --blue-dim: #0d3a55;
+  --red: #f05060;
+  --red-dim: #4a0d18;
+  --violet: #b070f8;
+  --violet-dim: #3a1060;
+  --teal: #20d8d0;
+  --teal-dim: #084840;
+  --grid: rgba(34, 180, 100, 0.06);
+  --text: #c8dde8;
+  --text-dim: #4a6070;
+  --border: rgba(232, 160, 32, 0.2);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  height: 100vh;
+  overflow: hidden;
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── Scan line CRT effect ── */
+.scan-line {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(34, 220, 136, 0.15), transparent);
+  animation: scan 8s linear infinite;
+  pointer-events: none;
+  z-index: 10;
+}
+@keyframes scan {
+  0% {
+    top: 56px;
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  95% {
+    opacity: 1;
+  }
+  100% {
+    top: 100vh;
+    opacity: 0;
+  }
+}
+
+/* ── Corner labels ── */
+.corner {
+  position: fixed;
+  z-index: 10;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+.corner.bl {
+  bottom: 10px;
+  left: 228px;
+}
+.corner.br {
+  bottom: 10px;
+  right: 268px;
+  text-align: right;
+}
+
+/* ── SVG canvas ── */
+.link {
+  stroke-opacity: 0.35;
+  stroke-width: 1;
+  fill: none;
+}
+.link:hover {
+  stroke-opacity: 0.9;
+}
+
+.link-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 8px;
+  fill: var(--text-dim);
+  pointer-events: none;
+}
+
+.node circle {
+  stroke-width: 1.5;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.node circle:hover {
+  filter: brightness(1.4);
+}
+.node.faded {
+  opacity: 0.15;
+}
+
+.node-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  fill: var(--text);
+  pointer-events: none;
+  text-anchor: middle;
+}

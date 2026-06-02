@@ -1,0 +1,31 @@
+{
+  "name": "knowledge-graph-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . && prettier --check src",
+    "format": "eslint . --fix && prettier --write src"
+  },
+  "dependencies": {
+    "@fontsource/orbitron": "^5.1.1",
+    "@fontsource/share-tech-mono": "^5.1.1",
+    "d3": "^7.9.0",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/eslint-config-prettier": "^10.1.0",
+    "@vue/eslint-config-typescript": "^14.2.0",
+    "eslint": "^9.17.0",
+    "eslint-plugin-vue": "^9.32.0",
+    "prettier": "^3.4.2",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.5",
+    "vue-tsc": "^2.2.0"
+  }
+}

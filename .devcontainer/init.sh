@@ -27,10 +27,23 @@ if ! command -v az &> /dev/null; then
     sudo apt-get install -y -qq azure-cli
 fi
 
+# Install pnpm if not present
+if ! command -v pnpm &> /dev/null; then
+    echo "📦 Installing pnpm..."
+    corepack enable
+    corepack prepare pnpm@latest --activate
+fi
+
 # Install Python server dependencies via uv
 if [ -f "backend/pyproject.toml" ]; then
     echo "🐍 Installing Python dependencies via uv..."
     (cd backend && uv sync)
+fi
+
+# Install frontend dependencies via pnpm
+if [ -f "frontend/package.json" ]; then
+    echo "🎨 Installing frontend dependencies via pnpm..."
+    (cd frontend && pnpm install)
 fi
 
 echo "✅ Dev container ready!"
