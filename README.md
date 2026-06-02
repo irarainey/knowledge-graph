@@ -43,3 +43,33 @@ pnpm install
 ```
 
 See [backend/README.md](backend/README.md) and [frontend/README.md](frontend/README.md) for component-specific details.
+
+## Importing data into Neo4j
+
+The knowledge graph is stored in `data/knowledge-graph.json` (a Neo4j/APOC-style
+export). To load it into Neo4j:
+
+1. Start Neo4j (if it isn't already running):
+
+   ```bash
+   scripts/start-database.sh
+   ```
+
+2. Configure the connection. Copy the example env file and adjust if needed (the
+   defaults match `scripts/start-database.sh`):
+
+   ```bash
+   cp backend/.env.example backend/.env
+   ```
+
+3. Run the import:
+
+   ```bash
+   scripts/import-data.sh            # update / upsert (adds new, updates existing)
+   scripts/import-data.sh --clear    # delete everything first, then import
+   ```
+
+The import is idempotent, so re-running with the default (upsert) mode is safe.
+Use `--clear` after removing or renaming nodes/relationships to get a clean
+reload. See [backend/README.md](backend/README.md) for the underlying command and
+additional options.
