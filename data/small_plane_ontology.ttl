@@ -484,15 +484,661 @@ spo:blockTime_minutes a owl:DatatypeProperty ;
 
 
 # ═════════════════════════════════════════════════════════════
-#  EXAMPLE INDIVIDUALS  (instance graph — mirrors knowledge-graph.json)
+#  ADDITIONAL CLASSES  (auto-generated to mirror knowledge-graph.json)
+# ═════════════════════════════════════════════════════════════
+
+spo:Aerodrome a owl:Class ;
+    rdfs:label "Aerodrome"@en .
+
+spo:Runway a owl:Class ;
+    rdfs:label "Runway"@en .
+
+spo:FuelInjectionServo a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "FuelInjectionServo"@en .
+
+spo:Magneto a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Magneto"@en .
+
+spo:Starter a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Starter"@en .
+
+spo:OilSystem a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "OilSystem"@en .
+
+spo:FuelPump a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "FuelPump"@en .
+
+spo:TrimTab a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "TrimTab"@en .
+
+spo:FlapActuator a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "FlapActuator"@en .
+
+spo:StallWarning a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "StallWarning"@en .
+
+spo:AirDataComputer a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "AirDataComputer"@en .
+
+spo:AHRS a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "AHRS"@en .
+
+spo:PitotStaticSystem a owl:Class ;
+    rdfs:subClassOf spo:System ;
+    rdfs:label "PitotStaticSystem"@en .
+
+spo:PitotHeat a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "PitotHeat"@en .
+
+spo:Light a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Light"@en .
+
+spo:Airport a owl:Class ;
+    rdfs:subClassOf spo:Aerodrome ;
+    rdfs:label "Airport"@en .
+
+spo:BrakeDisc a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "BrakeDisc"@en .
+
+spo:BrakeCaliper a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "BrakeCaliper"@en .
+
+spo:BrakeLining a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "BrakeLining"@en .
+
+spo:MasterCylinder a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "MasterCylinder"@en .
+
+spo:Wheel a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Wheel"@en .
+
+spo:Tyre a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Tyre"@en .
+
+spo:PropellerBlade a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "PropellerBlade"@en .
+
+spo:Spinner a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Spinner"@en .
+
+spo:Cylinder a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Cylinder"@en .
+
+spo:SparkPlug a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "SparkPlug"@en .
+
+spo:MultiFunctionDisplay a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "MultiFunctionDisplay"@en .
+
+spo:AudioPanel a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "AudioPanel"@en .
+
+spo:IntegratedAvionicsUnit a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "IntegratedAvionicsUnit"@en .
+
+spo:EngineAirframeUnit a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "EngineAirframeUnit"@en .
+
+spo:Magnetometer a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Magnetometer"@en .
+
+spo:EmergencyLocatorTransmitter a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "EmergencyLocatorTransmitter"@en .
+
+spo:OilCooler a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "OilCooler"@en .
+
+spo:OilFilter a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "OilFilter"@en .
+
+spo:AirFilter a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "AirFilter"@en .
+
+spo:AlternateAirDoor a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "AlternateAirDoor"@en .
+
+spo:FuelManifold a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "FuelManifold"@en .
+
+spo:FuelInjector a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "FuelInjector"@en .
+
+spo:FuelStrainer a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "FuelStrainer"@en .
+
+spo:FuelVent a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "FuelVent"@en .
+
+spo:MasterSwitch a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "MasterSwitch"@en .
+
+spo:VoltageRegulator a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "VoltageRegulator"@en .
+
+spo:Busbar a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Busbar"@en .
+
+spo:CircuitBreaker a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "CircuitBreaker"@en .
+
+spo:Ammeter a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Ammeter"@en .
+
+spo:OleoStrut a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "OleoStrut"@en .
+
+spo:GearLeg a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "GearLeg"@en .
+
+spo:WheelFairing a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "WheelFairing"@en .
+
+spo:NoseFork a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "NoseFork"@en .
+
+spo:CabinDoor a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "CabinDoor"@en .
+
+spo:Windscreen a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Windscreen"@en .
+
+spo:BaggageCompartment a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "BaggageCompartment"@en .
+
+spo:Seat a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "Seat"@en .
+
+spo:LiftStrut a owl:Class ;
+    rdfs:subClassOf spo:Component ;
+    rdfs:label "LiftStrut"@en .
+
+# ═════════════════════════════════════════════════════════════
+#  ADDITIONAL OBJECT PROPERTIES  (auto-generated)
+# ═════════════════════════════════════════════════════════════
+
+spo:hasControlSurface a owl:ObjectProperty ;
+    rdfs:label "hasControlSurface"@en .
+
+spo:houses a owl:ObjectProperty ;
+    rdfs:label "houses"@en .
+
+spo:drives a owl:ObjectProperty ;
+    rdfs:label "drives"@en .
+
+spo:providesIgnitionTo a owl:ObjectProperty ;
+    rdfs:label "providesIgnitionTo"@en .
+
+spo:feeds a owl:ObjectProperty ;
+    rdfs:label "feeds"@en .
+
+spo:actuates a owl:ObjectProperty ;
+    rdfs:label "actuates"@en .
+
+spo:departsFrom a owl:ObjectProperty ;
+    rdfs:label "departsFrom"@en .
+
+spo:arrivesAt a owl:ObjectProperty ;
+    rdfs:label "arrivesAt"@en .
+
+spo:hasRunway a owl:ObjectProperty ;
+    rdfs:label "hasRunway"@en .
+
+spo:occursAt a owl:ObjectProperty ;
+    rdfs:label "occursAt"@en .
+
+spo:usesRunway a owl:ObjectProperty ;
+    rdfs:label "usesRunway"@en .
+
+spo:providesServiceAt a owl:ObjectProperty ;
+    rdfs:label "providesServiceAt"@en .
+
+spo:clamps a owl:ObjectProperty ;
+    rdfs:label "clamps"@en .
+
+spo:fittedTo a owl:ObjectProperty ;
+    rdfs:label "fittedTo"@en .
+
+spo:mountedOn a owl:ObjectProperty ;
+    rdfs:label "mountedOn"@en .
+
+spo:fires a owl:ObjectProperty ;
+    rdfs:label "fires"@en .
+
+# ═════════════════════════════════════════════════════════════
+#  ADDITIONAL DATATYPE PROPERTIES  (auto-generated)
+# ═════════════════════════════════════════════════════════════
+
+spo:voltage_v a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "voltage_v"@en .
+
+spo:model a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "model"@en .
+
+spo:power_hp a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "power_hp"@en .
+
+spo:displacement_ci a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "displacement_ci"@en .
+
+spo:cylinders a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "cylinders"@en .
+
+spo:fuelInjected a owl:DatatypeProperty ;
+    rdfs:range xsd:boolean ;
+    rdfs:label "fuelInjected"@en .
+
+spo:manufacturer a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "manufacturer"@en .
+
+spo:type a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "type"@en .
+
+spo:blades a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "blades"@en .
+
+spo:diameter_in a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "diameter_in"@en .
+
+spo:usable_gal a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "usable_gal"@en .
+
+spo:positions a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "positions"@en .
+
+spo:construction a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "construction"@en .
+
+spo:length_ft a owl:DatatypeProperty ;
+    rdfs:range xsd:decimal ;
+    rdfs:label "length_ft"@en .
+
+spo:airfoil a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "airfoil"@en .
+
+spo:semiSpan_ft a owl:DatatypeProperty ;
+    rdfs:range xsd:decimal ;
+    rdfs:label "semiSpan_ft"@en .
+
+spo:washout_deg a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "washout_deg"@en .
+
+spo:hasDorsalFin a owl:DatatypeProperty ;
+    rdfs:range xsd:boolean ;
+    rdfs:label "hasDorsalFin"@en .
+
+spo:up_deg a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "up_deg"@en .
+
+spo:down_deg a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "down_deg"@en .
+
+spo:deflectionUp_deg a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "deflectionUp_deg"@en .
+
+spo:deflectionDown_deg a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "deflectionDown_deg"@en .
+
+spo:deflection_deg a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "deflection_deg"@en .
+
+spo:settings_deg a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "settings_deg"@en .
+
+spo:control a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "control"@en .
+
+spo:display_in a owl:DatatypeProperty ;
+    rdfs:range xsd:decimal ;
+    rdfs:label "display_in"@en .
+
+spo:mode a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "mode"@en .
+
+spo:note a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "note"@en .
+
+spo:channels a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "channels"@en .
+
+spo:tyreSize a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "tyreSize"@en .
+
+spo:actuation a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "actuation"@en .
+
+spo:output_a a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "output_a"@en .
+
+spo:output_amps a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "output_amps"@en .
+
+spo:drive a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "drive"@en .
+
+spo:date a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "date"@en .
+
+spo:callsign a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "callsign"@en .
+
+spo:flightRules a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "flightRules"@en .
+
+spo:distance_nm a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "distance_nm"@en .
+
+spo:cruiseAltitude_ft a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "cruiseAltitude_ft"@en .
+
+spo:flightTime_hours a owl:DatatypeProperty ;
+    rdfs:range xsd:decimal ;
+    rdfs:label "flightTime_hours"@en .
+
+spo:duration_minutes a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "duration_minutes"@en .
+
+spo:location a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "location"@en .
+
+spo:fieldElevation_ft a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "fieldElevation_ft"@en .
+
+spo:groundspeed_kt a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "groundspeed_kt"@en .
+
+spo:activity a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "activity"@en .
+
+spo:fuelState a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "fuelState"@en .
+
+spo:route a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "route"@en .
+
+spo:rotateSpeed_kt a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "rotateSpeed_kt"@en .
+
+spo:flapSetting_deg a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "flapSetting_deg"@en .
+
+spo:departureRunway a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "departureRunway"@en .
+
+spo:liftoffSpeed_kt a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "liftoffSpeed_kt"@en .
+
+spo:groundRoll_m a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "groundRoll_m"@en .
+
+spo:airspeed_kt a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "airspeed_kt"@en .
+
+spo:climbRate_fpm a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "climbRate_fpm"@en .
+
+spo:targetAltitude_ft a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "targetAltitude_ft"@en .
+
+spo:startAltitude_ft a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "startAltitude_ft"@en .
+
+spo:powerSetting a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "powerSetting"@en .
+
+spo:altitude_ft a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "altitude_ft"@en .
+
+spo:power_pct a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "power_pct"@en .
+
+spo:trueAirspeed_kt a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "trueAirspeed_kt"@en .
+
+spo:fuelBurn_gph a owl:DatatypeProperty ;
+    rdfs:range xsd:decimal ;
+    rdfs:label "fuelBurn_gph"@en .
+
+spo:descentRate_fpm a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "descentRate_fpm"@en .
+
+spo:patternAltitude_ft a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "patternAltitude_ft"@en .
+
+spo:glidepath_deg a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "glidepath_deg"@en .
+
+spo:arrivalRunway a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "arrivalRunway"@en .
+
+spo:touchdownSpeed_kt a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "touchdownSpeed_kt"@en .
+
+spo:capacity_qt a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "capacity_qt"@en .
+
+spo:sumpType a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "sumpType"@en .
+
+spo:minForFlight_qt a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "minForFlight_qt"@en .
+
+spo:driven a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "driven"@en .
+
+spo:icao a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "icao"@en .
+
+spo:iata a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "iata"@en .
+
+spo:elevation_ft a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "elevation_ft"@en .
+
+spo:designator a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "designator"@en .
+
+spo:length_m a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "length_m"@en .
+
+spo:surface a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "surface"@en .
+
+spo:pistons a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "pistons"@en .
+
+spo:size a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "size"@en .
+
+spo:ply a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "ply"@en .
+
+spo:count a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "count"@en .
+
+spo:perCylinder a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "perCylinder"@en .
+
+spo:function a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "function"@en .
+
+spo:features a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "features"@en .
+
+spo:frequency_mhz a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "frequency_mhz"@en .
+
+spo:batteryType a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "batteryType"@en .
+
+spo:regulated_v a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "regulated_v"@en .
+
+spo:display a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "display"@en .
+
+spo:material a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "material"@en .
+
+spo:aka a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "aka"@en .
+
+spo:maxLoad_lb a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "maxLoad_lb"@en .
+
+spo:config a owl:DatatypeProperty ;
+    rdfs:range xsd:string ;
+    rdfs:label "config"@en .
+
+spo:latitude a owl:DatatypeProperty ;
+    rdfs:range xsd:decimal ;
+    rdfs:label "latitude"@en .
+
+spo:longitude a owl:DatatypeProperty ;
+    rdfs:range xsd:decimal ;
+    rdfs:label "longitude"@en .
+
+# ═════════════════════════════════════════════════════════════
+#  INDIVIDUALS  (instance graph — generated from knowledge-graph.json)
 # ═════════════════════════════════════════════════════════════
 
 spo:G-ECHO a spo:LightAircraft ;
     rdfs:label "G-ECHO" ;
     spo:registration "G-ECHO" ;
-    spo:mtow_kg "1111"^^xsd:decimal ;
+    spo:mtow_kg "1111"^^xsd:integer ;
     spo:engineCount "1"^^xsd:integer ;
-    spo:hasSystem spo:airframe, spo:powerplant, spo:fuel, spo:electrical, spo:avionics, spo:flightControls, spo:landingGear ;
+    spo:hasSystem spo:airframe, spo:powerplant, spo:fuel, spo:electrical, spo:avionics, spo:flightControls, spo:landingGear, spo:pitotStatic ;
     spo:governedBy spo:poh, spo:typeCert ;
     spo:hasAD spo:ad .
 
@@ -502,23 +1148,24 @@ spo:airframe a spo:AirframeSystem ;
 
 spo:powerplant a spo:PowerplantSystem ;
     rdfs:label "Powerplant" ;
-    spo:hasComponent spo:io360, spo:propeller, spo:carburetor, spo:exhaust .
+    spo:hasComponent spo:io360, spo:propeller, spo:fuelServo, spo:exhaust .
 
 spo:fuel a spo:FuelSystem ;
     rdfs:label "Fuel System" ;
-    spo:hasComponent spo:leftTank, spo:rightTank, spo:fuelSelector, spo:fuelGauge .
+    spo:hasComponent spo:leftTank, spo:rightTank, spo:fuelSelector, spo:fuelGauge, spo:auxFuelPump, spo:gascolator, spo:fuelVents .
 
 spo:electrical a spo:ElectricalSystem ;
     rdfs:label "Electrical" ;
-    spo:hasComponent spo:battery, spo:alternator .
+    spo:voltage_v "28"^^xsd:integer ;
+    spo:hasComponent spo:battery, spo:alternator, spo:landingLight, spo:navLights, spo:masterSwitch, spo:busbar, spo:circuitBreakers, spo:ammeter .
 
 spo:avionics a spo:AvionicsSystem ;
     rdfs:label "Avionics" ;
-    spo:hasComponent spo:g1000, spo:xpdr, spo:vhf, spo:altimeter, spo:asi, spo:ai .
+    spo:hasComponent spo:g1000, spo:xpdr, spo:vhf, spo:altimeter, spo:asi, spo:ai, spo:adc, spo:ahrs, spo:mfd, spo:audioPanel, spo:gia1, spo:gia2, spo:gea71, spo:gmu44, spo:elt .
 
 spo:flightControls a spo:FlightControlSystem ;
     rdfs:label "Flight Controls" ;
-    spo:hasComponent spo:leftAileron, spo:rightAileron, spo:elevator, spo:rudder, spo:flaps, spo:yoke, spo:rudderPedals .
+    spo:hasComponent spo:leftAileron, spo:rightAileron, spo:elevator, spo:rudder, spo:flaps, spo:yoke, spo:rudderPedals, spo:flapMotor .
 
 spo:landingGear a spo:LandingGearSystem ;
     rdfs:label "Landing Gear" ;
@@ -528,109 +1175,200 @@ spo:io360 a spo:PistonEngine ;
     rdfs:label "Lycoming IO-360" ;
     spo:ratedHorsepower "180"^^xsd:integer ;
     spo:totalTime_hours "1240.5"^^xsd:decimal ;
-    spo:fuelsFrom spo:leftTank, spo:rightTank .
+    spo:model "IO-360-L2A" ;
+    spo:power_hp "180"^^xsd:integer ;
+    spo:displacement_ci "361"^^xsd:integer ;
+    spo:cylinders "4"^^xsd:integer ;
+    spo:fuelInjected "true"^^xsd:boolean ;
+    spo:fuelsFrom spo:leftTank, spo:rightTank ;
+    spo:drives spo:propeller ;
+    spo:hasPart spo:magLeft, spo:magRight, spo:starter, spo:oilSystem, spo:engFuelPump, spo:cyl1, spo:cyl2, spo:cyl3, spo:cyl4, spo:sparkPlugs, spo:inductionFilter, spo:alternateAir .
 
 spo:propeller a spo:Propeller ;
-    rdfs:label "Propeller" .
+    rdfs:label "Propeller" ;
+    spo:manufacturer "McCauley" ;
+    spo:model "McCauley 1A170E/JHA7660" ;
+    spo:type "fixed-pitch, two-blade aluminium" ;
+    spo:blades "2"^^xsd:integer ;
+    spo:diameter_in "76"^^xsd:integer ;
+    spo:hasPart spo:propBlade1, spo:propBlade2, spo:spinner .
 
-spo:carburetor a spo:Carburetor ;
-    rdfs:label "Carburetor" .
+spo:fuelServo a spo:FuelInjectionServo ;
+    rdfs:label "Fuel Servo" ;
+    spo:type "RSA-5AD1 fuel injection" ;
+    spo:feeds spo:io360 ;
+    spo:hasPart spo:flowDivider .
 
 spo:exhaust a spo:ExhaustSystem ;
-    rdfs:label "Exhaust" .
+    rdfs:label "Exhaust" ;
+    spo:type "dual, with cabin-heat muff" .
 
 spo:leftTank a spo:FuelTank ;
     rdfs:label "Left Tank" ;
-    spo:fuelCapacity_litres "95"^^xsd:decimal .
+    spo:fuelCapacity_litres "95"^^xsd:integer ;
+    spo:usable_gal "28"^^xsd:integer .
 
 spo:rightTank a spo:FuelTank ;
     rdfs:label "Right Tank" ;
-    spo:fuelCapacity_litres "95"^^xsd:decimal .
+    spo:fuelCapacity_litres "95"^^xsd:integer ;
+    spo:usable_gal "28"^^xsd:integer .
 
 spo:fuelSelector a spo:FuelSelector ;
-    rdfs:label "Fuel Selector" .
+    rdfs:label "Fuel Selector" ;
+    spo:positions "BOTH / LEFT / RIGHT / OFF" ;
+    spo:feeds spo:engFuelPump, spo:auxFuelPump .
 
 spo:fuelGauge a spo:FuelGauge ;
     rdfs:label "Fuel Gauge" .
 
 spo:fuselage a spo:Fuselage ;
-    rdfs:label "Fuselage" .
+    rdfs:label "Fuselage" ;
+    spo:construction "semi-monocoque aluminium alloy" ;
+    spo:length_ft "27.2"^^xsd:decimal ;
+    spo:hasPart spo:leftDoor, spo:rightDoor, spo:windscreen, spo:baggageBay, spo:seats .
 
 spo:leftWing a spo:Wing ;
-    rdfs:label "Left Wing" .
+    rdfs:label "Left Wing" ;
+    spo:airfoil "NACA 2412" ;
+    spo:construction "aluminium, strut-braced high wing" ;
+    spo:semiSpan_ft "18.0"^^xsd:decimal ;
+    spo:washout_deg "3"^^xsd:integer ;
+    spo:hasControlSurface spo:leftAileron, spo:flaps ;
+    spo:houses spo:leftTank ;
+    spo:hasPart spo:stallWarner, spo:leftWingStrut .
 
 spo:rightWing a spo:Wing ;
-    rdfs:label "Right Wing" .
+    rdfs:label "Right Wing" ;
+    spo:airfoil "NACA 2412" ;
+    spo:construction "aluminium, strut-braced high wing" ;
+    spo:semiSpan_ft "18.0"^^xsd:decimal ;
+    spo:washout_deg "3"^^xsd:integer ;
+    spo:hasControlSurface spo:rightAileron, spo:flaps ;
+    spo:houses spo:rightTank ;
+    spo:hasPart spo:rightWingStrut .
 
 spo:empennage a spo:EmpennageAssembly ;
     rdfs:label "Empennage" ;
+    spo:type "conventional tail" ;
+    spo:construction "aluminium" ;
     spo:hasPart spo:horizStab, spo:vertStab .
 
 spo:horizStab a spo:HorizontalStabiliser ;
-    rdfs:label "Horiz. Stab." .
+    rdfs:label "Horiz. Stab." ;
+    spo:type "fixed stabiliser" ;
+    spo:construction "aluminium" ;
+    spo:hasControlSurface spo:elevator .
 
 spo:vertStab a spo:VerticalStabiliser ;
-    rdfs:label "Vert. Stab. (Fin)" .
+    rdfs:label "Vert. Stab. (Fin)" ;
+    spo:type "swept fin" ;
+    spo:construction "aluminium" ;
+    spo:hasDorsalFin "true"^^xsd:boolean ;
+    spo:hasControlSurface spo:rudder .
 
 spo:leftAileron a spo:Aileron ;
-    rdfs:label "Left Aileron" .
+    rdfs:label "Left Aileron" ;
+    spo:type "Frise, differential" ;
+    spo:up_deg "20"^^xsd:integer ;
+    spo:down_deg "15"^^xsd:integer .
 
 spo:rightAileron a spo:Aileron ;
-    rdfs:label "Right Aileron" .
+    rdfs:label "Right Aileron" ;
+    spo:type "Frise, differential" ;
+    spo:up_deg "20"^^xsd:integer ;
+    spo:down_deg "15"^^xsd:integer .
 
 spo:elevator a spo:Elevator ;
-    rdfs:label "Elevator" .
+    rdfs:label "Elevator" ;
+    spo:deflectionUp_deg "28"^^xsd:integer ;
+    spo:deflectionDown_deg "23"^^xsd:integer ;
+    spo:hasPart spo:elevatorTrim .
 
 spo:rudder a spo:Rudder ;
-    rdfs:label "Rudder" .
+    rdfs:label "Rudder" ;
+    spo:deflection_deg "16"^^xsd:integer .
 
 spo:flaps a spo:Flap ;
-    rdfs:label "Flaps (0–30°)" .
+    rdfs:label "Flaps (0\u201330\u00b0)" ;
+    spo:type "single-slotted, electric" ;
+    spo:settings_deg "0/10/20/30" .
 
 spo:yoke a spo:ControlYoke ;
     rdfs:label "Control Yoke" ;
+    spo:type "dual control wheel" ;
+    spo:control "ailerons + elevator" ;
     spo:controls spo:leftAileron, spo:rightAileron, spo:elevator .
 
 spo:rudderPedals a spo:RudderPedals ;
     rdfs:label "Rudder Pedals" ;
-    spo:controls spo:rudder .
+    spo:type "dual, with toe brakes" ;
+    spo:control "rudder + nosewheel steering" ;
+    spo:controls spo:rudder ;
+    spo:operates spo:brakeMasterCyl .
 
 spo:g1000 a spo:GPSUnit ;
     rdfs:label "Garmin G1000 PFD" ;
+    spo:model "Garmin GDU 1040/1044B PFD" ;
+    spo:partNumber "011-00867-00" ;
+    spo:display_in "10.4"^^xsd:decimal ;
     spo:poweredBy spo:electrical .
 
 spo:xpdr a spo:Transponder ;
     rdfs:label "Transponder" ;
+    spo:model "Garmin GTX 33" ;
+    spo:mode "Mode S" ;
+    spo:partNumber "011-00779-00" ;
     spo:poweredBy spo:electrical .
 
 spo:vhf a spo:VHFRadio ;
     rdfs:label "VHF Radio" ;
+    spo:note "COM integrated in GIA 63" ;
+    spo:channels "25/8.33 kHz" ;
     spo:poweredBy spo:electrical .
 
 spo:altimeter a spo:AltimeterInstrument ;
-    rdfs:label "Altimeter" .
+    rdfs:label "Altimeter" ;
+    spo:note "displayed on G1000 PFD, source GDC 74A" .
 
 spo:asi a spo:AirspeedIndicator ;
-    rdfs:label "Airspeed Indicator" .
+    rdfs:label "Airspeed Indicator" ;
+    spo:note "displayed on G1000 PFD, source GDC 74A" .
 
 spo:ai a spo:AttitudeIndicator ;
-    rdfs:label "Attitude Indicator" .
+    rdfs:label "Attitude Indicator" ;
+    spo:note "displayed on G1000 PFD, source GRS 77 AHRS" .
 
 spo:noseWheel a spo:NoseWheel ;
-    rdfs:label "Nose Wheel" .
+    rdfs:label "Nose Wheel" ;
+    spo:tyreSize "5.00-5" ;
+    spo:type "steerable, oleo-pneumatic" ;
+    spo:hasPart spo:noseTyre, spo:noseStrut, spo:noseFork .
 
 spo:mainGear a spo:MainGear ;
-    rdfs:label "Main Gear" .
+    rdfs:label "Main Gear" ;
+    spo:tyreSize "6.00-6" ;
+    spo:type "fixed tricycle, tubular spring-steel" ;
+    spo:hasPart spo:brakes, spo:mainWheel, spo:mainStrut, spo:wheelFairing .
 
 spo:brakes a spo:Brake ;
-    rdfs:label "Brakes" .
+    rdfs:label "Brakes" ;
+    spo:type "Cleveland hydraulic single-disc" ;
+    spo:actuation "toe pedals" ;
+    spo:hasPart spo:brakeDisc, spo:brakeCaliper, spo:brakeLining, spo:brakeMasterCyl .
 
 spo:battery a spo:Battery ;
-    rdfs:label "Battery" .
+    rdfs:label "Battery" ;
+    spo:model "Concorde RG24-11M" ;
+    spo:voltage_v "24"^^xsd:integer .
 
 spo:alternator a spo:Alternator ;
     rdfs:label "Alternator" ;
-    spo:charges spo:battery .
+    spo:output_a "60"^^xsd:integer ;
+    spo:voltage_v "28"^^xsd:integer ;
+    spo:output_amps "60"^^xsd:integer ;
+    spo:drive "belt" ;
+    spo:charges spo:battery ;
+    spo:hasPart spo:voltageRegulator .
 
 spo:pic a spo:PilotInCommand ;
     rdfs:label "Pilot-in-Command" ;
@@ -643,10 +1381,11 @@ spo:ame a spo:MaintenanceEngineer ;
     spo:references spo:maintManual .
 
 spo:atc a spo:ATC ;
-    rdfs:label "Air Traffic Control" .
+    rdfs:label "Air Traffic Control" ;
+    spo:providesServiceAt spo:EGGD, spo:EGBP, spo:EGBJ, spo:EGFF, spo:EGTE, spo:EGTK, spo:EGHH .
 
 spo:poh a spo:POH ;
-    rdfs:label "POH — C172S" .
+    rdfs:label "POH \u2014 C172S" .
 
 spo:maintManual a spo:MaintenanceManual ;
     rdfs:label "Maintenance Manual" .
@@ -659,41 +1398,1089 @@ spo:ad a spo:AirworthinessDirective ;
 
 spo:flight001 a spo:Flight ;
     rdfs:label "Flight 001" ;
-    spo:departureAerodrome "EGTG" ;
-    spo:destinationAerodrome "EGBJ" ;
+    spo:departureAerodrome "EGGD" ;
+    spo:destinationAerodrome "EGBP" ;
     spo:blockTime_minutes "45"^^xsd:integer ;
+    spo:date "2026-05-20" ;
+    spo:callsign "GECHO" ;
+    spo:flightRules "VFR" ;
+    spo:distance_nm "28"^^xsd:integer ;
+    spo:cruiseAltitude_ft "2500"^^xsd:integer ;
+    spo:flightTime_hours "0.5"^^xsd:decimal ;
     spo:usesAircraft spo:G-ECHO ;
     spo:hasPIC spo:pic ;
+    spo:hasPhase spo:ph_preflight, spo:ph_taxi, spo:ph_takeoff, spo:ph_climb, spo:ph_cruise, spo:ph_descent, spo:ph_approach, spo:ph_landing ;
     spo:handledBy spo:atc ;
-    spo:hasPhase spo:ph_preflight, spo:ph_taxi, spo:ph_takeoff, spo:ph_climb, spo:ph_cruise, spo:ph_descent, spo:ph_approach, spo:ph_landing .
+    spo:departsFrom spo:EGGD ;
+    spo:arrivesAt spo:EGBP .
 
 spo:ph_preflight a spo:Preflight ;
     rdfs:label "Preflight" ;
-    spo:follows spo:ph_taxi .
+    spo:duration_minutes "15"^^xsd:integer ;
+    spo:location "apron" ;
+    spo:fieldElevation_ft "622"^^xsd:integer ;
+    spo:groundspeed_kt "0"^^xsd:integer ;
+    spo:distance_nm "0"^^xsd:integer ;
+    spo:activity "walkaround & cockpit checks" ;
+    spo:fuelState "full tanks" ;
+    spo:follows spo:ph_taxi ;
+    spo:occursAt spo:EGGD .
 
 spo:ph_taxi a spo:Taxi ;
     rdfs:label "Taxi" ;
-    spo:follows spo:ph_takeoff .
+    spo:duration_minutes "5"^^xsd:integer ;
+    spo:groundspeed_kt "10"^^xsd:integer ;
+    spo:fieldElevation_ft "622"^^xsd:integer ;
+    spo:distance_nm "0.8"^^xsd:decimal ;
+    spo:route "apron to holding point" ;
+    spo:follows spo:ph_takeoff ;
+    spo:occursAt spo:EGGD .
 
 spo:ph_takeoff a spo:Takeoff ;
     rdfs:label "Takeoff" ;
-    spo:follows spo:ph_climb .
+    spo:duration_minutes "1"^^xsd:integer ;
+    spo:rotateSpeed_kt "55"^^xsd:integer ;
+    spo:flapSetting_deg "10"^^xsd:integer ;
+    spo:fieldElevation_ft "622"^^xsd:integer ;
+    spo:departureRunway "09/27" ;
+    spo:liftoffSpeed_kt "56"^^xsd:integer ;
+    spo:groundRoll_m "290"^^xsd:integer ;
+    spo:distance_nm "0.2"^^xsd:decimal ;
+    spo:follows spo:ph_climb ;
+    spo:occursAt spo:EGGD ;
+    spo:usesRunway spo:rwyEGGD27 .
 
 spo:ph_climb a spo:Climb ;
     rdfs:label "Climb" ;
+    spo:duration_minutes "4"^^xsd:integer ;
+    spo:airspeed_kt "74"^^xsd:integer ;
+    spo:climbRate_fpm "700"^^xsd:integer ;
+    spo:targetAltitude_ft "2500"^^xsd:integer ;
+    spo:startAltitude_ft "622"^^xsd:integer ;
+    spo:groundspeed_kt "75"^^xsd:integer ;
+    spo:distance_nm "5.0"^^xsd:decimal ;
+    spo:powerSetting "full throttle" ;
     spo:follows spo:ph_cruise .
 
 spo:ph_cruise a spo:Cruise ;
     rdfs:label "Cruise" ;
+    spo:duration_minutes "20"^^xsd:integer ;
+    spo:altitude_ft "2500"^^xsd:integer ;
+    spo:airspeed_kt "110"^^xsd:integer ;
+    spo:power_pct "65"^^xsd:integer ;
+    spo:trueAirspeed_kt "115"^^xsd:integer ;
+    spo:groundspeed_kt "110"^^xsd:integer ;
+    spo:fuelBurn_gph "8.5"^^xsd:decimal ;
+    spo:distance_nm "36.7"^^xsd:decimal ;
     spo:follows spo:ph_descent .
 
 spo:ph_descent a spo:Descent ;
     rdfs:label "Descent" ;
+    spo:duration_minutes "6"^^xsd:integer ;
+    spo:airspeed_kt "110"^^xsd:integer ;
+    spo:descentRate_fpm "500"^^xsd:integer ;
+    spo:startAltitude_ft "2500"^^xsd:integer ;
+    spo:targetAltitude_ft "1433"^^xsd:integer ;
+    spo:groundspeed_kt "120"^^xsd:integer ;
+    spo:distance_nm "12.0"^^xsd:decimal ;
     spo:follows spo:ph_approach .
 
 spo:ph_approach a spo:Approach ;
     rdfs:label "Approach" ;
-    spo:follows spo:ph_landing .
+    spo:duration_minutes "5"^^xsd:integer ;
+    spo:airspeed_kt "65"^^xsd:integer ;
+    spo:flapSetting_deg "30"^^xsd:integer ;
+    spo:patternAltitude_ft "1433"^^xsd:integer ;
+    spo:glidepath_deg "3"^^xsd:integer ;
+    spo:groundspeed_kt "70"^^xsd:integer ;
+    spo:distance_nm "5.8"^^xsd:decimal ;
+    spo:arrivalRunway "08/26" ;
+    spo:follows spo:ph_landing ;
+    spo:occursAt spo:EGBP .
 
 spo:ph_landing a spo:Landing ;
-    rdfs:label "Landing" .
+    rdfs:label "Landing" ;
+    spo:duration_minutes "1"^^xsd:integer ;
+    spo:touchdownSpeed_kt "55"^^xsd:integer ;
+    spo:flapSetting_deg "30"^^xsd:integer ;
+    spo:fieldElevation_ft "433"^^xsd:integer ;
+    spo:arrivalRunway "08/26" ;
+    spo:groundRoll_m "175"^^xsd:integer ;
+    spo:distance_nm "0.3"^^xsd:decimal ;
+    spo:occursAt spo:EGBP ;
+    spo:usesRunway spo:rwyEGBP08 .
+
+spo:magLeft a spo:Magneto ;
+    rdfs:label "Left Magneto" ;
+    spo:type "Slick" ;
+    spo:model "Slick 4370" ;
+    spo:providesIgnitionTo spo:io360 ;
+    spo:fires spo:sparkPlugs .
+
+spo:magRight a spo:Magneto ;
+    rdfs:label "Right Magneto" ;
+    spo:type "Slick" ;
+    spo:model "Slick 4371" ;
+    spo:providesIgnitionTo spo:io360 ;
+    spo:fires spo:sparkPlugs .
+
+spo:starter a spo:Starter ;
+    rdfs:label "Starter Motor" ;
+    spo:type "lightweight electric" ;
+    spo:voltage_v "24"^^xsd:integer ;
+    spo:poweredBy spo:electrical .
+
+spo:oilSystem a spo:OilSystem ;
+    rdfs:label "Oil System" ;
+    spo:capacity_qt "8"^^xsd:integer ;
+    spo:sumpType "wet sump" ;
+    spo:minForFlight_qt "2"^^xsd:integer ;
+    spo:hasPart spo:oilCooler, spo:oilFilter .
+
+spo:engFuelPump a spo:FuelPump ;
+    rdfs:label "Engine Fuel Pump" ;
+    spo:driven "engine" ;
+    spo:feeds spo:fuelServo .
+
+spo:auxFuelPump a spo:FuelPump ;
+    rdfs:label "Aux Fuel Pump" ;
+    spo:driven "electric" ;
+    spo:poweredBy spo:electrical ;
+    spo:feeds spo:fuelServo .
+
+spo:elevatorTrim a spo:TrimTab ;
+    rdfs:label "Elevator Trim" .
+
+spo:flapMotor a spo:FlapActuator ;
+    rdfs:label "Flap Motor" ;
+    spo:type "electric" ;
+    spo:poweredBy spo:electrical ;
+    spo:actuates spo:flaps .
+
+spo:stallWarner a spo:StallWarning ;
+    rdfs:label "Stall Warning" ;
+    spo:type "pneumatic reed horn" .
+
+spo:adc a spo:AirDataComputer ;
+    rdfs:label "Air Data Computer (ADC)" ;
+    spo:model "Garmin GDC 74A" ;
+    spo:partNumber "011-00882-20" ;
+    spo:poweredBy spo:electrical ;
+    spo:feeds spo:g1000 .
+
+spo:ahrs a spo:AHRS ;
+    rdfs:label "AHRS" ;
+    spo:model "Garmin GRS 77" ;
+    spo:partNumber "011-00779-10" ;
+    spo:poweredBy spo:electrical ;
+    spo:feeds spo:g1000, spo:ai .
+
+spo:pitotStatic a spo:PitotStaticSystem ;
+    rdfs:label "Pitot-Static" ;
+    spo:hasComponent spo:pitotHeat ;
+    spo:feeds spo:adc, spo:asi, spo:altimeter .
+
+spo:pitotHeat a spo:PitotHeat ;
+    rdfs:label "Pitot Heat" ;
+    spo:poweredBy spo:electrical .
+
+spo:landingLight a spo:Light ;
+    rdfs:label "Landing Light" .
+
+spo:navLights a spo:Light ;
+    rdfs:label "Nav/Strobe Lights" .
+
+spo:EGGD a spo:Airport ;
+    rdfs:label "Bristol" ;
+    spo:icao "EGGD" ;
+    spo:iata "BRS" ;
+    spo:elevation_ft "622"^^xsd:integer ;
+    spo:hasRunway spo:rwyEGGD27 .
+
+spo:EGBP a spo:Airport ;
+    rdfs:label "Cotswold Airport" ;
+    spo:icao "EGBP" ;
+    spo:elevation_ft "433"^^xsd:integer ;
+    spo:hasRunway spo:rwyEGBP08 .
+
+spo:rwyEGGD27 a spo:Runway ;
+    rdfs:label "EGGD RWY 09/27" ;
+    spo:designator "09/27" ;
+    spo:length_m "2011"^^xsd:integer ;
+    spo:surface "Asphalt" .
+
+spo:rwyEGBP08 a spo:Runway ;
+    rdfs:label "EGBP RWY 08/26" ;
+    spo:designator "08/26" ;
+    spo:length_m "2000"^^xsd:integer ;
+    spo:surface "Asphalt" .
+
+spo:brakeDisc a spo:BrakeDisc ;
+    rdfs:label "Brake Disc" ;
+    spo:manufacturer "Cleveland" ;
+    spo:mountedOn spo:mainWheel .
+
+spo:brakeCaliper a spo:BrakeCaliper ;
+    rdfs:label "Brake Caliper" ;
+    spo:model "Cleveland 30-63" ;
+    spo:pistons "1"^^xsd:integer ;
+    spo:clamps spo:brakeDisc .
+
+spo:brakeLining a spo:BrakeLining ;
+    rdfs:label "Brake Linings" ;
+    spo:model "Cleveland 66-105" ;
+    spo:fittedTo spo:brakeCaliper .
+
+spo:brakeMasterCyl a spo:MasterCylinder ;
+    rdfs:label "Brake Master Cylinders" ;
+    spo:type "toe-operated" ;
+    spo:actuates spo:brakeCaliper .
+
+spo:mainWheel a spo:Wheel ;
+    rdfs:label "Main Wheel" ;
+    spo:model "Cleveland 40-86A" ;
+    spo:type "split" ;
+    spo:hasPart spo:mainTyre .
+
+spo:mainTyre a spo:Tyre ;
+    rdfs:label "Main Tyre" ;
+    spo:size "6.00-6" ;
+    spo:ply "6"^^xsd:integer .
+
+spo:noseTyre a spo:Tyre ;
+    rdfs:label "Nose Tyre" ;
+    spo:size "5.00-5" ;
+    spo:ply "6"^^xsd:integer .
+
+spo:propBlade1 a spo:PropellerBlade ;
+    rdfs:label "Prop Blade 1" .
+
+spo:propBlade2 a spo:PropellerBlade ;
+    rdfs:label "Prop Blade 2" .
+
+spo:spinner a spo:Spinner ;
+    rdfs:label "Spinner" .
+
+spo:cyl1 a spo:Cylinder ;
+    rdfs:label "Cylinder 1" .
+
+spo:cyl2 a spo:Cylinder ;
+    rdfs:label "Cylinder 2" .
+
+spo:cyl3 a spo:Cylinder ;
+    rdfs:label "Cylinder 3" .
+
+spo:cyl4 a spo:Cylinder ;
+    rdfs:label "Cylinder 4" .
+
+spo:sparkPlugs a spo:SparkPlug ;
+    rdfs:label "Spark Plugs" ;
+    spo:count "8"^^xsd:integer ;
+    spo:perCylinder "2"^^xsd:integer ;
+    spo:model "Champion REM40E" .
+
+spo:mfd a spo:MultiFunctionDisplay ;
+    rdfs:label "G1000 MFD" ;
+    spo:model "Garmin GDU 1044B" ;
+    spo:partNumber "011-01023-00" ;
+    spo:display_in "10.4"^^xsd:decimal ;
+    spo:function "engine data, map, flight planning" .
+
+spo:audioPanel a spo:AudioPanel ;
+    rdfs:label "Audio Panel" ;
+    spo:model "Garmin GMA 1347" ;
+    spo:partNumber "011-01070-00" ;
+    spo:features "intercom, marker beacon" .
+
+spo:gia1 a spo:IntegratedAvionicsUnit ;
+    rdfs:label "GIA 63 #1" ;
+    spo:model "Garmin GIA 63W" ;
+    spo:partNumber "011-01034-00" ;
+    spo:function "COM/NAV/GPS/glideslope" ;
+    spo:feeds spo:g1000 .
+
+spo:gia2 a spo:IntegratedAvionicsUnit ;
+    rdfs:label "GIA 63 #2" ;
+    spo:model "Garmin GIA 63W" ;
+    spo:partNumber "011-01034-00" ;
+    spo:function "COM/NAV/GPS/glideslope" ;
+    spo:feeds spo:mfd .
+
+spo:gea71 a spo:EngineAirframeUnit ;
+    rdfs:label "GEA 71" ;
+    spo:model "Garmin GEA 71" ;
+    spo:partNumber "011-00942-00" ;
+    spo:function "engine/airframe sensor interface" ;
+    spo:feeds spo:mfd .
+
+spo:gmu44 a spo:Magnetometer ;
+    rdfs:label "GMU 44 Magnetometer" ;
+    spo:model "Garmin GMU 44" ;
+    spo:partNumber "011-00861-00" ;
+    spo:location "left wing" ;
+    spo:feeds spo:ahrs .
+
+spo:elt a spo:EmergencyLocatorTransmitter ;
+    rdfs:label "ELT" ;
+    spo:model "Artex ELT 345" ;
+    spo:frequency_mhz "406"^^xsd:integer ;
+    spo:batteryType "lithium" .
+
+spo:oilCooler a spo:OilCooler ;
+    rdfs:label "Oil Cooler" ;
+    spo:type "air-cooled, firewall-mounted" .
+
+spo:oilFilter a spo:OilFilter ;
+    rdfs:label "Oil Filter" ;
+    spo:model "Champion CH48108-1" ;
+    spo:type "full-flow spin-on" .
+
+spo:inductionFilter a spo:AirFilter ;
+    rdfs:label "Induction Air Filter" ;
+    spo:model "Brackett BA-6110" ;
+    spo:type "foam element" .
+
+spo:alternateAir a spo:AlternateAirDoor ;
+    rdfs:label "Alternate Air Door" ;
+    spo:function "bypass induction air on filter blockage" .
+
+spo:flowDivider a spo:FuelManifold ;
+    rdfs:label "Fuel Flow Divider" ;
+    spo:type "spider manifold" ;
+    spo:location "top of engine" ;
+    spo:hasPart spo:injectors ;
+    spo:feeds spo:injectors .
+
+spo:injectors a spo:FuelInjector ;
+    rdfs:label "Injector Nozzles" ;
+    spo:count "4"^^xsd:integer ;
+    spo:type "air-bleed nozzle, one per cylinder" .
+
+spo:gascolator a spo:FuelStrainer ;
+    rdfs:label "Gascolator" ;
+    spo:function "fuel strainer/sediment bowl" ;
+    spo:location "firewall low point" ;
+    spo:feeds spo:engFuelPump .
+
+spo:fuelVents a spo:FuelVent ;
+    rdfs:label "Fuel Vents" ;
+    spo:type "left tank vent + crossover" ;
+    spo:function "tank pressure equalisation" .
+
+spo:masterSwitch a spo:MasterSwitch ;
+    rdfs:label "Master Switch" ;
+    spo:type "split rocker (BAT/ALT)" ;
+    spo:controls spo:battery .
+
+spo:voltageRegulator a spo:VoltageRegulator ;
+    rdfs:label "Voltage Regulator" ;
+    spo:type "solid-state, over-voltage protected" ;
+    spo:regulated_v "28"^^xsd:integer .
+
+spo:busbar a spo:Busbar ;
+    rdfs:label "Bus Bars" ;
+    spo:type "main bus + avionics bus" ;
+    spo:poweredBy spo:battery .
+
+spo:circuitBreakers a spo:CircuitBreaker ;
+    rdfs:label "Circuit Breakers" ;
+    spo:type "push-to-reset panel" .
+
+spo:ammeter a spo:Ammeter ;
+    rdfs:label "Ammeter" ;
+    spo:function "battery charge/discharge indication" ;
+    spo:display "G1000 MFD" .
+
+spo:noseStrut a spo:OleoStrut ;
+    rdfs:label "Nose Strut" ;
+    spo:type "oleo-pneumatic (air/oil)" .
+
+spo:mainStrut a spo:GearLeg ;
+    rdfs:label "Main Gear Legs" ;
+    spo:type "tubular spring-steel" ;
+    spo:material "chrome-vanadium steel" .
+
+spo:wheelFairing a spo:WheelFairing ;
+    rdfs:label "Wheel Fairings" ;
+    spo:aka "speed fairings / spats" ;
+    spo:material "composite" .
+
+spo:noseFork a spo:NoseFork ;
+    rdfs:label "Nose Fork" ;
+    spo:function "steerable fork with shimmy damper" .
+
+spo:leftDoor a spo:CabinDoor ;
+    rdfs:label "Left Cabin Door" ;
+    spo:material "aluminium" .
+
+spo:rightDoor a spo:CabinDoor ;
+    rdfs:label "Right Cabin Door" ;
+    spo:material "aluminium" .
+
+spo:windscreen a spo:Windscreen ;
+    rdfs:label "Windscreen" ;
+    spo:material "acrylic" ;
+    spo:type "one-piece wraparound" .
+
+spo:baggageBay a spo:BaggageCompartment ;
+    rdfs:label "Baggage Compartment" ;
+    spo:maxLoad_lb "120"^^xsd:integer .
+
+spo:seats a spo:Seat ;
+    rdfs:label "Seats" ;
+    spo:count "4"^^xsd:integer ;
+    spo:config "2 front adjustable + rear bench" .
+
+spo:leftWingStrut a spo:LiftStrut ;
+    rdfs:label "Left Lift Strut" ;
+    spo:type "single streamlined strut" ;
+    spo:material "steel" .
+
+spo:rightWingStrut a spo:LiftStrut ;
+    rdfs:label "Right Lift Strut" ;
+    spo:type "single streamlined strut" ;
+    spo:material "steel" .
+
+spo:EGBJ a spo:Airport ;
+    rdfs:label "Gloucestershire" ;
+    spo:icao "EGBJ" ;
+    spo:elevation_ft "101"^^xsd:integer ;
+    spo:latitude "51.8942"^^xsd:decimal ;
+    spo:longitude "-2.1672"^^xsd:decimal ;
+    spo:hasRunway spo:rwyEGBJ09 .
+
+spo:rwyEGBJ09 a spo:Runway ;
+    rdfs:label "EGBJ RWY 09/27" ;
+    spo:designator "09/27" ;
+    spo:length_m "1379"^^xsd:integer ;
+    spo:surface "Asphalt" .
+
+spo:EGFF a spo:Airport ;
+    rdfs:label "Cardiff" ;
+    spo:icao "EGFF" ;
+    spo:elevation_ft "220"^^xsd:integer ;
+    spo:latitude "51.3967"^^xsd:decimal ;
+    spo:longitude "-3.3433"^^xsd:decimal ;
+    spo:iata "CWL" ;
+    spo:hasRunway spo:rwyEGFF12 .
+
+spo:rwyEGFF12 a spo:Runway ;
+    rdfs:label "EGFF RWY 12/30" ;
+    spo:designator "12/30" ;
+    spo:length_m "2400"^^xsd:integer ;
+    spo:surface "Asphalt" .
+
+spo:EGTE a spo:Airport ;
+    rdfs:label "Exeter" ;
+    spo:icao "EGTE" ;
+    spo:elevation_ft "102"^^xsd:integer ;
+    spo:latitude "50.7344"^^xsd:decimal ;
+    spo:longitude "-3.4139"^^xsd:decimal ;
+    spo:iata "EXT" ;
+    spo:hasRunway spo:rwyEGTE08 .
+
+spo:rwyEGTE08 a spo:Runway ;
+    rdfs:label "EGTE RWY 08/26" ;
+    spo:designator "08/26" ;
+    spo:length_m "2034"^^xsd:integer ;
+    spo:surface "Asphalt" .
+
+spo:EGTK a spo:Airport ;
+    rdfs:label "Oxford (Kidlington)" ;
+    spo:icao "EGTK" ;
+    spo:elevation_ft "270"^^xsd:integer ;
+    spo:latitude "51.8369"^^xsd:decimal ;
+    spo:longitude "-1.32"^^xsd:decimal ;
+    spo:iata "OXF" ;
+    spo:hasRunway spo:rwyEGTK01 .
+
+spo:rwyEGTK01 a spo:Runway ;
+    rdfs:label "EGTK RWY 01/19" ;
+    spo:designator "01/19" ;
+    spo:length_m "1682"^^xsd:integer ;
+    spo:surface "Asphalt" .
+
+spo:EGHH a spo:Airport ;
+    rdfs:label "Bournemouth" ;
+    spo:icao "EGHH" ;
+    spo:elevation_ft "38"^^xsd:integer ;
+    spo:latitude "50.7794"^^xsd:decimal ;
+    spo:longitude "-1.8425"^^xsd:decimal ;
+    spo:iata "BOH" ;
+    spo:hasRunway spo:rwyEGHH08 .
+
+spo:rwyEGHH08 a spo:Runway ;
+    rdfs:label "EGHH RWY 08/26" ;
+    spo:designator "08/26" ;
+    spo:length_m "2268"^^xsd:integer ;
+    spo:surface "Asphalt" .
+
+spo:flight002 a spo:Flight ;
+    rdfs:label "Flight 002" ;
+    spo:departureAerodrome "EGBP" ;
+    spo:destinationAerodrome "EGBJ" ;
+    spo:date "2026-05-22" ;
+    spo:callsign "GECHO" ;
+    spo:flightRules "VFR" ;
+    spo:distance_nm "14"^^xsd:integer ;
+    spo:flightTime_hours "0.3"^^xsd:decimal ;
+    spo:blockTime_minutes "33"^^xsd:integer ;
+    spo:cruiseAltitude_ft "2200"^^xsd:integer ;
+    spo:usesAircraft spo:G-ECHO ;
+    spo:hasPIC spo:pic ;
+    spo:handledBy spo:atc ;
+    spo:departsFrom spo:EGBP ;
+    spo:arrivesAt spo:EGBJ ;
+    spo:hasPhase spo:ph_002_preflight, spo:ph_002_taxi, spo:ph_002_takeoff, spo:ph_002_climb, spo:ph_002_cruise, spo:ph_002_descent, spo:ph_002_approach, spo:ph_002_landing .
+
+spo:flight003 a spo:Flight ;
+    rdfs:label "Flight 003" ;
+    spo:departureAerodrome "EGGD" ;
+    spo:destinationAerodrome "EGFF" ;
+    spo:date "2026-05-25" ;
+    spo:callsign "GECHO" ;
+    spo:flightRules "VFR" ;
+    spo:distance_nm "23"^^xsd:integer ;
+    spo:flightTime_hours "0.4"^^xsd:decimal ;
+    spo:blockTime_minutes "39"^^xsd:integer ;
+    spo:cruiseAltitude_ft "2000"^^xsd:integer ;
+    spo:usesAircraft spo:G-ECHO ;
+    spo:hasPIC spo:pic ;
+    spo:handledBy spo:atc ;
+    spo:departsFrom spo:EGGD ;
+    spo:arrivesAt spo:EGFF ;
+    spo:hasPhase spo:ph_003_preflight, spo:ph_003_taxi, spo:ph_003_takeoff, spo:ph_003_climb, spo:ph_003_cruise, spo:ph_003_descent, spo:ph_003_approach, spo:ph_003_landing .
+
+spo:flight004 a spo:Flight ;
+    rdfs:label "Flight 004" ;
+    spo:departureAerodrome "EGGD" ;
+    spo:destinationAerodrome "EGTE" ;
+    spo:date "2026-05-28" ;
+    spo:callsign "GECHO" ;
+    spo:flightRules "VFR" ;
+    spo:distance_nm "47"^^xsd:integer ;
+    spo:flightTime_hours "0.6"^^xsd:decimal ;
+    spo:blockTime_minutes "51"^^xsd:integer ;
+    spo:cruiseAltitude_ft "3500"^^xsd:integer ;
+    spo:usesAircraft spo:G-ECHO ;
+    spo:hasPIC spo:pic ;
+    spo:handledBy spo:atc ;
+    spo:departsFrom spo:EGGD ;
+    spo:arrivesAt spo:EGTE ;
+    spo:hasPhase spo:ph_004_preflight, spo:ph_004_taxi, spo:ph_004_takeoff, spo:ph_004_climb, spo:ph_004_cruise, spo:ph_004_descent, spo:ph_004_approach, spo:ph_004_landing .
+
+spo:flight005 a spo:Flight ;
+    rdfs:label "Flight 005" ;
+    spo:departureAerodrome "EGBP" ;
+    spo:destinationAerodrome "EGTK" ;
+    spo:date "2026-06-01" ;
+    spo:callsign "GECHO" ;
+    spo:flightRules "VFR" ;
+    spo:distance_nm "29"^^xsd:integer ;
+    spo:flightTime_hours "0.5"^^xsd:decimal ;
+    spo:blockTime_minutes "45"^^xsd:integer ;
+    spo:cruiseAltitude_ft "2500"^^xsd:integer ;
+    spo:usesAircraft spo:G-ECHO ;
+    spo:hasPIC spo:pic ;
+    spo:handledBy spo:atc ;
+    spo:departsFrom spo:EGBP ;
+    spo:arrivesAt spo:EGTK ;
+    spo:hasPhase spo:ph_005_preflight, spo:ph_005_taxi, spo:ph_005_takeoff, spo:ph_005_climb, spo:ph_005_cruise, spo:ph_005_descent, spo:ph_005_approach, spo:ph_005_landing .
+
+spo:flight006 a spo:Flight ;
+    rdfs:label "Flight 006" ;
+    spo:departureAerodrome "EGGD" ;
+    spo:destinationAerodrome "EGHH" ;
+    spo:date "2026-06-04" ;
+    spo:callsign "GECHO" ;
+    spo:flightRules "VFR" ;
+    spo:distance_nm "49"^^xsd:integer ;
+    spo:flightTime_hours "0.7"^^xsd:decimal ;
+    spo:blockTime_minutes "57"^^xsd:integer ;
+    spo:cruiseAltitude_ft "3000"^^xsd:integer ;
+    spo:usesAircraft spo:G-ECHO ;
+    spo:hasPIC spo:pic ;
+    spo:handledBy spo:atc ;
+    spo:departsFrom spo:EGGD ;
+    spo:arrivesAt spo:EGHH ;
+    spo:hasPhase spo:ph_006_preflight, spo:ph_006_taxi, spo:ph_006_takeoff, spo:ph_006_climb, spo:ph_006_cruise, spo:ph_006_descent, spo:ph_006_approach, spo:ph_006_landing .
+
+spo:ph_002_preflight a spo:Preflight ;
+    rdfs:label "Preflight" ;
+    spo:duration_minutes "15"^^xsd:integer ;
+    spo:location "apron" ;
+    spo:fieldElevation_ft "433"^^xsd:integer ;
+    spo:groundspeed_kt "0"^^xsd:integer ;
+    spo:distance_nm "0"^^xsd:integer ;
+    spo:activity "walkaround & cockpit checks" ;
+    spo:fuelState "full tanks" ;
+    spo:follows spo:ph_002_taxi ;
+    spo:occursAt spo:EGBP .
+
+spo:ph_002_taxi a spo:Taxi ;
+    rdfs:label "Taxi" ;
+    spo:duration_minutes "5"^^xsd:integer ;
+    spo:groundspeed_kt "10"^^xsd:integer ;
+    spo:fieldElevation_ft "433"^^xsd:integer ;
+    spo:distance_nm "0.8"^^xsd:decimal ;
+    spo:route "apron to holding point" ;
+    spo:follows spo:ph_002_takeoff ;
+    spo:occursAt spo:EGBP .
+
+spo:ph_002_takeoff a spo:Takeoff ;
+    rdfs:label "Takeoff" ;
+    spo:duration_minutes "1"^^xsd:integer ;
+    spo:rotateSpeed_kt "55"^^xsd:integer ;
+    spo:flapSetting_deg "10"^^xsd:integer ;
+    spo:fieldElevation_ft "433"^^xsd:integer ;
+    spo:departureRunway "08/26" ;
+    spo:liftoffSpeed_kt "56"^^xsd:integer ;
+    spo:groundRoll_m "290"^^xsd:integer ;
+    spo:distance_nm "0.2"^^xsd:decimal ;
+    spo:follows spo:ph_002_climb ;
+    spo:occursAt spo:EGBP ;
+    spo:usesRunway spo:rwyEGBP08 .
+
+spo:ph_002_climb a spo:Climb ;
+    rdfs:label "Climb" ;
+    spo:duration_minutes "4"^^xsd:integer ;
+    spo:airspeed_kt "74"^^xsd:integer ;
+    spo:climbRate_fpm "700"^^xsd:integer ;
+    spo:targetAltitude_ft "2200"^^xsd:integer ;
+    spo:startAltitude_ft "433"^^xsd:integer ;
+    spo:groundspeed_kt "75"^^xsd:integer ;
+    spo:distance_nm "5.0"^^xsd:decimal ;
+    spo:powerSetting "full throttle" ;
+    spo:follows spo:ph_002_cruise .
+
+spo:ph_002_cruise a spo:Cruise ;
+    rdfs:label "Cruise" ;
+    spo:duration_minutes "3"^^xsd:integer ;
+    spo:altitude_ft "2200"^^xsd:integer ;
+    spo:airspeed_kt "110"^^xsd:integer ;
+    spo:power_pct "65"^^xsd:integer ;
+    spo:trueAirspeed_kt "115"^^xsd:integer ;
+    spo:groundspeed_kt "110"^^xsd:integer ;
+    spo:fuelBurn_gph "8.5"^^xsd:decimal ;
+    spo:distance_nm "5.5"^^xsd:decimal ;
+    spo:follows spo:ph_002_descent .
+
+spo:ph_002_descent a spo:Descent ;
+    rdfs:label "Descent" ;
+    spo:duration_minutes "6"^^xsd:integer ;
+    spo:airspeed_kt "110"^^xsd:integer ;
+    spo:descentRate_fpm "500"^^xsd:integer ;
+    spo:startAltitude_ft "2200"^^xsd:integer ;
+    spo:targetAltitude_ft "1101"^^xsd:integer ;
+    spo:groundspeed_kt "120"^^xsd:integer ;
+    spo:distance_nm "12.0"^^xsd:decimal ;
+    spo:follows spo:ph_002_approach .
+
+spo:ph_002_approach a spo:Approach ;
+    rdfs:label "Approach" ;
+    spo:duration_minutes "5"^^xsd:integer ;
+    spo:airspeed_kt "65"^^xsd:integer ;
+    spo:flapSetting_deg "30"^^xsd:integer ;
+    spo:patternAltitude_ft "1101"^^xsd:integer ;
+    spo:glidepath_deg "3"^^xsd:integer ;
+    spo:groundspeed_kt "70"^^xsd:integer ;
+    spo:distance_nm "5.8"^^xsd:decimal ;
+    spo:arrivalRunway "09/27" ;
+    spo:follows spo:ph_002_landing ;
+    spo:occursAt spo:EGBJ .
+
+spo:ph_002_landing a spo:Landing ;
+    rdfs:label "Landing" ;
+    spo:duration_minutes "1"^^xsd:integer ;
+    spo:touchdownSpeed_kt "55"^^xsd:integer ;
+    spo:flapSetting_deg "30"^^xsd:integer ;
+    spo:fieldElevation_ft "101"^^xsd:integer ;
+    spo:arrivalRunway "09/27" ;
+    spo:groundRoll_m "175"^^xsd:integer ;
+    spo:distance_nm "0.3"^^xsd:decimal ;
+    spo:occursAt spo:EGBJ ;
+    spo:usesRunway spo:rwyEGBJ09 .
+
+spo:ph_003_preflight a spo:Preflight ;
+    rdfs:label "Preflight" ;
+    spo:duration_minutes "15"^^xsd:integer ;
+    spo:location "apron" ;
+    spo:fieldElevation_ft "622"^^xsd:integer ;
+    spo:groundspeed_kt "0"^^xsd:integer ;
+    spo:distance_nm "0"^^xsd:integer ;
+    spo:activity "walkaround & cockpit checks" ;
+    spo:fuelState "full tanks" ;
+    spo:follows spo:ph_003_taxi ;
+    spo:occursAt spo:EGGD .
+
+spo:ph_003_taxi a spo:Taxi ;
+    rdfs:label "Taxi" ;
+    spo:duration_minutes "5"^^xsd:integer ;
+    spo:groundspeed_kt "10"^^xsd:integer ;
+    spo:fieldElevation_ft "622"^^xsd:integer ;
+    spo:distance_nm "0.8"^^xsd:decimal ;
+    spo:route "apron to holding point" ;
+    spo:follows spo:ph_003_takeoff ;
+    spo:occursAt spo:EGGD .
+
+spo:ph_003_takeoff a spo:Takeoff ;
+    rdfs:label "Takeoff" ;
+    spo:duration_minutes "1"^^xsd:integer ;
+    spo:rotateSpeed_kt "55"^^xsd:integer ;
+    spo:flapSetting_deg "10"^^xsd:integer ;
+    spo:fieldElevation_ft "622"^^xsd:integer ;
+    spo:departureRunway "09/27" ;
+    spo:liftoffSpeed_kt "56"^^xsd:integer ;
+    spo:groundRoll_m "290"^^xsd:integer ;
+    spo:distance_nm "0.2"^^xsd:decimal ;
+    spo:follows spo:ph_003_climb ;
+    spo:occursAt spo:EGGD ;
+    spo:usesRunway spo:rwyEGGD27 .
+
+spo:ph_003_climb a spo:Climb ;
+    rdfs:label "Climb" ;
+    spo:duration_minutes "4"^^xsd:integer ;
+    spo:airspeed_kt "74"^^xsd:integer ;
+    spo:climbRate_fpm "700"^^xsd:integer ;
+    spo:targetAltitude_ft "2000"^^xsd:integer ;
+    spo:startAltitude_ft "622"^^xsd:integer ;
+    spo:groundspeed_kt "75"^^xsd:integer ;
+    spo:distance_nm "5.0"^^xsd:decimal ;
+    spo:powerSetting "full throttle" ;
+    spo:follows spo:ph_003_cruise .
+
+spo:ph_003_cruise a spo:Cruise ;
+    rdfs:label "Cruise" ;
+    spo:duration_minutes "7"^^xsd:integer ;
+    spo:altitude_ft "2000"^^xsd:integer ;
+    spo:airspeed_kt "110"^^xsd:integer ;
+    spo:power_pct "65"^^xsd:integer ;
+    spo:trueAirspeed_kt "115"^^xsd:integer ;
+    spo:groundspeed_kt "110"^^xsd:integer ;
+    spo:fuelBurn_gph "8.5"^^xsd:decimal ;
+    spo:distance_nm "12.8"^^xsd:decimal ;
+    spo:follows spo:ph_003_descent .
+
+spo:ph_003_descent a spo:Descent ;
+    rdfs:label "Descent" ;
+    spo:duration_minutes "6"^^xsd:integer ;
+    spo:airspeed_kt "110"^^xsd:integer ;
+    spo:descentRate_fpm "500"^^xsd:integer ;
+    spo:startAltitude_ft "2000"^^xsd:integer ;
+    spo:targetAltitude_ft "1220"^^xsd:integer ;
+    spo:groundspeed_kt "120"^^xsd:integer ;
+    spo:distance_nm "12.0"^^xsd:decimal ;
+    spo:follows spo:ph_003_approach .
+
+spo:ph_003_approach a spo:Approach ;
+    rdfs:label "Approach" ;
+    spo:duration_minutes "5"^^xsd:integer ;
+    spo:airspeed_kt "65"^^xsd:integer ;
+    spo:flapSetting_deg "30"^^xsd:integer ;
+    spo:patternAltitude_ft "1220"^^xsd:integer ;
+    spo:glidepath_deg "3"^^xsd:integer ;
+    spo:groundspeed_kt "70"^^xsd:integer ;
+    spo:distance_nm "5.8"^^xsd:decimal ;
+    spo:arrivalRunway "12/30" ;
+    spo:follows spo:ph_003_landing ;
+    spo:occursAt spo:EGFF .
+
+spo:ph_003_landing a spo:Landing ;
+    rdfs:label "Landing" ;
+    spo:duration_minutes "1"^^xsd:integer ;
+    spo:touchdownSpeed_kt "55"^^xsd:integer ;
+    spo:flapSetting_deg "30"^^xsd:integer ;
+    spo:fieldElevation_ft "220"^^xsd:integer ;
+    spo:arrivalRunway "12/30" ;
+    spo:groundRoll_m "175"^^xsd:integer ;
+    spo:distance_nm "0.3"^^xsd:decimal ;
+    spo:occursAt spo:EGFF ;
+    spo:usesRunway spo:rwyEGFF12 .
+
+spo:ph_004_preflight a spo:Preflight ;
+    rdfs:label "Preflight" ;
+    spo:duration_minutes "15"^^xsd:integer ;
+    spo:location "apron" ;
+    spo:fieldElevation_ft "622"^^xsd:integer ;
+    spo:groundspeed_kt "0"^^xsd:integer ;
+    spo:distance_nm "0"^^xsd:integer ;
+    spo:activity "walkaround & cockpit checks" ;
+    spo:fuelState "full tanks" ;
+    spo:follows spo:ph_004_taxi ;
+    spo:occursAt spo:EGGD .
+
+spo:ph_004_taxi a spo:Taxi ;
+    rdfs:label "Taxi" ;
+    spo:duration_minutes "5"^^xsd:integer ;
+    spo:groundspeed_kt "10"^^xsd:integer ;
+    spo:fieldElevation_ft "622"^^xsd:integer ;
+    spo:distance_nm "0.8"^^xsd:decimal ;
+    spo:route "apron to holding point" ;
+    spo:follows spo:ph_004_takeoff ;
+    spo:occursAt spo:EGGD .
+
+spo:ph_004_takeoff a spo:Takeoff ;
+    rdfs:label "Takeoff" ;
+    spo:duration_minutes "1"^^xsd:integer ;
+    spo:rotateSpeed_kt "55"^^xsd:integer ;
+    spo:flapSetting_deg "10"^^xsd:integer ;
+    spo:fieldElevation_ft "622"^^xsd:integer ;
+    spo:departureRunway "09/27" ;
+    spo:liftoffSpeed_kt "56"^^xsd:integer ;
+    spo:groundRoll_m "290"^^xsd:integer ;
+    spo:distance_nm "0.2"^^xsd:decimal ;
+    spo:follows spo:ph_004_climb ;
+    spo:occursAt spo:EGGD ;
+    spo:usesRunway spo:rwyEGGD27 .
+
+spo:ph_004_climb a spo:Climb ;
+    rdfs:label "Climb" ;
+    spo:duration_minutes "4"^^xsd:integer ;
+    spo:airspeed_kt "74"^^xsd:integer ;
+    spo:climbRate_fpm "700"^^xsd:integer ;
+    spo:targetAltitude_ft "3500"^^xsd:integer ;
+    spo:startAltitude_ft "622"^^xsd:integer ;
+    spo:groundspeed_kt "75"^^xsd:integer ;
+    spo:distance_nm "5.0"^^xsd:decimal ;
+    spo:powerSetting "full throttle" ;
+    spo:follows spo:ph_004_cruise .
+
+spo:ph_004_cruise a spo:Cruise ;
+    rdfs:label "Cruise" ;
+    spo:duration_minutes "19"^^xsd:integer ;
+    spo:altitude_ft "3500"^^xsd:integer ;
+    spo:airspeed_kt "110"^^xsd:integer ;
+    spo:power_pct "65"^^xsd:integer ;
+    spo:trueAirspeed_kt "115"^^xsd:integer ;
+    spo:groundspeed_kt "110"^^xsd:integer ;
+    spo:fuelBurn_gph "8.5"^^xsd:decimal ;
+    spo:distance_nm "34.8"^^xsd:decimal ;
+    spo:follows spo:ph_004_descent .
+
+spo:ph_004_descent a spo:Descent ;
+    rdfs:label "Descent" ;
+    spo:duration_minutes "6"^^xsd:integer ;
+    spo:airspeed_kt "110"^^xsd:integer ;
+    spo:descentRate_fpm "500"^^xsd:integer ;
+    spo:startAltitude_ft "3500"^^xsd:integer ;
+    spo:targetAltitude_ft "1102"^^xsd:integer ;
+    spo:groundspeed_kt "120"^^xsd:integer ;
+    spo:distance_nm "12.0"^^xsd:decimal ;
+    spo:follows spo:ph_004_approach .
+
+spo:ph_004_approach a spo:Approach ;
+    rdfs:label "Approach" ;
+    spo:duration_minutes "5"^^xsd:integer ;
+    spo:airspeed_kt "65"^^xsd:integer ;
+    spo:flapSetting_deg "30"^^xsd:integer ;
+    spo:patternAltitude_ft "1102"^^xsd:integer ;
+    spo:glidepath_deg "3"^^xsd:integer ;
+    spo:groundspeed_kt "70"^^xsd:integer ;
+    spo:distance_nm "5.8"^^xsd:decimal ;
+    spo:arrivalRunway "08/26" ;
+    spo:follows spo:ph_004_landing ;
+    spo:occursAt spo:EGTE .
+
+spo:ph_004_landing a spo:Landing ;
+    rdfs:label "Landing" ;
+    spo:duration_minutes "1"^^xsd:integer ;
+    spo:touchdownSpeed_kt "55"^^xsd:integer ;
+    spo:flapSetting_deg "30"^^xsd:integer ;
+    spo:fieldElevation_ft "102"^^xsd:integer ;
+    spo:arrivalRunway "08/26" ;
+    spo:groundRoll_m "175"^^xsd:integer ;
+    spo:distance_nm "0.3"^^xsd:decimal ;
+    spo:occursAt spo:EGTE ;
+    spo:usesRunway spo:rwyEGTE08 .
+
+spo:ph_005_preflight a spo:Preflight ;
+    rdfs:label "Preflight" ;
+    spo:duration_minutes "15"^^xsd:integer ;
+    spo:location "apron" ;
+    spo:fieldElevation_ft "433"^^xsd:integer ;
+    spo:groundspeed_kt "0"^^xsd:integer ;
+    spo:distance_nm "0"^^xsd:integer ;
+    spo:activity "walkaround & cockpit checks" ;
+    spo:fuelState "full tanks" ;
+    spo:follows spo:ph_005_taxi ;
+    spo:occursAt spo:EGBP .
+
+spo:ph_005_taxi a spo:Taxi ;
+    rdfs:label "Taxi" ;
+    spo:duration_minutes "5"^^xsd:integer ;
+    spo:groundspeed_kt "10"^^xsd:integer ;
+    spo:fieldElevation_ft "433"^^xsd:integer ;
+    spo:distance_nm "0.8"^^xsd:decimal ;
+    spo:route "apron to holding point" ;
+    spo:follows spo:ph_005_takeoff ;
+    spo:occursAt spo:EGBP .
+
+spo:ph_005_takeoff a spo:Takeoff ;
+    rdfs:label "Takeoff" ;
+    spo:duration_minutes "1"^^xsd:integer ;
+    spo:rotateSpeed_kt "55"^^xsd:integer ;
+    spo:flapSetting_deg "10"^^xsd:integer ;
+    spo:fieldElevation_ft "433"^^xsd:integer ;
+    spo:departureRunway "08/26" ;
+    spo:liftoffSpeed_kt "56"^^xsd:integer ;
+    spo:groundRoll_m "290"^^xsd:integer ;
+    spo:distance_nm "0.2"^^xsd:decimal ;
+    spo:follows spo:ph_005_climb ;
+    spo:occursAt spo:EGBP ;
+    spo:usesRunway spo:rwyEGBP08 .
+
+spo:ph_005_climb a spo:Climb ;
+    rdfs:label "Climb" ;
+    spo:duration_minutes "4"^^xsd:integer ;
+    spo:airspeed_kt "74"^^xsd:integer ;
+    spo:climbRate_fpm "700"^^xsd:integer ;
+    spo:targetAltitude_ft "2500"^^xsd:integer ;
+    spo:startAltitude_ft "433"^^xsd:integer ;
+    spo:groundspeed_kt "75"^^xsd:integer ;
+    spo:distance_nm "5.0"^^xsd:decimal ;
+    spo:powerSetting "full throttle" ;
+    spo:follows spo:ph_005_cruise .
+
+spo:ph_005_cruise a spo:Cruise ;
+    rdfs:label "Cruise" ;
+    spo:duration_minutes "13"^^xsd:integer ;
+    spo:altitude_ft "2500"^^xsd:integer ;
+    spo:airspeed_kt "110"^^xsd:integer ;
+    spo:power_pct "65"^^xsd:integer ;
+    spo:trueAirspeed_kt "115"^^xsd:integer ;
+    spo:groundspeed_kt "110"^^xsd:integer ;
+    spo:fuelBurn_gph "8.5"^^xsd:decimal ;
+    spo:distance_nm "23.8"^^xsd:decimal ;
+    spo:follows spo:ph_005_descent .
+
+spo:ph_005_descent a spo:Descent ;
+    rdfs:label "Descent" ;
+    spo:duration_minutes "6"^^xsd:integer ;
+    spo:airspeed_kt "110"^^xsd:integer ;
+    spo:descentRate_fpm "500"^^xsd:integer ;
+    spo:startAltitude_ft "2500"^^xsd:integer ;
+    spo:targetAltitude_ft "1270"^^xsd:integer ;
+    spo:groundspeed_kt "120"^^xsd:integer ;
+    spo:distance_nm "12.0"^^xsd:decimal ;
+    spo:follows spo:ph_005_approach .
+
+spo:ph_005_approach a spo:Approach ;
+    rdfs:label "Approach" ;
+    spo:duration_minutes "5"^^xsd:integer ;
+    spo:airspeed_kt "65"^^xsd:integer ;
+    spo:flapSetting_deg "30"^^xsd:integer ;
+    spo:patternAltitude_ft "1270"^^xsd:integer ;
+    spo:glidepath_deg "3"^^xsd:integer ;
+    spo:groundspeed_kt "70"^^xsd:integer ;
+    spo:distance_nm "5.8"^^xsd:decimal ;
+    spo:arrivalRunway "01/19" ;
+    spo:follows spo:ph_005_landing ;
+    spo:occursAt spo:EGTK .
+
+spo:ph_005_landing a spo:Landing ;
+    rdfs:label "Landing" ;
+    spo:duration_minutes "1"^^xsd:integer ;
+    spo:touchdownSpeed_kt "55"^^xsd:integer ;
+    spo:flapSetting_deg "30"^^xsd:integer ;
+    spo:fieldElevation_ft "270"^^xsd:integer ;
+    spo:arrivalRunway "01/19" ;
+    spo:groundRoll_m "175"^^xsd:integer ;
+    spo:distance_nm "0.3"^^xsd:decimal ;
+    spo:occursAt spo:EGTK ;
+    spo:usesRunway spo:rwyEGTK01 .
+
+spo:ph_006_preflight a spo:Preflight ;
+    rdfs:label "Preflight" ;
+    spo:duration_minutes "15"^^xsd:integer ;
+    spo:location "apron" ;
+    spo:fieldElevation_ft "622"^^xsd:integer ;
+    spo:groundspeed_kt "0"^^xsd:integer ;
+    spo:distance_nm "0"^^xsd:integer ;
+    spo:activity "walkaround & cockpit checks" ;
+    spo:fuelState "full tanks" ;
+    spo:follows spo:ph_006_taxi ;
+    spo:occursAt spo:EGGD .
+
+spo:ph_006_taxi a spo:Taxi ;
+    rdfs:label "Taxi" ;
+    spo:duration_minutes "5"^^xsd:integer ;
+    spo:groundspeed_kt "10"^^xsd:integer ;
+    spo:fieldElevation_ft "622"^^xsd:integer ;
+    spo:distance_nm "0.8"^^xsd:decimal ;
+    spo:route "apron to holding point" ;
+    spo:follows spo:ph_006_takeoff ;
+    spo:occursAt spo:EGGD .
+
+spo:ph_006_takeoff a spo:Takeoff ;
+    rdfs:label "Takeoff" ;
+    spo:duration_minutes "1"^^xsd:integer ;
+    spo:rotateSpeed_kt "55"^^xsd:integer ;
+    spo:flapSetting_deg "10"^^xsd:integer ;
+    spo:fieldElevation_ft "622"^^xsd:integer ;
+    spo:departureRunway "09/27" ;
+    spo:liftoffSpeed_kt "56"^^xsd:integer ;
+    spo:groundRoll_m "290"^^xsd:integer ;
+    spo:distance_nm "0.2"^^xsd:decimal ;
+    spo:follows spo:ph_006_climb ;
+    spo:occursAt spo:EGGD ;
+    spo:usesRunway spo:rwyEGGD27 .
+
+spo:ph_006_climb a spo:Climb ;
+    rdfs:label "Climb" ;
+    spo:duration_minutes "4"^^xsd:integer ;
+    spo:airspeed_kt "74"^^xsd:integer ;
+    spo:climbRate_fpm "700"^^xsd:integer ;
+    spo:targetAltitude_ft "3000"^^xsd:integer ;
+    spo:startAltitude_ft "622"^^xsd:integer ;
+    spo:groundspeed_kt "75"^^xsd:integer ;
+    spo:distance_nm "5.0"^^xsd:decimal ;
+    spo:powerSetting "full throttle" ;
+    spo:follows spo:ph_006_cruise .
+
+spo:ph_006_cruise a spo:Cruise ;
+    rdfs:label "Cruise" ;
+    spo:duration_minutes "25"^^xsd:integer ;
+    spo:altitude_ft "3000"^^xsd:integer ;
+    spo:airspeed_kt "110"^^xsd:integer ;
+    spo:power_pct "65"^^xsd:integer ;
+    spo:trueAirspeed_kt "115"^^xsd:integer ;
+    spo:groundspeed_kt "110"^^xsd:integer ;
+    spo:fuelBurn_gph "8.5"^^xsd:decimal ;
+    spo:distance_nm "45.8"^^xsd:decimal ;
+    spo:follows spo:ph_006_descent .
+
+spo:ph_006_descent a spo:Descent ;
+    rdfs:label "Descent" ;
+    spo:duration_minutes "6"^^xsd:integer ;
+    spo:airspeed_kt "110"^^xsd:integer ;
+    spo:descentRate_fpm "500"^^xsd:integer ;
+    spo:startAltitude_ft "3000"^^xsd:integer ;
+    spo:targetAltitude_ft "1038"^^xsd:integer ;
+    spo:groundspeed_kt "120"^^xsd:integer ;
+    spo:distance_nm "12.0"^^xsd:decimal ;
+    spo:follows spo:ph_006_approach .
+
+spo:ph_006_approach a spo:Approach ;
+    rdfs:label "Approach" ;
+    spo:duration_minutes "5"^^xsd:integer ;
+    spo:airspeed_kt "65"^^xsd:integer ;
+    spo:flapSetting_deg "30"^^xsd:integer ;
+    spo:patternAltitude_ft "1038"^^xsd:integer ;
+    spo:glidepath_deg "3"^^xsd:integer ;
+    spo:groundspeed_kt "70"^^xsd:integer ;
+    spo:distance_nm "5.8"^^xsd:decimal ;
+    spo:arrivalRunway "08/26" ;
+    spo:follows spo:ph_006_landing ;
+    spo:occursAt spo:EGHH .
+
+spo:ph_006_landing a spo:Landing ;
+    rdfs:label "Landing" ;
+    spo:duration_minutes "1"^^xsd:integer ;
+    spo:touchdownSpeed_kt "55"^^xsd:integer ;
+    spo:flapSetting_deg "30"^^xsd:integer ;
+    spo:fieldElevation_ft "38"^^xsd:integer ;
+    spo:arrivalRunway "08/26" ;
+    spo:groundRoll_m "175"^^xsd:integer ;
+    spo:distance_nm "0.3"^^xsd:decimal ;
+    spo:occursAt spo:EGHH ;
+    spo:usesRunway spo:rwyEGHH08 .

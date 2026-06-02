@@ -5,12 +5,13 @@ import SidebarFilters from './components/SidebarFilters.vue'
 import InfoPanel from './components/InfoPanel.vue'
 import KnowledgeGraph from './components/KnowledgeGraph.vue'
 import { adaptNeo4j, createStyleResolver, presentTypes } from './graph'
-import type { Graph, GraphNode, NodeStyles, RawGraph } from './types'
+import type { Graph, GraphNode, LayoutMode, NodeStyles, RawGraph } from './types'
 
 const graph = ref<Graph>({ nodes: [], links: [] })
 const styles = ref<NodeStyles>({})
 const activeTypes = ref<Set<string>>(new Set())
 const selectedNode = ref<GraphNode | null>(null)
+const layout = ref<LayoutMode>('force')
 const error = ref<string | null>(null)
 
 const graphRef = useTemplateRef<InstanceType<typeof KnowledgeGraph>>('graphRef')
@@ -27,6 +28,16 @@ function toggleType(type: string): void {
 
 function reset(): void {
   graphRef.value?.resetView()
+}
+
+function setLayout(mode: LayoutMode): void {
+  layout.value = mode
+}
+
+// Click a node to focus it; click the same node again (or the background)
+// clears the selection.
+function onNodeSelected(node: GraphNode): void {
+  selectedNode.value = selectedNode.value?.id === node.id ? null : node
 }
 
 // Load optional style overrides. Failure is non-fatal: the resolver falls back
@@ -60,9 +71,13 @@ onMounted(loadGraph)
 </script>
 
 <template>
-  <div class="scan-line"></div>
-
-  <GraphHeader :node-count="graph.nodes.length" :edge-count="graph.links.length" @reset="reset" />
+  <GraphHeader
+    :node-count="graph.nodes.length"
+    :edge-count="graph.links.length"
+    :layout="layout"
+    @reset="reset"
+    @set-layout="setLayout"
+  />
 
   <SidebarFilters
     :types="types"
@@ -78,7 +93,10 @@ onMounted(loadGraph)
     :types="types"
     :active-types="activeTypes"
     :style-for="styleFor"
-    @node-selected="selectedNode = $event"
+    :layout="layout"
+    :selected-id="selectedNode?.id ?? null"
+    @node-selected="onNodeSelected"
+    @background="selectedNode = null"
   />
 
   <InfoPanel
@@ -88,7 +106,9 @@ onMounted(loadGraph)
     @close="selectedNode = null"
   />
 
-  <div class="corner bl">DRAG TO PAN · SCROLL TO ZOOM · CLICK NODE FOR DETAIL</div>
+  <div class="corner bl">
+    DRAG TO PAN · SCROLL TO ZOOM · CLICK NODE TO FOCUS · CLICK AGAIN OR BACKGROUND TO CLEAR
+  </div>
   <div class="corner br">SPO:// v1.0.0</div>
 
   <div v-if="error" class="load-error">{{ error }}</div>

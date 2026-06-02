@@ -1,17 +1,21 @@
 <script setup lang="ts">
+import type { LayoutMode } from '../types'
+
 defineProps<{
   nodeCount: number
   edgeCount: number
+  layout: LayoutMode
 }>()
 
 defineEmits<{
   reset: []
+  'set-layout': [mode: LayoutMode]
 }>()
 </script>
 
 <template>
   <header>
-    <div class="logo">SMALL PLANE <span>// ONTOLOGY</span></div>
+    <div class="logo">ONTOLOGY</div>
     <div class="header-divider"></div>
     <div class="stat-pill">
       NODES <strong>{{ nodeCount }}</strong>
@@ -23,6 +27,22 @@ defineEmits<{
     <div class="header-divider"></div>
     <div class="stat-pill">EXAMPLE <strong>G-ECHO · C172S</strong></div>
     <div class="header-right">
+      <div class="layout-toggle">
+        <button
+          class="btn-layout"
+          :class="{ active: layout === 'force' }"
+          @click="$emit('set-layout', 'force')"
+        >
+          ✦ FORCE
+        </button>
+        <button
+          class="btn-layout"
+          :class="{ active: layout === 'radial' }"
+          @click="$emit('set-layout', 'radial')"
+        >
+          ◎ RADIAL
+        </button>
+      </div>
       <button class="btn-reset" @click="$emit('reset')">⟳ RESET</button>
     </div>
   </header>
@@ -85,6 +105,35 @@ header {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.layout-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+}
+.btn-layout {
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-layout:last-child {
+  border-right: none;
+}
+.btn-layout:hover {
+  color: var(--amber);
+  background: rgba(232, 160, 32, 0.08);
+}
+.btn-layout.active {
+  color: var(--amber);
+  background: rgba(232, 160, 32, 0.15);
+  text-shadow: 0 0 8px rgba(232, 160, 32, 0.4);
 }
 
 .btn-reset {

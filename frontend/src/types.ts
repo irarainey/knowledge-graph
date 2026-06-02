@@ -11,6 +11,9 @@ export interface NodeStyle {
 
 export type NodeStyles = Record<string, NodeStyle>
 
+// Graph layout strategies offered by the renderer.
+export type LayoutMode = 'force' | 'radial'
+
 // ── Raw Neo4j / APOC export shapes ──────────────────────────────────────────
 export interface RawNode {
   id: string

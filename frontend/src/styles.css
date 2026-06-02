@@ -14,7 +14,6 @@
   --violet-dim: #3a1060;
   --teal: #20d8d0;
   --teal-dim: #084840;
-  --grid: rgba(34, 180, 100, 0.06);
   --text: #c8dde8;
   --text-dim: #4a6070;
   --border: rgba(232, 160, 32, 0.2);
@@ -32,38 +31,6 @@ body {
   font-family: 'Share Tech Mono', monospace;
   height: 100vh;
   overflow: hidden;
-  background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-/* ── Scan line CRT effect ── */
-.scan-line {
-  position: fixed;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(34, 220, 136, 0.15), transparent);
-  animation: scan 8s linear infinite;
-  pointer-events: none;
-  z-index: 10;
-}
-@keyframes scan {
-  0% {
-    top: 56px;
-    opacity: 0;
-  }
-  5% {
-    opacity: 1;
-  }
-  95% {
-    opacity: 1;
-  }
-  100% {
-    top: 100vh;
-    opacity: 0;
-  }
 }
 
 /* ── Corner labels ── */
@@ -87,7 +54,7 @@ body {
 
 /* ── SVG canvas ── */
 .link {
-  stroke-opacity: 0.35;
+  stroke-opacity: 0.55;
   stroke-width: 1;
   fill: none;
 }
@@ -120,4 +87,11 @@ body {
   fill: var(--text);
   pointer-events: none;
   text-anchor: middle;
+}
+
+.node,
+.link,
+.node-label,
+.link-label {
+  transition: opacity 0.2s ease;
 }

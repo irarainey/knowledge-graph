@@ -50,7 +50,8 @@
         "ElectricalSystem"
       ],
       "properties": {
-        "name": "Electrical"
+        "name": "Electrical",
+        "voltage_v": 28
       }
     },
     {
@@ -92,7 +93,12 @@
       "properties": {
         "name": "Lycoming IO-360",
         "ratedHorsepower": 180,
-        "totalTime_hours": 1240.5
+        "totalTime_hours": 1240.5,
+        "model": "IO-360-L2A",
+        "power_hp": 180,
+        "displacement_ci": 361,
+        "cylinders": 4,
+        "fuelInjected": true
       }
     },
     {
@@ -102,17 +108,23 @@
         "Propeller"
       ],
       "properties": {
-        "name": "Propeller"
+        "name": "Propeller",
+        "manufacturer": "McCauley",
+        "model": "McCauley 1A170E/JHA7660",
+        "type": "fixed-pitch, two-blade aluminium",
+        "blades": 2,
+        "diameter_in": 76
       }
     },
     {
-      "id": "carburetor",
+      "id": "fuelServo",
       "labels": [
         "Component",
-        "Carburetor"
+        "FuelInjectionServo"
       ],
       "properties": {
-        "name": "Carburetor"
+        "name": "Fuel Servo",
+        "type": "RSA-5AD1 fuel injection"
       }
     },
     {
@@ -122,7 +134,8 @@
         "ExhaustSystem"
       ],
       "properties": {
-        "name": "Exhaust"
+        "name": "Exhaust",
+        "type": "dual, with cabin-heat muff"
       }
     },
     {
@@ -133,7 +146,8 @@
       ],
       "properties": {
         "name": "Left Tank",
-        "fuelCapacity_litres": 95
+        "fuelCapacity_litres": 95,
+        "usable_gal": 28
       }
     },
     {
@@ -144,7 +158,8 @@
       ],
       "properties": {
         "name": "Right Tank",
-        "fuelCapacity_litres": 95
+        "fuelCapacity_litres": 95,
+        "usable_gal": 28
       }
     },
     {
@@ -154,7 +169,8 @@
         "FuelSelector"
       ],
       "properties": {
-        "name": "Fuel Selector"
+        "name": "Fuel Selector",
+        "positions": "BOTH / LEFT / RIGHT / OFF"
       }
     },
     {
@@ -174,7 +190,9 @@
         "Fuselage"
       ],
       "properties": {
-        "name": "Fuselage"
+        "name": "Fuselage",
+        "construction": "semi-monocoque aluminium alloy",
+        "length_ft": 27.2
       }
     },
     {
@@ -184,7 +202,11 @@
         "Wing"
       ],
       "properties": {
-        "name": "Left Wing"
+        "name": "Left Wing",
+        "airfoil": "NACA 2412",
+        "construction": "aluminium, strut-braced high wing",
+        "semiSpan_ft": 18.0,
+        "washout_deg": 3
       }
     },
     {
@@ -194,7 +216,11 @@
         "Wing"
       ],
       "properties": {
-        "name": "Right Wing"
+        "name": "Right Wing",
+        "airfoil": "NACA 2412",
+        "construction": "aluminium, strut-braced high wing",
+        "semiSpan_ft": 18.0,
+        "washout_deg": 3
       }
     },
     {
@@ -204,7 +230,9 @@
         "EmpennageAssembly"
       ],
       "properties": {
-        "name": "Empennage"
+        "name": "Empennage",
+        "type": "conventional tail",
+        "construction": "aluminium"
       }
     },
     {
@@ -214,7 +242,9 @@
         "HorizontalStabiliser"
       ],
       "properties": {
-        "name": "Horiz. Stab."
+        "name": "Horiz. Stab.",
+        "type": "fixed stabiliser",
+        "construction": "aluminium"
       }
     },
     {
@@ -224,7 +254,10 @@
         "VerticalStabiliser"
       ],
       "properties": {
-        "name": "Vert. Stab. (Fin)"
+        "name": "Vert. Stab. (Fin)",
+        "type": "swept fin",
+        "construction": "aluminium",
+        "hasDorsalFin": true
       }
     },
     {
@@ -234,7 +267,10 @@
         "Aileron"
       ],
       "properties": {
-        "name": "Left Aileron"
+        "name": "Left Aileron",
+        "type": "Frise, differential",
+        "up_deg": 20,
+        "down_deg": 15
       }
     },
     {
@@ -244,7 +280,10 @@
         "Aileron"
       ],
       "properties": {
-        "name": "Right Aileron"
+        "name": "Right Aileron",
+        "type": "Frise, differential",
+        "up_deg": 20,
+        "down_deg": 15
       }
     },
     {
@@ -254,7 +293,9 @@
         "Elevator"
       ],
       "properties": {
-        "name": "Elevator"
+        "name": "Elevator",
+        "deflectionUp_deg": 28,
+        "deflectionDown_deg": 23
       }
     },
     {
@@ -264,7 +305,8 @@
         "Rudder"
       ],
       "properties": {
-        "name": "Rudder"
+        "name": "Rudder",
+        "deflection_deg": 16
       }
     },
     {
@@ -274,7 +316,9 @@
         "Flap"
       ],
       "properties": {
-        "name": "Flaps (0–30°)"
+        "name": "Flaps (0\u201330\u00b0)",
+        "type": "single-slotted, electric",
+        "settings_deg": "0/10/20/30"
       }
     },
     {
@@ -284,7 +328,9 @@
         "ControlYoke"
       ],
       "properties": {
-        "name": "Control Yoke"
+        "name": "Control Yoke",
+        "type": "dual control wheel",
+        "control": "ailerons + elevator"
       }
     },
     {
@@ -294,7 +340,9 @@
         "RudderPedals"
       ],
       "properties": {
-        "name": "Rudder Pedals"
+        "name": "Rudder Pedals",
+        "type": "dual, with toe brakes",
+        "control": "rudder + nosewheel steering"
       }
     },
     {
@@ -304,7 +352,10 @@
         "GPSUnit"
       ],
       "properties": {
-        "name": "Garmin G1000 PFD"
+        "name": "Garmin G1000 PFD",
+        "model": "Garmin GDU 1040/1044B PFD",
+        "partNumber": "011-00867-00",
+        "display_in": 10.4
       }
     },
     {
@@ -314,7 +365,10 @@
         "Transponder"
       ],
       "properties": {
-        "name": "Transponder"
+        "name": "Transponder",
+        "model": "Garmin GTX 33",
+        "mode": "Mode S",
+        "partNumber": "011-00779-00"
       }
     },
     {
@@ -324,7 +378,9 @@
         "VHFRadio"
       ],
       "properties": {
-        "name": "VHF Radio"
+        "name": "VHF Radio",
+        "note": "COM integrated in GIA 63",
+        "channels": "25/8.33 kHz"
       }
     },
     {
@@ -334,7 +390,8 @@
         "AltimeterInstrument"
       ],
       "properties": {
-        "name": "Altimeter"
+        "name": "Altimeter",
+        "note": "displayed on G1000 PFD, source GDC 74A"
       }
     },
     {
@@ -344,7 +401,8 @@
         "AirspeedIndicator"
       ],
       "properties": {
-        "name": "Airspeed Indicator"
+        "name": "Airspeed Indicator",
+        "note": "displayed on G1000 PFD, source GDC 74A"
       }
     },
     {
@@ -354,7 +412,8 @@
         "AttitudeIndicator"
       ],
       "properties": {
-        "name": "Attitude Indicator"
+        "name": "Attitude Indicator",
+        "note": "displayed on G1000 PFD, source GRS 77 AHRS"
       }
     },
     {
@@ -364,7 +423,9 @@
         "NoseWheel"
       ],
       "properties": {
-        "name": "Nose Wheel"
+        "name": "Nose Wheel",
+        "tyreSize": "5.00-5",
+        "type": "steerable, oleo-pneumatic"
       }
     },
     {
@@ -374,7 +435,9 @@
         "MainGear"
       ],
       "properties": {
-        "name": "Main Gear"
+        "name": "Main Gear",
+        "tyreSize": "6.00-6",
+        "type": "fixed tricycle, tubular spring-steel"
       }
     },
     {
@@ -384,7 +447,9 @@
         "Brake"
       ],
       "properties": {
-        "name": "Brakes"
+        "name": "Brakes",
+        "type": "Cleveland hydraulic single-disc",
+        "actuation": "toe pedals"
       }
     },
     {
@@ -394,7 +459,9 @@
         "Battery"
       ],
       "properties": {
-        "name": "Battery"
+        "name": "Battery",
+        "model": "Concorde RG24-11M",
+        "voltage_v": 24
       }
     },
     {
@@ -404,7 +471,11 @@
         "Alternator"
       ],
       "properties": {
-        "name": "Alternator"
+        "name": "Alternator",
+        "output_a": 60,
+        "voltage_v": 28,
+        "output_amps": 60,
+        "drive": "belt"
       }
     },
     {
@@ -445,7 +516,7 @@
         "POH"
       ],
       "properties": {
-        "name": "POH — C172S"
+        "name": "POH \u2014 C172S"
       }
     },
     {
@@ -485,9 +556,15 @@
       ],
       "properties": {
         "name": "Flight 001",
-        "departureAerodrome": "EGTG",
-        "destinationAerodrome": "EGBJ",
-        "blockTime_minutes": 45
+        "departureAerodrome": "EGGD",
+        "destinationAerodrome": "EGBP",
+        "blockTime_minutes": 45,
+        "date": "2026-05-20",
+        "callsign": "GECHO",
+        "flightRules": "VFR",
+        "distance_nm": 28,
+        "cruiseAltitude_ft": 2500,
+        "flightTime_hours": 0.5
       }
     },
     {
@@ -497,7 +574,14 @@
         "Preflight"
       ],
       "properties": {
-        "name": "Preflight"
+        "name": "Preflight",
+        "duration_minutes": 15,
+        "location": "apron",
+        "fieldElevation_ft": 622,
+        "groundspeed_kt": 0,
+        "distance_nm": 0,
+        "activity": "walkaround & cockpit checks",
+        "fuelState": "full tanks"
       }
     },
     {
@@ -507,7 +591,12 @@
         "Taxi"
       ],
       "properties": {
-        "name": "Taxi"
+        "name": "Taxi",
+        "duration_minutes": 5,
+        "groundspeed_kt": 10,
+        "fieldElevation_ft": 622,
+        "distance_nm": 0.8,
+        "route": "apron to holding point"
       }
     },
     {
@@ -517,7 +606,15 @@
         "Takeoff"
       ],
       "properties": {
-        "name": "Takeoff"
+        "name": "Takeoff",
+        "duration_minutes": 1,
+        "rotateSpeed_kt": 55,
+        "flapSetting_deg": 10,
+        "fieldElevation_ft": 622,
+        "departureRunway": "09/27",
+        "liftoffSpeed_kt": 56,
+        "groundRoll_m": 290,
+        "distance_nm": 0.2
       }
     },
     {
@@ -527,7 +624,15 @@
         "Climb"
       ],
       "properties": {
-        "name": "Climb"
+        "name": "Climb",
+        "duration_minutes": 4,
+        "airspeed_kt": 74,
+        "climbRate_fpm": 700,
+        "targetAltitude_ft": 2500,
+        "startAltitude_ft": 622,
+        "groundspeed_kt": 75,
+        "distance_nm": 5.0,
+        "powerSetting": "full throttle"
       }
     },
     {
@@ -537,7 +642,15 @@
         "Cruise"
       ],
       "properties": {
-        "name": "Cruise"
+        "name": "Cruise",
+        "duration_minutes": 20,
+        "altitude_ft": 2500,
+        "airspeed_kt": 110,
+        "power_pct": 65,
+        "trueAirspeed_kt": 115,
+        "groundspeed_kt": 110,
+        "fuelBurn_gph": 8.5,
+        "distance_nm": 36.7
       }
     },
     {
@@ -547,7 +660,14 @@
         "Descent"
       ],
       "properties": {
-        "name": "Descent"
+        "name": "Descent",
+        "duration_minutes": 6,
+        "airspeed_kt": 110,
+        "descentRate_fpm": 500,
+        "startAltitude_ft": 2500,
+        "targetAltitude_ft": 1433,
+        "groundspeed_kt": 120,
+        "distance_nm": 12.0
       }
     },
     {
@@ -557,7 +677,15 @@
         "Approach"
       ],
       "properties": {
-        "name": "Approach"
+        "name": "Approach",
+        "duration_minutes": 5,
+        "airspeed_kt": 65,
+        "flapSetting_deg": 30,
+        "patternAltitude_ft": 1433,
+        "glidepath_deg": 3,
+        "groundspeed_kt": 70,
+        "distance_nm": 5.8,
+        "arrivalRunway": "08/26"
       }
     },
     {
@@ -567,7 +695,1678 @@
         "Landing"
       ],
       "properties": {
-        "name": "Landing"
+        "name": "Landing",
+        "duration_minutes": 1,
+        "touchdownSpeed_kt": 55,
+        "flapSetting_deg": 30,
+        "fieldElevation_ft": 433,
+        "arrivalRunway": "08/26",
+        "groundRoll_m": 175,
+        "distance_nm": 0.3
+      }
+    },
+    {
+      "id": "magLeft",
+      "labels": [
+        "Component",
+        "Magneto"
+      ],
+      "properties": {
+        "name": "Left Magneto",
+        "type": "Slick",
+        "model": "Slick 4370"
+      }
+    },
+    {
+      "id": "magRight",
+      "labels": [
+        "Component",
+        "Magneto"
+      ],
+      "properties": {
+        "name": "Right Magneto",
+        "type": "Slick",
+        "model": "Slick 4371"
+      }
+    },
+    {
+      "id": "starter",
+      "labels": [
+        "Component",
+        "Starter"
+      ],
+      "properties": {
+        "name": "Starter Motor",
+        "type": "lightweight electric",
+        "voltage_v": 24
+      }
+    },
+    {
+      "id": "oilSystem",
+      "labels": [
+        "Component",
+        "OilSystem"
+      ],
+      "properties": {
+        "name": "Oil System",
+        "capacity_qt": 8,
+        "sumpType": "wet sump",
+        "minForFlight_qt": 2
+      }
+    },
+    {
+      "id": "engFuelPump",
+      "labels": [
+        "Component",
+        "FuelPump"
+      ],
+      "properties": {
+        "name": "Engine Fuel Pump",
+        "driven": "engine"
+      }
+    },
+    {
+      "id": "auxFuelPump",
+      "labels": [
+        "Component",
+        "FuelPump"
+      ],
+      "properties": {
+        "name": "Aux Fuel Pump",
+        "driven": "electric"
+      }
+    },
+    {
+      "id": "elevatorTrim",
+      "labels": [
+        "Component",
+        "TrimTab"
+      ],
+      "properties": {
+        "name": "Elevator Trim"
+      }
+    },
+    {
+      "id": "flapMotor",
+      "labels": [
+        "Component",
+        "FlapActuator"
+      ],
+      "properties": {
+        "name": "Flap Motor",
+        "type": "electric"
+      }
+    },
+    {
+      "id": "stallWarner",
+      "labels": [
+        "Component",
+        "StallWarning"
+      ],
+      "properties": {
+        "name": "Stall Warning",
+        "type": "pneumatic reed horn"
+      }
+    },
+    {
+      "id": "adc",
+      "labels": [
+        "Component",
+        "AirDataComputer"
+      ],
+      "properties": {
+        "name": "Air Data Computer (ADC)",
+        "model": "Garmin GDC 74A",
+        "partNumber": "011-00882-20"
+      }
+    },
+    {
+      "id": "ahrs",
+      "labels": [
+        "Component",
+        "AHRS"
+      ],
+      "properties": {
+        "name": "AHRS",
+        "model": "Garmin GRS 77",
+        "partNumber": "011-00779-10"
+      }
+    },
+    {
+      "id": "pitotStatic",
+      "labels": [
+        "System",
+        "PitotStaticSystem"
+      ],
+      "properties": {
+        "name": "Pitot-Static"
+      }
+    },
+    {
+      "id": "pitotHeat",
+      "labels": [
+        "Component",
+        "PitotHeat"
+      ],
+      "properties": {
+        "name": "Pitot Heat"
+      }
+    },
+    {
+      "id": "landingLight",
+      "labels": [
+        "Component",
+        "Light"
+      ],
+      "properties": {
+        "name": "Landing Light"
+      }
+    },
+    {
+      "id": "navLights",
+      "labels": [
+        "Component",
+        "Light"
+      ],
+      "properties": {
+        "name": "Nav/Strobe Lights"
+      }
+    },
+    {
+      "id": "EGGD",
+      "labels": [
+        "Aerodrome",
+        "Airport"
+      ],
+      "properties": {
+        "name": "Bristol",
+        "icao": "EGGD",
+        "iata": "BRS",
+        "elevation_ft": 622
+      }
+    },
+    {
+      "id": "EGBP",
+      "labels": [
+        "Aerodrome",
+        "Airport"
+      ],
+      "properties": {
+        "name": "Cotswold Airport",
+        "icao": "EGBP",
+        "elevation_ft": 433
+      }
+    },
+    {
+      "id": "rwyEGGD27",
+      "labels": [
+        "Runway"
+      ],
+      "properties": {
+        "name": "EGGD RWY 09/27",
+        "designator": "09/27",
+        "length_m": 2011,
+        "surface": "Asphalt"
+      }
+    },
+    {
+      "id": "rwyEGBP08",
+      "labels": [
+        "Runway"
+      ],
+      "properties": {
+        "name": "EGBP RWY 08/26",
+        "designator": "08/26",
+        "length_m": 2000,
+        "surface": "Asphalt"
+      }
+    },
+    {
+      "id": "brakeDisc",
+      "labels": [
+        "Component",
+        "BrakeDisc"
+      ],
+      "properties": {
+        "name": "Brake Disc",
+        "manufacturer": "Cleveland"
+      }
+    },
+    {
+      "id": "brakeCaliper",
+      "labels": [
+        "Component",
+        "BrakeCaliper"
+      ],
+      "properties": {
+        "name": "Brake Caliper",
+        "model": "Cleveland 30-63",
+        "pistons": 1
+      }
+    },
+    {
+      "id": "brakeLining",
+      "labels": [
+        "Component",
+        "BrakeLining"
+      ],
+      "properties": {
+        "name": "Brake Linings",
+        "model": "Cleveland 66-105"
+      }
+    },
+    {
+      "id": "brakeMasterCyl",
+      "labels": [
+        "Component",
+        "MasterCylinder"
+      ],
+      "properties": {
+        "name": "Brake Master Cylinders",
+        "type": "toe-operated"
+      }
+    },
+    {
+      "id": "mainWheel",
+      "labels": [
+        "Component",
+        "Wheel"
+      ],
+      "properties": {
+        "name": "Main Wheel",
+        "model": "Cleveland 40-86A",
+        "type": "split"
+      }
+    },
+    {
+      "id": "mainTyre",
+      "labels": [
+        "Component",
+        "Tyre"
+      ],
+      "properties": {
+        "name": "Main Tyre",
+        "size": "6.00-6",
+        "ply": 6
+      }
+    },
+    {
+      "id": "noseTyre",
+      "labels": [
+        "Component",
+        "Tyre"
+      ],
+      "properties": {
+        "name": "Nose Tyre",
+        "size": "5.00-5",
+        "ply": 6
+      }
+    },
+    {
+      "id": "propBlade1",
+      "labels": [
+        "Component",
+        "PropellerBlade"
+      ],
+      "properties": {
+        "name": "Prop Blade 1"
+      }
+    },
+    {
+      "id": "propBlade2",
+      "labels": [
+        "Component",
+        "PropellerBlade"
+      ],
+      "properties": {
+        "name": "Prop Blade 2"
+      }
+    },
+    {
+      "id": "spinner",
+      "labels": [
+        "Component",
+        "Spinner"
+      ],
+      "properties": {
+        "name": "Spinner"
+      }
+    },
+    {
+      "id": "cyl1",
+      "labels": [
+        "Component",
+        "Cylinder"
+      ],
+      "properties": {
+        "name": "Cylinder 1"
+      }
+    },
+    {
+      "id": "cyl2",
+      "labels": [
+        "Component",
+        "Cylinder"
+      ],
+      "properties": {
+        "name": "Cylinder 2"
+      }
+    },
+    {
+      "id": "cyl3",
+      "labels": [
+        "Component",
+        "Cylinder"
+      ],
+      "properties": {
+        "name": "Cylinder 3"
+      }
+    },
+    {
+      "id": "cyl4",
+      "labels": [
+        "Component",
+        "Cylinder"
+      ],
+      "properties": {
+        "name": "Cylinder 4"
+      }
+    },
+    {
+      "id": "sparkPlugs",
+      "labels": [
+        "Component",
+        "SparkPlug"
+      ],
+      "properties": {
+        "name": "Spark Plugs",
+        "count": 8,
+        "perCylinder": 2,
+        "model": "Champion REM40E"
+      }
+    },
+    {
+      "id": "mfd",
+      "labels": [
+        "Component",
+        "MultiFunctionDisplay"
+      ],
+      "properties": {
+        "name": "G1000 MFD",
+        "model": "Garmin GDU 1044B",
+        "partNumber": "011-01023-00",
+        "display_in": 10.4,
+        "function": "engine data, map, flight planning"
+      }
+    },
+    {
+      "id": "audioPanel",
+      "labels": [
+        "Component",
+        "AudioPanel"
+      ],
+      "properties": {
+        "name": "Audio Panel",
+        "model": "Garmin GMA 1347",
+        "partNumber": "011-01070-00",
+        "features": "intercom, marker beacon"
+      }
+    },
+    {
+      "id": "gia1",
+      "labels": [
+        "Component",
+        "IntegratedAvionicsUnit"
+      ],
+      "properties": {
+        "name": "GIA 63 #1",
+        "model": "Garmin GIA 63W",
+        "partNumber": "011-01034-00",
+        "function": "COM/NAV/GPS/glideslope"
+      }
+    },
+    {
+      "id": "gia2",
+      "labels": [
+        "Component",
+        "IntegratedAvionicsUnit"
+      ],
+      "properties": {
+        "name": "GIA 63 #2",
+        "model": "Garmin GIA 63W",
+        "partNumber": "011-01034-00",
+        "function": "COM/NAV/GPS/glideslope"
+      }
+    },
+    {
+      "id": "gea71",
+      "labels": [
+        "Component",
+        "EngineAirframeUnit"
+      ],
+      "properties": {
+        "name": "GEA 71",
+        "model": "Garmin GEA 71",
+        "partNumber": "011-00942-00",
+        "function": "engine/airframe sensor interface"
+      }
+    },
+    {
+      "id": "gmu44",
+      "labels": [
+        "Component",
+        "Magnetometer"
+      ],
+      "properties": {
+        "name": "GMU 44 Magnetometer",
+        "model": "Garmin GMU 44",
+        "partNumber": "011-00861-00",
+        "location": "left wing"
+      }
+    },
+    {
+      "id": "elt",
+      "labels": [
+        "Component",
+        "EmergencyLocatorTransmitter"
+      ],
+      "properties": {
+        "name": "ELT",
+        "model": "Artex ELT 345",
+        "frequency_mhz": 406,
+        "batteryType": "lithium"
+      }
+    },
+    {
+      "id": "oilCooler",
+      "labels": [
+        "Component",
+        "OilCooler"
+      ],
+      "properties": {
+        "name": "Oil Cooler",
+        "type": "air-cooled, firewall-mounted"
+      }
+    },
+    {
+      "id": "oilFilter",
+      "labels": [
+        "Component",
+        "OilFilter"
+      ],
+      "properties": {
+        "name": "Oil Filter",
+        "model": "Champion CH48108-1",
+        "type": "full-flow spin-on"
+      }
+    },
+    {
+      "id": "inductionFilter",
+      "labels": [
+        "Component",
+        "AirFilter"
+      ],
+      "properties": {
+        "name": "Induction Air Filter",
+        "model": "Brackett BA-6110",
+        "type": "foam element"
+      }
+    },
+    {
+      "id": "alternateAir",
+      "labels": [
+        "Component",
+        "AlternateAirDoor"
+      ],
+      "properties": {
+        "name": "Alternate Air Door",
+        "function": "bypass induction air on filter blockage"
+      }
+    },
+    {
+      "id": "flowDivider",
+      "labels": [
+        "Component",
+        "FuelManifold"
+      ],
+      "properties": {
+        "name": "Fuel Flow Divider",
+        "type": "spider manifold",
+        "location": "top of engine"
+      }
+    },
+    {
+      "id": "injectors",
+      "labels": [
+        "Component",
+        "FuelInjector"
+      ],
+      "properties": {
+        "name": "Injector Nozzles",
+        "count": 4,
+        "type": "air-bleed nozzle, one per cylinder"
+      }
+    },
+    {
+      "id": "gascolator",
+      "labels": [
+        "Component",
+        "FuelStrainer"
+      ],
+      "properties": {
+        "name": "Gascolator",
+        "function": "fuel strainer/sediment bowl",
+        "location": "firewall low point"
+      }
+    },
+    {
+      "id": "fuelVents",
+      "labels": [
+        "Component",
+        "FuelVent"
+      ],
+      "properties": {
+        "name": "Fuel Vents",
+        "type": "left tank vent + crossover",
+        "function": "tank pressure equalisation"
+      }
+    },
+    {
+      "id": "masterSwitch",
+      "labels": [
+        "Component",
+        "MasterSwitch"
+      ],
+      "properties": {
+        "name": "Master Switch",
+        "type": "split rocker (BAT/ALT)"
+      }
+    },
+    {
+      "id": "voltageRegulator",
+      "labels": [
+        "Component",
+        "VoltageRegulator"
+      ],
+      "properties": {
+        "name": "Voltage Regulator",
+        "type": "solid-state, over-voltage protected",
+        "regulated_v": 28
+      }
+    },
+    {
+      "id": "busbar",
+      "labels": [
+        "Component",
+        "Busbar"
+      ],
+      "properties": {
+        "name": "Bus Bars",
+        "type": "main bus + avionics bus"
+      }
+    },
+    {
+      "id": "circuitBreakers",
+      "labels": [
+        "Component",
+        "CircuitBreaker"
+      ],
+      "properties": {
+        "name": "Circuit Breakers",
+        "type": "push-to-reset panel"
+      }
+    },
+    {
+      "id": "ammeter",
+      "labels": [
+        "Component",
+        "Ammeter"
+      ],
+      "properties": {
+        "name": "Ammeter",
+        "function": "battery charge/discharge indication",
+        "display": "G1000 MFD"
+      }
+    },
+    {
+      "id": "noseStrut",
+      "labels": [
+        "Component",
+        "OleoStrut"
+      ],
+      "properties": {
+        "name": "Nose Strut",
+        "type": "oleo-pneumatic (air/oil)"
+      }
+    },
+    {
+      "id": "mainStrut",
+      "labels": [
+        "Component",
+        "GearLeg"
+      ],
+      "properties": {
+        "name": "Main Gear Legs",
+        "type": "tubular spring-steel",
+        "material": "chrome-vanadium steel"
+      }
+    },
+    {
+      "id": "wheelFairing",
+      "labels": [
+        "Component",
+        "WheelFairing"
+      ],
+      "properties": {
+        "name": "Wheel Fairings",
+        "aka": "speed fairings / spats",
+        "material": "composite"
+      }
+    },
+    {
+      "id": "noseFork",
+      "labels": [
+        "Component",
+        "NoseFork"
+      ],
+      "properties": {
+        "name": "Nose Fork",
+        "function": "steerable fork with shimmy damper"
+      }
+    },
+    {
+      "id": "leftDoor",
+      "labels": [
+        "Component",
+        "CabinDoor"
+      ],
+      "properties": {
+        "name": "Left Cabin Door",
+        "material": "aluminium"
+      }
+    },
+    {
+      "id": "rightDoor",
+      "labels": [
+        "Component",
+        "CabinDoor"
+      ],
+      "properties": {
+        "name": "Right Cabin Door",
+        "material": "aluminium"
+      }
+    },
+    {
+      "id": "windscreen",
+      "labels": [
+        "Component",
+        "Windscreen"
+      ],
+      "properties": {
+        "name": "Windscreen",
+        "material": "acrylic",
+        "type": "one-piece wraparound"
+      }
+    },
+    {
+      "id": "baggageBay",
+      "labels": [
+        "Component",
+        "BaggageCompartment"
+      ],
+      "properties": {
+        "name": "Baggage Compartment",
+        "maxLoad_lb": 120
+      }
+    },
+    {
+      "id": "seats",
+      "labels": [
+        "Component",
+        "Seat"
+      ],
+      "properties": {
+        "name": "Seats",
+        "count": 4,
+        "config": "2 front adjustable + rear bench"
+      }
+    },
+    {
+      "id": "leftWingStrut",
+      "labels": [
+        "Component",
+        "LiftStrut"
+      ],
+      "properties": {
+        "name": "Left Lift Strut",
+        "type": "single streamlined strut",
+        "material": "steel"
+      }
+    },
+    {
+      "id": "rightWingStrut",
+      "labels": [
+        "Component",
+        "LiftStrut"
+      ],
+      "properties": {
+        "name": "Right Lift Strut",
+        "type": "single streamlined strut",
+        "material": "steel"
+      }
+    },
+    {
+      "id": "EGBJ",
+      "labels": [
+        "Aerodrome",
+        "Airport"
+      ],
+      "properties": {
+        "name": "Gloucestershire",
+        "icao": "EGBJ",
+        "elevation_ft": 101,
+        "latitude": 51.8942,
+        "longitude": -2.1672
+      }
+    },
+    {
+      "id": "rwyEGBJ09",
+      "labels": [
+        "Runway"
+      ],
+      "properties": {
+        "name": "EGBJ RWY 09/27",
+        "designator": "09/27",
+        "length_m": 1379,
+        "surface": "Asphalt"
+      }
+    },
+    {
+      "id": "EGFF",
+      "labels": [
+        "Aerodrome",
+        "Airport"
+      ],
+      "properties": {
+        "name": "Cardiff",
+        "icao": "EGFF",
+        "elevation_ft": 220,
+        "latitude": 51.3967,
+        "longitude": -3.3433,
+        "iata": "CWL"
+      }
+    },
+    {
+      "id": "rwyEGFF12",
+      "labels": [
+        "Runway"
+      ],
+      "properties": {
+        "name": "EGFF RWY 12/30",
+        "designator": "12/30",
+        "length_m": 2400,
+        "surface": "Asphalt"
+      }
+    },
+    {
+      "id": "EGTE",
+      "labels": [
+        "Aerodrome",
+        "Airport"
+      ],
+      "properties": {
+        "name": "Exeter",
+        "icao": "EGTE",
+        "elevation_ft": 102,
+        "latitude": 50.7344,
+        "longitude": -3.4139,
+        "iata": "EXT"
+      }
+    },
+    {
+      "id": "rwyEGTE08",
+      "labels": [
+        "Runway"
+      ],
+      "properties": {
+        "name": "EGTE RWY 08/26",
+        "designator": "08/26",
+        "length_m": 2034,
+        "surface": "Asphalt"
+      }
+    },
+    {
+      "id": "EGTK",
+      "labels": [
+        "Aerodrome",
+        "Airport"
+      ],
+      "properties": {
+        "name": "Oxford (Kidlington)",
+        "icao": "EGTK",
+        "elevation_ft": 270,
+        "latitude": 51.8369,
+        "longitude": -1.32,
+        "iata": "OXF"
+      }
+    },
+    {
+      "id": "rwyEGTK01",
+      "labels": [
+        "Runway"
+      ],
+      "properties": {
+        "name": "EGTK RWY 01/19",
+        "designator": "01/19",
+        "length_m": 1682,
+        "surface": "Asphalt"
+      }
+    },
+    {
+      "id": "EGHH",
+      "labels": [
+        "Aerodrome",
+        "Airport"
+      ],
+      "properties": {
+        "name": "Bournemouth",
+        "icao": "EGHH",
+        "elevation_ft": 38,
+        "latitude": 50.7794,
+        "longitude": -1.8425,
+        "iata": "BOH"
+      }
+    },
+    {
+      "id": "rwyEGHH08",
+      "labels": [
+        "Runway"
+      ],
+      "properties": {
+        "name": "EGHH RWY 08/26",
+        "designator": "08/26",
+        "length_m": 2268,
+        "surface": "Asphalt"
+      }
+    },
+    {
+      "id": "flight002",
+      "labels": [
+        "Flight"
+      ],
+      "properties": {
+        "name": "Flight 002",
+        "departureAerodrome": "EGBP",
+        "destinationAerodrome": "EGBJ",
+        "date": "2026-05-22",
+        "callsign": "GECHO",
+        "flightRules": "VFR",
+        "distance_nm": 14,
+        "flightTime_hours": 0.3,
+        "blockTime_minutes": 33,
+        "cruiseAltitude_ft": 2200
+      }
+    },
+    {
+      "id": "flight003",
+      "labels": [
+        "Flight"
+      ],
+      "properties": {
+        "name": "Flight 003",
+        "departureAerodrome": "EGGD",
+        "destinationAerodrome": "EGFF",
+        "date": "2026-05-25",
+        "callsign": "GECHO",
+        "flightRules": "VFR",
+        "distance_nm": 23,
+        "flightTime_hours": 0.4,
+        "blockTime_minutes": 39,
+        "cruiseAltitude_ft": 2000
+      }
+    },
+    {
+      "id": "flight004",
+      "labels": [
+        "Flight"
+      ],
+      "properties": {
+        "name": "Flight 004",
+        "departureAerodrome": "EGGD",
+        "destinationAerodrome": "EGTE",
+        "date": "2026-05-28",
+        "callsign": "GECHO",
+        "flightRules": "VFR",
+        "distance_nm": 47,
+        "flightTime_hours": 0.6,
+        "blockTime_minutes": 51,
+        "cruiseAltitude_ft": 3500
+      }
+    },
+    {
+      "id": "flight005",
+      "labels": [
+        "Flight"
+      ],
+      "properties": {
+        "name": "Flight 005",
+        "departureAerodrome": "EGBP",
+        "destinationAerodrome": "EGTK",
+        "date": "2026-06-01",
+        "callsign": "GECHO",
+        "flightRules": "VFR",
+        "distance_nm": 29,
+        "flightTime_hours": 0.5,
+        "blockTime_minutes": 45,
+        "cruiseAltitude_ft": 2500
+      }
+    },
+    {
+      "id": "flight006",
+      "labels": [
+        "Flight"
+      ],
+      "properties": {
+        "name": "Flight 006",
+        "departureAerodrome": "EGGD",
+        "destinationAerodrome": "EGHH",
+        "date": "2026-06-04",
+        "callsign": "GECHO",
+        "flightRules": "VFR",
+        "distance_nm": 49,
+        "flightTime_hours": 0.7,
+        "blockTime_minutes": 57,
+        "cruiseAltitude_ft": 3000
+      }
+    },
+    {
+      "id": "ph_002_preflight",
+      "labels": [
+        "FlightPhase",
+        "Preflight"
+      ],
+      "properties": {
+        "name": "Preflight",
+        "duration_minutes": 15,
+        "location": "apron",
+        "fieldElevation_ft": 433,
+        "groundspeed_kt": 0,
+        "distance_nm": 0,
+        "activity": "walkaround & cockpit checks",
+        "fuelState": "full tanks"
+      }
+    },
+    {
+      "id": "ph_002_taxi",
+      "labels": [
+        "FlightPhase",
+        "Taxi"
+      ],
+      "properties": {
+        "name": "Taxi",
+        "duration_minutes": 5,
+        "groundspeed_kt": 10,
+        "fieldElevation_ft": 433,
+        "distance_nm": 0.8,
+        "route": "apron to holding point"
+      }
+    },
+    {
+      "id": "ph_002_takeoff",
+      "labels": [
+        "FlightPhase",
+        "Takeoff"
+      ],
+      "properties": {
+        "name": "Takeoff",
+        "duration_minutes": 1,
+        "rotateSpeed_kt": 55,
+        "flapSetting_deg": 10,
+        "fieldElevation_ft": 433,
+        "departureRunway": "08/26",
+        "liftoffSpeed_kt": 56,
+        "groundRoll_m": 290,
+        "distance_nm": 0.2
+      }
+    },
+    {
+      "id": "ph_002_climb",
+      "labels": [
+        "FlightPhase",
+        "Climb"
+      ],
+      "properties": {
+        "name": "Climb",
+        "duration_minutes": 4,
+        "airspeed_kt": 74,
+        "climbRate_fpm": 700,
+        "targetAltitude_ft": 2200,
+        "startAltitude_ft": 433,
+        "groundspeed_kt": 75,
+        "distance_nm": 5.0,
+        "powerSetting": "full throttle"
+      }
+    },
+    {
+      "id": "ph_002_cruise",
+      "labels": [
+        "FlightPhase",
+        "Cruise"
+      ],
+      "properties": {
+        "name": "Cruise",
+        "duration_minutes": 3,
+        "altitude_ft": 2200,
+        "airspeed_kt": 110,
+        "power_pct": 65,
+        "trueAirspeed_kt": 115,
+        "groundspeed_kt": 110,
+        "fuelBurn_gph": 8.5,
+        "distance_nm": 5.5
+      }
+    },
+    {
+      "id": "ph_002_descent",
+      "labels": [
+        "FlightPhase",
+        "Descent"
+      ],
+      "properties": {
+        "name": "Descent",
+        "duration_minutes": 6,
+        "airspeed_kt": 110,
+        "descentRate_fpm": 500,
+        "startAltitude_ft": 2200,
+        "targetAltitude_ft": 1101,
+        "groundspeed_kt": 120,
+        "distance_nm": 12.0
+      }
+    },
+    {
+      "id": "ph_002_approach",
+      "labels": [
+        "FlightPhase",
+        "Approach"
+      ],
+      "properties": {
+        "name": "Approach",
+        "duration_minutes": 5,
+        "airspeed_kt": 65,
+        "flapSetting_deg": 30,
+        "patternAltitude_ft": 1101,
+        "glidepath_deg": 3,
+        "groundspeed_kt": 70,
+        "distance_nm": 5.8,
+        "arrivalRunway": "09/27"
+      }
+    },
+    {
+      "id": "ph_002_landing",
+      "labels": [
+        "FlightPhase",
+        "Landing"
+      ],
+      "properties": {
+        "name": "Landing",
+        "duration_minutes": 1,
+        "touchdownSpeed_kt": 55,
+        "flapSetting_deg": 30,
+        "fieldElevation_ft": 101,
+        "arrivalRunway": "09/27",
+        "groundRoll_m": 175,
+        "distance_nm": 0.3
+      }
+    },
+    {
+      "id": "ph_003_preflight",
+      "labels": [
+        "FlightPhase",
+        "Preflight"
+      ],
+      "properties": {
+        "name": "Preflight",
+        "duration_minutes": 15,
+        "location": "apron",
+        "fieldElevation_ft": 622,
+        "groundspeed_kt": 0,
+        "distance_nm": 0,
+        "activity": "walkaround & cockpit checks",
+        "fuelState": "full tanks"
+      }
+    },
+    {
+      "id": "ph_003_taxi",
+      "labels": [
+        "FlightPhase",
+        "Taxi"
+      ],
+      "properties": {
+        "name": "Taxi",
+        "duration_minutes": 5,
+        "groundspeed_kt": 10,
+        "fieldElevation_ft": 622,
+        "distance_nm": 0.8,
+        "route": "apron to holding point"
+      }
+    },
+    {
+      "id": "ph_003_takeoff",
+      "labels": [
+        "FlightPhase",
+        "Takeoff"
+      ],
+      "properties": {
+        "name": "Takeoff",
+        "duration_minutes": 1,
+        "rotateSpeed_kt": 55,
+        "flapSetting_deg": 10,
+        "fieldElevation_ft": 622,
+        "departureRunway": "09/27",
+        "liftoffSpeed_kt": 56,
+        "groundRoll_m": 290,
+        "distance_nm": 0.2
+      }
+    },
+    {
+      "id": "ph_003_climb",
+      "labels": [
+        "FlightPhase",
+        "Climb"
+      ],
+      "properties": {
+        "name": "Climb",
+        "duration_minutes": 4,
+        "airspeed_kt": 74,
+        "climbRate_fpm": 700,
+        "targetAltitude_ft": 2000,
+        "startAltitude_ft": 622,
+        "groundspeed_kt": 75,
+        "distance_nm": 5.0,
+        "powerSetting": "full throttle"
+      }
+    },
+    {
+      "id": "ph_003_cruise",
+      "labels": [
+        "FlightPhase",
+        "Cruise"
+      ],
+      "properties": {
+        "name": "Cruise",
+        "duration_minutes": 7,
+        "altitude_ft": 2000,
+        "airspeed_kt": 110,
+        "power_pct": 65,
+        "trueAirspeed_kt": 115,
+        "groundspeed_kt": 110,
+        "fuelBurn_gph": 8.5,
+        "distance_nm": 12.8
+      }
+    },
+    {
+      "id": "ph_003_descent",
+      "labels": [
+        "FlightPhase",
+        "Descent"
+      ],
+      "properties": {
+        "name": "Descent",
+        "duration_minutes": 6,
+        "airspeed_kt": 110,
+        "descentRate_fpm": 500,
+        "startAltitude_ft": 2000,
+        "targetAltitude_ft": 1220,
+        "groundspeed_kt": 120,
+        "distance_nm": 12.0
+      }
+    },
+    {
+      "id": "ph_003_approach",
+      "labels": [
+        "FlightPhase",
+        "Approach"
+      ],
+      "properties": {
+        "name": "Approach",
+        "duration_minutes": 5,
+        "airspeed_kt": 65,
+        "flapSetting_deg": 30,
+        "patternAltitude_ft": 1220,
+        "glidepath_deg": 3,
+        "groundspeed_kt": 70,
+        "distance_nm": 5.8,
+        "arrivalRunway": "12/30"
+      }
+    },
+    {
+      "id": "ph_003_landing",
+      "labels": [
+        "FlightPhase",
+        "Landing"
+      ],
+      "properties": {
+        "name": "Landing",
+        "duration_minutes": 1,
+        "touchdownSpeed_kt": 55,
+        "flapSetting_deg": 30,
+        "fieldElevation_ft": 220,
+        "arrivalRunway": "12/30",
+        "groundRoll_m": 175,
+        "distance_nm": 0.3
+      }
+    },
+    {
+      "id": "ph_004_preflight",
+      "labels": [
+        "FlightPhase",
+        "Preflight"
+      ],
+      "properties": {
+        "name": "Preflight",
+        "duration_minutes": 15,
+        "location": "apron",
+        "fieldElevation_ft": 622,
+        "groundspeed_kt": 0,
+        "distance_nm": 0,
+        "activity": "walkaround & cockpit checks",
+        "fuelState": "full tanks"
+      }
+    },
+    {
+      "id": "ph_004_taxi",
+      "labels": [
+        "FlightPhase",
+        "Taxi"
+      ],
+      "properties": {
+        "name": "Taxi",
+        "duration_minutes": 5,
+        "groundspeed_kt": 10,
+        "fieldElevation_ft": 622,
+        "distance_nm": 0.8,
+        "route": "apron to holding point"
+      }
+    },
+    {
+      "id": "ph_004_takeoff",
+      "labels": [
+        "FlightPhase",
+        "Takeoff"
+      ],
+      "properties": {
+        "name": "Takeoff",
+        "duration_minutes": 1,
+        "rotateSpeed_kt": 55,
+        "flapSetting_deg": 10,
+        "fieldElevation_ft": 622,
+        "departureRunway": "09/27",
+        "liftoffSpeed_kt": 56,
+        "groundRoll_m": 290,
+        "distance_nm": 0.2
+      }
+    },
+    {
+      "id": "ph_004_climb",
+      "labels": [
+        "FlightPhase",
+        "Climb"
+      ],
+      "properties": {
+        "name": "Climb",
+        "duration_minutes": 4,
+        "airspeed_kt": 74,
+        "climbRate_fpm": 700,
+        "targetAltitude_ft": 3500,
+        "startAltitude_ft": 622,
+        "groundspeed_kt": 75,
+        "distance_nm": 5.0,
+        "powerSetting": "full throttle"
+      }
+    },
+    {
+      "id": "ph_004_cruise",
+      "labels": [
+        "FlightPhase",
+        "Cruise"
+      ],
+      "properties": {
+        "name": "Cruise",
+        "duration_minutes": 19,
+        "altitude_ft": 3500,
+        "airspeed_kt": 110,
+        "power_pct": 65,
+        "trueAirspeed_kt": 115,
+        "groundspeed_kt": 110,
+        "fuelBurn_gph": 8.5,
+        "distance_nm": 34.8
+      }
+    },
+    {
+      "id": "ph_004_descent",
+      "labels": [
+        "FlightPhase",
+        "Descent"
+      ],
+      "properties": {
+        "name": "Descent",
+        "duration_minutes": 6,
+        "airspeed_kt": 110,
+        "descentRate_fpm": 500,
+        "startAltitude_ft": 3500,
+        "targetAltitude_ft": 1102,
+        "groundspeed_kt": 120,
+        "distance_nm": 12.0
+      }
+    },
+    {
+      "id": "ph_004_approach",
+      "labels": [
+        "FlightPhase",
+        "Approach"
+      ],
+      "properties": {
+        "name": "Approach",
+        "duration_minutes": 5,
+        "airspeed_kt": 65,
+        "flapSetting_deg": 30,
+        "patternAltitude_ft": 1102,
+        "glidepath_deg": 3,
+        "groundspeed_kt": 70,
+        "distance_nm": 5.8,
+        "arrivalRunway": "08/26"
+      }
+    },
+    {
+      "id": "ph_004_landing",
+      "labels": [
+        "FlightPhase",
+        "Landing"
+      ],
+      "properties": {
+        "name": "Landing",
+        "duration_minutes": 1,
+        "touchdownSpeed_kt": 55,
+        "flapSetting_deg": 30,
+        "fieldElevation_ft": 102,
+        "arrivalRunway": "08/26",
+        "groundRoll_m": 175,
+        "distance_nm": 0.3
+      }
+    },
+    {
+      "id": "ph_005_preflight",
+      "labels": [
+        "FlightPhase",
+        "Preflight"
+      ],
+      "properties": {
+        "name": "Preflight",
+        "duration_minutes": 15,
+        "location": "apron",
+        "fieldElevation_ft": 433,
+        "groundspeed_kt": 0,
+        "distance_nm": 0,
+        "activity": "walkaround & cockpit checks",
+        "fuelState": "full tanks"
+      }
+    },
+    {
+      "id": "ph_005_taxi",
+      "labels": [
+        "FlightPhase",
+        "Taxi"
+      ],
+      "properties": {
+        "name": "Taxi",
+        "duration_minutes": 5,
+        "groundspeed_kt": 10,
+        "fieldElevation_ft": 433,
+        "distance_nm": 0.8,
+        "route": "apron to holding point"
+      }
+    },
+    {
+      "id": "ph_005_takeoff",
+      "labels": [
+        "FlightPhase",
+        "Takeoff"
+      ],
+      "properties": {
+        "name": "Takeoff",
+        "duration_minutes": 1,
+        "rotateSpeed_kt": 55,
+        "flapSetting_deg": 10,
+        "fieldElevation_ft": 433,
+        "departureRunway": "08/26",
+        "liftoffSpeed_kt": 56,
+        "groundRoll_m": 290,
+        "distance_nm": 0.2
+      }
+    },
+    {
+      "id": "ph_005_climb",
+      "labels": [
+        "FlightPhase",
+        "Climb"
+      ],
+      "properties": {
+        "name": "Climb",
+        "duration_minutes": 4,
+        "airspeed_kt": 74,
+        "climbRate_fpm": 700,
+        "targetAltitude_ft": 2500,
+        "startAltitude_ft": 433,
+        "groundspeed_kt": 75,
+        "distance_nm": 5.0,
+        "powerSetting": "full throttle"
+      }
+    },
+    {
+      "id": "ph_005_cruise",
+      "labels": [
+        "FlightPhase",
+        "Cruise"
+      ],
+      "properties": {
+        "name": "Cruise",
+        "duration_minutes": 13,
+        "altitude_ft": 2500,
+        "airspeed_kt": 110,
+        "power_pct": 65,
+        "trueAirspeed_kt": 115,
+        "groundspeed_kt": 110,
+        "fuelBurn_gph": 8.5,
+        "distance_nm": 23.8
+      }
+    },
+    {
+      "id": "ph_005_descent",
+      "labels": [
+        "FlightPhase",
+        "Descent"
+      ],
+      "properties": {
+        "name": "Descent",
+        "duration_minutes": 6,
+        "airspeed_kt": 110,
+        "descentRate_fpm": 500,
+        "startAltitude_ft": 2500,
+        "targetAltitude_ft": 1270,
+        "groundspeed_kt": 120,
+        "distance_nm": 12.0
+      }
+    },
+    {
+      "id": "ph_005_approach",
+      "labels": [
+        "FlightPhase",
+        "Approach"
+      ],
+      "properties": {
+        "name": "Approach",
+        "duration_minutes": 5,
+        "airspeed_kt": 65,
+        "flapSetting_deg": 30,
+        "patternAltitude_ft": 1270,
+        "glidepath_deg": 3,
+        "groundspeed_kt": 70,
+        "distance_nm": 5.8,
+        "arrivalRunway": "01/19"
+      }
+    },
+    {
+      "id": "ph_005_landing",
+      "labels": [
+        "FlightPhase",
+        "Landing"
+      ],
+      "properties": {
+        "name": "Landing",
+        "duration_minutes": 1,
+        "touchdownSpeed_kt": 55,
+        "flapSetting_deg": 30,
+        "fieldElevation_ft": 270,
+        "arrivalRunway": "01/19",
+        "groundRoll_m": 175,
+        "distance_nm": 0.3
+      }
+    },
+    {
+      "id": "ph_006_preflight",
+      "labels": [
+        "FlightPhase",
+        "Preflight"
+      ],
+      "properties": {
+        "name": "Preflight",
+        "duration_minutes": 15,
+        "location": "apron",
+        "fieldElevation_ft": 622,
+        "groundspeed_kt": 0,
+        "distance_nm": 0,
+        "activity": "walkaround & cockpit checks",
+        "fuelState": "full tanks"
+      }
+    },
+    {
+      "id": "ph_006_taxi",
+      "labels": [
+        "FlightPhase",
+        "Taxi"
+      ],
+      "properties": {
+        "name": "Taxi",
+        "duration_minutes": 5,
+        "groundspeed_kt": 10,
+        "fieldElevation_ft": 622,
+        "distance_nm": 0.8,
+        "route": "apron to holding point"
+      }
+    },
+    {
+      "id": "ph_006_takeoff",
+      "labels": [
+        "FlightPhase",
+        "Takeoff"
+      ],
+      "properties": {
+        "name": "Takeoff",
+        "duration_minutes": 1,
+        "rotateSpeed_kt": 55,
+        "flapSetting_deg": 10,
+        "fieldElevation_ft": 622,
+        "departureRunway": "09/27",
+        "liftoffSpeed_kt": 56,
+        "groundRoll_m": 290,
+        "distance_nm": 0.2
+      }
+    },
+    {
+      "id": "ph_006_climb",
+      "labels": [
+        "FlightPhase",
+        "Climb"
+      ],
+      "properties": {
+        "name": "Climb",
+        "duration_minutes": 4,
+        "airspeed_kt": 74,
+        "climbRate_fpm": 700,
+        "targetAltitude_ft": 3000,
+        "startAltitude_ft": 622,
+        "groundspeed_kt": 75,
+        "distance_nm": 5.0,
+        "powerSetting": "full throttle"
+      }
+    },
+    {
+      "id": "ph_006_cruise",
+      "labels": [
+        "FlightPhase",
+        "Cruise"
+      ],
+      "properties": {
+        "name": "Cruise",
+        "duration_minutes": 25,
+        "altitude_ft": 3000,
+        "airspeed_kt": 110,
+        "power_pct": 65,
+        "trueAirspeed_kt": 115,
+        "groundspeed_kt": 110,
+        "fuelBurn_gph": 8.5,
+        "distance_nm": 45.8
+      }
+    },
+    {
+      "id": "ph_006_descent",
+      "labels": [
+        "FlightPhase",
+        "Descent"
+      ],
+      "properties": {
+        "name": "Descent",
+        "duration_minutes": 6,
+        "airspeed_kt": 110,
+        "descentRate_fpm": 500,
+        "startAltitude_ft": 3000,
+        "targetAltitude_ft": 1038,
+        "groundspeed_kt": 120,
+        "distance_nm": 12.0
+      }
+    },
+    {
+      "id": "ph_006_approach",
+      "labels": [
+        "FlightPhase",
+        "Approach"
+      ],
+      "properties": {
+        "name": "Approach",
+        "duration_minutes": 5,
+        "airspeed_kt": 65,
+        "flapSetting_deg": 30,
+        "patternAltitude_ft": 1038,
+        "glidepath_deg": 3,
+        "groundspeed_kt": 70,
+        "distance_nm": 5.8,
+        "arrivalRunway": "08/26"
+      }
+    },
+    {
+      "id": "ph_006_landing",
+      "labels": [
+        "FlightPhase",
+        "Landing"
+      ],
+      "properties": {
+        "name": "Landing",
+        "duration_minutes": 1,
+        "touchdownSpeed_kt": 55,
+        "flapSetting_deg": 30,
+        "fieldElevation_ft": 38,
+        "arrivalRunway": "08/26",
+        "groundRoll_m": 175,
+        "distance_nm": 0.3
       }
     }
   ],
@@ -660,7 +2459,7 @@
       "id": "r13",
       "type": "HAS_COMPONENT",
       "startNode": "powerplant",
-      "endNode": "carburetor",
+      "endNode": "fuelServo",
       "properties": {}
     },
     {
@@ -1081,6 +2880,1866 @@
       "type": "HANDLED_BY",
       "startNode": "flight001",
       "endNode": "atc",
+      "properties": {}
+    },
+    {
+      "id": "r74",
+      "type": "HAS_CONTROL_SURFACE",
+      "startNode": "leftWing",
+      "endNode": "leftAileron",
+      "properties": {}
+    },
+    {
+      "id": "r75",
+      "type": "HAS_CONTROL_SURFACE",
+      "startNode": "rightWing",
+      "endNode": "rightAileron",
+      "properties": {}
+    },
+    {
+      "id": "r76",
+      "type": "HAS_CONTROL_SURFACE",
+      "startNode": "leftWing",
+      "endNode": "flaps",
+      "properties": {}
+    },
+    {
+      "id": "r77",
+      "type": "HAS_CONTROL_SURFACE",
+      "startNode": "rightWing",
+      "endNode": "flaps",
+      "properties": {}
+    },
+    {
+      "id": "r78",
+      "type": "HAS_CONTROL_SURFACE",
+      "startNode": "horizStab",
+      "endNode": "elevator",
+      "properties": {}
+    },
+    {
+      "id": "r79",
+      "type": "HAS_CONTROL_SURFACE",
+      "startNode": "vertStab",
+      "endNode": "rudder",
+      "properties": {}
+    },
+    {
+      "id": "r80",
+      "type": "HOUSES",
+      "startNode": "leftWing",
+      "endNode": "leftTank",
+      "properties": {}
+    },
+    {
+      "id": "r81",
+      "type": "HOUSES",
+      "startNode": "rightWing",
+      "endNode": "rightTank",
+      "properties": {}
+    },
+    {
+      "id": "r82",
+      "type": "DRIVES",
+      "startNode": "io360",
+      "endNode": "propeller",
+      "properties": {}
+    },
+    {
+      "id": "r83",
+      "type": "HAS_PART",
+      "startNode": "mainGear",
+      "endNode": "brakes",
+      "properties": {}
+    },
+    {
+      "id": "r84",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "magLeft",
+      "properties": {}
+    },
+    {
+      "id": "r85",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "magRight",
+      "properties": {}
+    },
+    {
+      "id": "r86",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "starter",
+      "properties": {}
+    },
+    {
+      "id": "r87",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "oilSystem",
+      "properties": {}
+    },
+    {
+      "id": "r88",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "engFuelPump",
+      "properties": {}
+    },
+    {
+      "id": "r89",
+      "type": "PROVIDES_IGNITION_TO",
+      "startNode": "magLeft",
+      "endNode": "io360",
+      "properties": {}
+    },
+    {
+      "id": "r90",
+      "type": "PROVIDES_IGNITION_TO",
+      "startNode": "magRight",
+      "endNode": "io360",
+      "properties": {}
+    },
+    {
+      "id": "r91",
+      "type": "POWERED_BY",
+      "startNode": "starter",
+      "endNode": "electrical",
+      "properties": {}
+    },
+    {
+      "id": "r92",
+      "type": "HAS_COMPONENT",
+      "startNode": "fuel",
+      "endNode": "auxFuelPump",
+      "properties": {}
+    },
+    {
+      "id": "r93",
+      "type": "POWERED_BY",
+      "startNode": "auxFuelPump",
+      "endNode": "electrical",
+      "properties": {}
+    },
+    {
+      "id": "r94",
+      "type": "FEEDS",
+      "startNode": "fuelSelector",
+      "endNode": "engFuelPump",
+      "properties": {}
+    },
+    {
+      "id": "r95",
+      "type": "FEEDS",
+      "startNode": "fuelSelector",
+      "endNode": "auxFuelPump",
+      "properties": {}
+    },
+    {
+      "id": "r96",
+      "type": "FEEDS",
+      "startNode": "engFuelPump",
+      "endNode": "fuelServo",
+      "properties": {}
+    },
+    {
+      "id": "r97",
+      "type": "FEEDS",
+      "startNode": "auxFuelPump",
+      "endNode": "fuelServo",
+      "properties": {}
+    },
+    {
+      "id": "r98",
+      "type": "FEEDS",
+      "startNode": "fuelServo",
+      "endNode": "io360",
+      "properties": {}
+    },
+    {
+      "id": "r99",
+      "type": "HAS_COMPONENT",
+      "startNode": "flightControls",
+      "endNode": "flapMotor",
+      "properties": {}
+    },
+    {
+      "id": "r100",
+      "type": "POWERED_BY",
+      "startNode": "flapMotor",
+      "endNode": "electrical",
+      "properties": {}
+    },
+    {
+      "id": "r101",
+      "type": "ACTUATES",
+      "startNode": "flapMotor",
+      "endNode": "flaps",
+      "properties": {}
+    },
+    {
+      "id": "r102",
+      "type": "HAS_PART",
+      "startNode": "elevator",
+      "endNode": "elevatorTrim",
+      "properties": {}
+    },
+    {
+      "id": "r103",
+      "type": "HAS_PART",
+      "startNode": "leftWing",
+      "endNode": "stallWarner",
+      "properties": {}
+    },
+    {
+      "id": "r105",
+      "type": "HAS_SYSTEM",
+      "startNode": "G-ECHO",
+      "endNode": "pitotStatic",
+      "properties": {}
+    },
+    {
+      "id": "r106",
+      "type": "HAS_COMPONENT",
+      "startNode": "pitotStatic",
+      "endNode": "pitotHeat",
+      "properties": {}
+    },
+    {
+      "id": "r107",
+      "type": "POWERED_BY",
+      "startNode": "pitotHeat",
+      "endNode": "electrical",
+      "properties": {}
+    },
+    {
+      "id": "r108",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "adc",
+      "properties": {}
+    },
+    {
+      "id": "r109",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "ahrs",
+      "properties": {}
+    },
+    {
+      "id": "r110",
+      "type": "POWERED_BY",
+      "startNode": "adc",
+      "endNode": "electrical",
+      "properties": {}
+    },
+    {
+      "id": "r111",
+      "type": "POWERED_BY",
+      "startNode": "ahrs",
+      "endNode": "electrical",
+      "properties": {}
+    },
+    {
+      "id": "r112",
+      "type": "FEEDS",
+      "startNode": "pitotStatic",
+      "endNode": "adc",
+      "properties": {}
+    },
+    {
+      "id": "r113",
+      "type": "FEEDS",
+      "startNode": "pitotStatic",
+      "endNode": "asi",
+      "properties": {}
+    },
+    {
+      "id": "r114",
+      "type": "FEEDS",
+      "startNode": "pitotStatic",
+      "endNode": "altimeter",
+      "properties": {}
+    },
+    {
+      "id": "r115",
+      "type": "FEEDS",
+      "startNode": "adc",
+      "endNode": "g1000",
+      "properties": {}
+    },
+    {
+      "id": "r116",
+      "type": "FEEDS",
+      "startNode": "ahrs",
+      "endNode": "g1000",
+      "properties": {}
+    },
+    {
+      "id": "r117",
+      "type": "FEEDS",
+      "startNode": "ahrs",
+      "endNode": "ai",
+      "properties": {}
+    },
+    {
+      "id": "r118",
+      "type": "HAS_COMPONENT",
+      "startNode": "electrical",
+      "endNode": "landingLight",
+      "properties": {}
+    },
+    {
+      "id": "r119",
+      "type": "HAS_COMPONENT",
+      "startNode": "electrical",
+      "endNode": "navLights",
+      "properties": {}
+    },
+    {
+      "id": "r120",
+      "type": "DEPARTS_FROM",
+      "startNode": "flight001",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r121",
+      "type": "ARRIVES_AT",
+      "startNode": "flight001",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r122",
+      "type": "HAS_RUNWAY",
+      "startNode": "EGGD",
+      "endNode": "rwyEGGD27",
+      "properties": {}
+    },
+    {
+      "id": "r123",
+      "type": "HAS_RUNWAY",
+      "startNode": "EGBP",
+      "endNode": "rwyEGBP08",
+      "properties": {}
+    },
+    {
+      "id": "r124",
+      "type": "OCCURS_AT",
+      "startNode": "ph_preflight",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r125",
+      "type": "OCCURS_AT",
+      "startNode": "ph_taxi",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r126",
+      "type": "OCCURS_AT",
+      "startNode": "ph_takeoff",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r127",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_takeoff",
+      "endNode": "rwyEGGD27",
+      "properties": {}
+    },
+    {
+      "id": "r128",
+      "type": "OCCURS_AT",
+      "startNode": "ph_approach",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r129",
+      "type": "OCCURS_AT",
+      "startNode": "ph_landing",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r130",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_landing",
+      "endNode": "rwyEGBP08",
+      "properties": {}
+    },
+    {
+      "id": "r131",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atc",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r132",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atc",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r133",
+      "type": "HAS_PART",
+      "startNode": "brakes",
+      "endNode": "brakeDisc",
+      "properties": {}
+    },
+    {
+      "id": "r134",
+      "type": "HAS_PART",
+      "startNode": "brakes",
+      "endNode": "brakeCaliper",
+      "properties": {}
+    },
+    {
+      "id": "r135",
+      "type": "HAS_PART",
+      "startNode": "brakes",
+      "endNode": "brakeLining",
+      "properties": {}
+    },
+    {
+      "id": "r136",
+      "type": "HAS_PART",
+      "startNode": "brakes",
+      "endNode": "brakeMasterCyl",
+      "properties": {}
+    },
+    {
+      "id": "r137",
+      "type": "CLAMPS",
+      "startNode": "brakeCaliper",
+      "endNode": "brakeDisc",
+      "properties": {}
+    },
+    {
+      "id": "r138",
+      "type": "FITTED_TO",
+      "startNode": "brakeLining",
+      "endNode": "brakeCaliper",
+      "properties": {}
+    },
+    {
+      "id": "r139",
+      "type": "ACTUATES",
+      "startNode": "brakeMasterCyl",
+      "endNode": "brakeCaliper",
+      "properties": {}
+    },
+    {
+      "id": "r140",
+      "type": "OPERATES",
+      "startNode": "rudderPedals",
+      "endNode": "brakeMasterCyl",
+      "properties": {}
+    },
+    {
+      "id": "r141",
+      "type": "HAS_PART",
+      "startNode": "mainGear",
+      "endNode": "mainWheel",
+      "properties": {}
+    },
+    {
+      "id": "r142",
+      "type": "HAS_PART",
+      "startNode": "mainWheel",
+      "endNode": "mainTyre",
+      "properties": {}
+    },
+    {
+      "id": "r143",
+      "type": "MOUNTED_ON",
+      "startNode": "brakeDisc",
+      "endNode": "mainWheel",
+      "properties": {}
+    },
+    {
+      "id": "r144",
+      "type": "HAS_PART",
+      "startNode": "noseWheel",
+      "endNode": "noseTyre",
+      "properties": {}
+    },
+    {
+      "id": "r145",
+      "type": "HAS_PART",
+      "startNode": "propeller",
+      "endNode": "propBlade1",
+      "properties": {}
+    },
+    {
+      "id": "r146",
+      "type": "HAS_PART",
+      "startNode": "propeller",
+      "endNode": "propBlade2",
+      "properties": {}
+    },
+    {
+      "id": "r147",
+      "type": "HAS_PART",
+      "startNode": "propeller",
+      "endNode": "spinner",
+      "properties": {}
+    },
+    {
+      "id": "r148",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "cyl1",
+      "properties": {}
+    },
+    {
+      "id": "r149",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "cyl2",
+      "properties": {}
+    },
+    {
+      "id": "r150",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "cyl3",
+      "properties": {}
+    },
+    {
+      "id": "r151",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "cyl4",
+      "properties": {}
+    },
+    {
+      "id": "r152",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "sparkPlugs",
+      "properties": {}
+    },
+    {
+      "id": "r153",
+      "type": "FIRES",
+      "startNode": "magLeft",
+      "endNode": "sparkPlugs",
+      "properties": {}
+    },
+    {
+      "id": "r154",
+      "type": "FIRES",
+      "startNode": "magRight",
+      "endNode": "sparkPlugs",
+      "properties": {}
+    },
+    {
+      "id": "r155",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "mfd",
+      "properties": {}
+    },
+    {
+      "id": "r156",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "audioPanel",
+      "properties": {}
+    },
+    {
+      "id": "r157",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "gia1",
+      "properties": {}
+    },
+    {
+      "id": "r158",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "gia2",
+      "properties": {}
+    },
+    {
+      "id": "r159",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "gea71",
+      "properties": {}
+    },
+    {
+      "id": "r160",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "gmu44",
+      "properties": {}
+    },
+    {
+      "id": "r161",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "elt",
+      "properties": {}
+    },
+    {
+      "id": "r162",
+      "type": "FEEDS",
+      "startNode": "gmu44",
+      "endNode": "ahrs",
+      "properties": {
+        "signal": "magnetic heading"
+      }
+    },
+    {
+      "id": "r163",
+      "type": "FEEDS",
+      "startNode": "gia1",
+      "endNode": "g1000",
+      "properties": {
+        "signal": "NAV/COM/GPS"
+      }
+    },
+    {
+      "id": "r164",
+      "type": "FEEDS",
+      "startNode": "gia2",
+      "endNode": "mfd",
+      "properties": {
+        "signal": "NAV/COM/GPS"
+      }
+    },
+    {
+      "id": "r165",
+      "type": "FEEDS",
+      "startNode": "gea71",
+      "endNode": "mfd",
+      "properties": {
+        "signal": "engine parameters"
+      }
+    },
+    {
+      "id": "r166",
+      "type": "HAS_PART",
+      "startNode": "oilSystem",
+      "endNode": "oilCooler",
+      "properties": {}
+    },
+    {
+      "id": "r167",
+      "type": "HAS_PART",
+      "startNode": "oilSystem",
+      "endNode": "oilFilter",
+      "properties": {}
+    },
+    {
+      "id": "r168",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "inductionFilter",
+      "properties": {}
+    },
+    {
+      "id": "r169",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "alternateAir",
+      "properties": {}
+    },
+    {
+      "id": "r170",
+      "type": "HAS_PART",
+      "startNode": "fuelServo",
+      "endNode": "flowDivider",
+      "properties": {}
+    },
+    {
+      "id": "r171",
+      "type": "HAS_PART",
+      "startNode": "flowDivider",
+      "endNode": "injectors",
+      "properties": {}
+    },
+    {
+      "id": "r172",
+      "type": "FEEDS",
+      "startNode": "flowDivider",
+      "endNode": "injectors",
+      "properties": {
+        "fluid": "metered fuel"
+      }
+    },
+    {
+      "id": "r173",
+      "type": "HAS_COMPONENT",
+      "startNode": "fuel",
+      "endNode": "gascolator",
+      "properties": {}
+    },
+    {
+      "id": "r174",
+      "type": "HAS_COMPONENT",
+      "startNode": "fuel",
+      "endNode": "fuelVents",
+      "properties": {}
+    },
+    {
+      "id": "r175",
+      "type": "FEEDS",
+      "startNode": "gascolator",
+      "endNode": "engFuelPump",
+      "properties": {
+        "fluid": "fuel"
+      }
+    },
+    {
+      "id": "r176",
+      "type": "HAS_COMPONENT",
+      "startNode": "electrical",
+      "endNode": "masterSwitch",
+      "properties": {}
+    },
+    {
+      "id": "r177",
+      "type": "HAS_COMPONENT",
+      "startNode": "electrical",
+      "endNode": "busbar",
+      "properties": {}
+    },
+    {
+      "id": "r178",
+      "type": "HAS_COMPONENT",
+      "startNode": "electrical",
+      "endNode": "circuitBreakers",
+      "properties": {}
+    },
+    {
+      "id": "r179",
+      "type": "HAS_COMPONENT",
+      "startNode": "electrical",
+      "endNode": "ammeter",
+      "properties": {}
+    },
+    {
+      "id": "r180",
+      "type": "HAS_PART",
+      "startNode": "alternator",
+      "endNode": "voltageRegulator",
+      "properties": {}
+    },
+    {
+      "id": "r181",
+      "type": "CONTROLS",
+      "startNode": "masterSwitch",
+      "endNode": "battery",
+      "properties": {}
+    },
+    {
+      "id": "r182",
+      "type": "POWERED_BY",
+      "startNode": "busbar",
+      "endNode": "battery",
+      "properties": {}
+    },
+    {
+      "id": "r183",
+      "type": "HAS_PART",
+      "startNode": "noseWheel",
+      "endNode": "noseStrut",
+      "properties": {}
+    },
+    {
+      "id": "r184",
+      "type": "HAS_PART",
+      "startNode": "noseWheel",
+      "endNode": "noseFork",
+      "properties": {}
+    },
+    {
+      "id": "r185",
+      "type": "HAS_PART",
+      "startNode": "mainGear",
+      "endNode": "mainStrut",
+      "properties": {}
+    },
+    {
+      "id": "r186",
+      "type": "HAS_PART",
+      "startNode": "mainGear",
+      "endNode": "wheelFairing",
+      "properties": {}
+    },
+    {
+      "id": "r187",
+      "type": "HAS_PART",
+      "startNode": "fuselage",
+      "endNode": "leftDoor",
+      "properties": {}
+    },
+    {
+      "id": "r188",
+      "type": "HAS_PART",
+      "startNode": "fuselage",
+      "endNode": "rightDoor",
+      "properties": {}
+    },
+    {
+      "id": "r189",
+      "type": "HAS_PART",
+      "startNode": "fuselage",
+      "endNode": "windscreen",
+      "properties": {}
+    },
+    {
+      "id": "r190",
+      "type": "HAS_PART",
+      "startNode": "fuselage",
+      "endNode": "baggageBay",
+      "properties": {}
+    },
+    {
+      "id": "r191",
+      "type": "HAS_PART",
+      "startNode": "fuselage",
+      "endNode": "seats",
+      "properties": {}
+    },
+    {
+      "id": "r192",
+      "type": "HAS_PART",
+      "startNode": "leftWing",
+      "endNode": "leftWingStrut",
+      "properties": {}
+    },
+    {
+      "id": "r193",
+      "type": "HAS_PART",
+      "startNode": "rightWing",
+      "endNode": "rightWingStrut",
+      "properties": {}
+    },
+    {
+      "id": "r194",
+      "type": "HAS_RUNWAY",
+      "startNode": "EGBJ",
+      "endNode": "rwyEGBJ09",
+      "properties": {}
+    },
+    {
+      "id": "r195",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atc",
+      "endNode": "EGBJ",
+      "properties": {}
+    },
+    {
+      "id": "r196",
+      "type": "HAS_RUNWAY",
+      "startNode": "EGFF",
+      "endNode": "rwyEGFF12",
+      "properties": {}
+    },
+    {
+      "id": "r197",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atc",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r198",
+      "type": "HAS_RUNWAY",
+      "startNode": "EGTE",
+      "endNode": "rwyEGTE08",
+      "properties": {}
+    },
+    {
+      "id": "r199",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atc",
+      "endNode": "EGTE",
+      "properties": {}
+    },
+    {
+      "id": "r200",
+      "type": "HAS_RUNWAY",
+      "startNode": "EGTK",
+      "endNode": "rwyEGTK01",
+      "properties": {}
+    },
+    {
+      "id": "r201",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atc",
+      "endNode": "EGTK",
+      "properties": {}
+    },
+    {
+      "id": "r202",
+      "type": "HAS_RUNWAY",
+      "startNode": "EGHH",
+      "endNode": "rwyEGHH08",
+      "properties": {}
+    },
+    {
+      "id": "r203",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atc",
+      "endNode": "EGHH",
+      "properties": {}
+    },
+    {
+      "id": "r204",
+      "type": "USES_AIRCRAFT",
+      "startNode": "flight002",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r205",
+      "type": "HAS_PIC",
+      "startNode": "flight002",
+      "endNode": "pic",
+      "properties": {}
+    },
+    {
+      "id": "r206",
+      "type": "HANDLED_BY",
+      "startNode": "flight002",
+      "endNode": "atc",
+      "properties": {}
+    },
+    {
+      "id": "r207",
+      "type": "DEPARTS_FROM",
+      "startNode": "flight002",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r208",
+      "type": "ARRIVES_AT",
+      "startNode": "flight002",
+      "endNode": "EGBJ",
+      "properties": {}
+    },
+    {
+      "id": "r211",
+      "type": "USES_AIRCRAFT",
+      "startNode": "flight003",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r212",
+      "type": "HAS_PIC",
+      "startNode": "flight003",
+      "endNode": "pic",
+      "properties": {}
+    },
+    {
+      "id": "r213",
+      "type": "HANDLED_BY",
+      "startNode": "flight003",
+      "endNode": "atc",
+      "properties": {}
+    },
+    {
+      "id": "r214",
+      "type": "DEPARTS_FROM",
+      "startNode": "flight003",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r215",
+      "type": "ARRIVES_AT",
+      "startNode": "flight003",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r218",
+      "type": "USES_AIRCRAFT",
+      "startNode": "flight004",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r219",
+      "type": "HAS_PIC",
+      "startNode": "flight004",
+      "endNode": "pic",
+      "properties": {}
+    },
+    {
+      "id": "r220",
+      "type": "HANDLED_BY",
+      "startNode": "flight004",
+      "endNode": "atc",
+      "properties": {}
+    },
+    {
+      "id": "r221",
+      "type": "DEPARTS_FROM",
+      "startNode": "flight004",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r222",
+      "type": "ARRIVES_AT",
+      "startNode": "flight004",
+      "endNode": "EGTE",
+      "properties": {}
+    },
+    {
+      "id": "r225",
+      "type": "USES_AIRCRAFT",
+      "startNode": "flight005",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r226",
+      "type": "HAS_PIC",
+      "startNode": "flight005",
+      "endNode": "pic",
+      "properties": {}
+    },
+    {
+      "id": "r227",
+      "type": "HANDLED_BY",
+      "startNode": "flight005",
+      "endNode": "atc",
+      "properties": {}
+    },
+    {
+      "id": "r228",
+      "type": "DEPARTS_FROM",
+      "startNode": "flight005",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r229",
+      "type": "ARRIVES_AT",
+      "startNode": "flight005",
+      "endNode": "EGTK",
+      "properties": {}
+    },
+    {
+      "id": "r232",
+      "type": "USES_AIRCRAFT",
+      "startNode": "flight006",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r233",
+      "type": "HAS_PIC",
+      "startNode": "flight006",
+      "endNode": "pic",
+      "properties": {}
+    },
+    {
+      "id": "r234",
+      "type": "HANDLED_BY",
+      "startNode": "flight006",
+      "endNode": "atc",
+      "properties": {}
+    },
+    {
+      "id": "r235",
+      "type": "DEPARTS_FROM",
+      "startNode": "flight006",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r236",
+      "type": "ARRIVES_AT",
+      "startNode": "flight006",
+      "endNode": "EGHH",
+      "properties": {}
+    },
+    {
+      "id": "r237",
+      "type": "HAS_PHASE",
+      "startNode": "flight002",
+      "endNode": "ph_002_preflight",
+      "properties": {}
+    },
+    {
+      "id": "r238",
+      "type": "HAS_PHASE",
+      "startNode": "flight002",
+      "endNode": "ph_002_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r239",
+      "type": "HAS_PHASE",
+      "startNode": "flight002",
+      "endNode": "ph_002_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r240",
+      "type": "HAS_PHASE",
+      "startNode": "flight002",
+      "endNode": "ph_002_climb",
+      "properties": {}
+    },
+    {
+      "id": "r241",
+      "type": "HAS_PHASE",
+      "startNode": "flight002",
+      "endNode": "ph_002_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r242",
+      "type": "HAS_PHASE",
+      "startNode": "flight002",
+      "endNode": "ph_002_descent",
+      "properties": {}
+    },
+    {
+      "id": "r243",
+      "type": "HAS_PHASE",
+      "startNode": "flight002",
+      "endNode": "ph_002_approach",
+      "properties": {}
+    },
+    {
+      "id": "r244",
+      "type": "HAS_PHASE",
+      "startNode": "flight002",
+      "endNode": "ph_002_landing",
+      "properties": {}
+    },
+    {
+      "id": "r245",
+      "type": "FOLLOWS",
+      "startNode": "ph_002_preflight",
+      "endNode": "ph_002_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r246",
+      "type": "FOLLOWS",
+      "startNode": "ph_002_taxi",
+      "endNode": "ph_002_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r247",
+      "type": "FOLLOWS",
+      "startNode": "ph_002_takeoff",
+      "endNode": "ph_002_climb",
+      "properties": {}
+    },
+    {
+      "id": "r248",
+      "type": "FOLLOWS",
+      "startNode": "ph_002_climb",
+      "endNode": "ph_002_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r249",
+      "type": "FOLLOWS",
+      "startNode": "ph_002_cruise",
+      "endNode": "ph_002_descent",
+      "properties": {}
+    },
+    {
+      "id": "r250",
+      "type": "FOLLOWS",
+      "startNode": "ph_002_descent",
+      "endNode": "ph_002_approach",
+      "properties": {}
+    },
+    {
+      "id": "r251",
+      "type": "FOLLOWS",
+      "startNode": "ph_002_approach",
+      "endNode": "ph_002_landing",
+      "properties": {}
+    },
+    {
+      "id": "r252",
+      "type": "OCCURS_AT",
+      "startNode": "ph_002_preflight",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r253",
+      "type": "OCCURS_AT",
+      "startNode": "ph_002_taxi",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r254",
+      "type": "OCCURS_AT",
+      "startNode": "ph_002_takeoff",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r255",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_002_takeoff",
+      "endNode": "rwyEGBP08",
+      "properties": {}
+    },
+    {
+      "id": "r256",
+      "type": "OCCURS_AT",
+      "startNode": "ph_002_approach",
+      "endNode": "EGBJ",
+      "properties": {}
+    },
+    {
+      "id": "r257",
+      "type": "OCCURS_AT",
+      "startNode": "ph_002_landing",
+      "endNode": "EGBJ",
+      "properties": {}
+    },
+    {
+      "id": "r258",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_002_landing",
+      "endNode": "rwyEGBJ09",
+      "properties": {}
+    },
+    {
+      "id": "r259",
+      "type": "HAS_PHASE",
+      "startNode": "flight003",
+      "endNode": "ph_003_preflight",
+      "properties": {}
+    },
+    {
+      "id": "r260",
+      "type": "HAS_PHASE",
+      "startNode": "flight003",
+      "endNode": "ph_003_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r261",
+      "type": "HAS_PHASE",
+      "startNode": "flight003",
+      "endNode": "ph_003_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r262",
+      "type": "HAS_PHASE",
+      "startNode": "flight003",
+      "endNode": "ph_003_climb",
+      "properties": {}
+    },
+    {
+      "id": "r263",
+      "type": "HAS_PHASE",
+      "startNode": "flight003",
+      "endNode": "ph_003_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r264",
+      "type": "HAS_PHASE",
+      "startNode": "flight003",
+      "endNode": "ph_003_descent",
+      "properties": {}
+    },
+    {
+      "id": "r265",
+      "type": "HAS_PHASE",
+      "startNode": "flight003",
+      "endNode": "ph_003_approach",
+      "properties": {}
+    },
+    {
+      "id": "r266",
+      "type": "HAS_PHASE",
+      "startNode": "flight003",
+      "endNode": "ph_003_landing",
+      "properties": {}
+    },
+    {
+      "id": "r267",
+      "type": "FOLLOWS",
+      "startNode": "ph_003_preflight",
+      "endNode": "ph_003_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r268",
+      "type": "FOLLOWS",
+      "startNode": "ph_003_taxi",
+      "endNode": "ph_003_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r269",
+      "type": "FOLLOWS",
+      "startNode": "ph_003_takeoff",
+      "endNode": "ph_003_climb",
+      "properties": {}
+    },
+    {
+      "id": "r270",
+      "type": "FOLLOWS",
+      "startNode": "ph_003_climb",
+      "endNode": "ph_003_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r271",
+      "type": "FOLLOWS",
+      "startNode": "ph_003_cruise",
+      "endNode": "ph_003_descent",
+      "properties": {}
+    },
+    {
+      "id": "r272",
+      "type": "FOLLOWS",
+      "startNode": "ph_003_descent",
+      "endNode": "ph_003_approach",
+      "properties": {}
+    },
+    {
+      "id": "r273",
+      "type": "FOLLOWS",
+      "startNode": "ph_003_approach",
+      "endNode": "ph_003_landing",
+      "properties": {}
+    },
+    {
+      "id": "r274",
+      "type": "OCCURS_AT",
+      "startNode": "ph_003_preflight",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r275",
+      "type": "OCCURS_AT",
+      "startNode": "ph_003_taxi",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r276",
+      "type": "OCCURS_AT",
+      "startNode": "ph_003_takeoff",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r277",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_003_takeoff",
+      "endNode": "rwyEGGD27",
+      "properties": {}
+    },
+    {
+      "id": "r278",
+      "type": "OCCURS_AT",
+      "startNode": "ph_003_approach",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r279",
+      "type": "OCCURS_AT",
+      "startNode": "ph_003_landing",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r280",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_003_landing",
+      "endNode": "rwyEGFF12",
+      "properties": {}
+    },
+    {
+      "id": "r281",
+      "type": "HAS_PHASE",
+      "startNode": "flight004",
+      "endNode": "ph_004_preflight",
+      "properties": {}
+    },
+    {
+      "id": "r282",
+      "type": "HAS_PHASE",
+      "startNode": "flight004",
+      "endNode": "ph_004_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r283",
+      "type": "HAS_PHASE",
+      "startNode": "flight004",
+      "endNode": "ph_004_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r284",
+      "type": "HAS_PHASE",
+      "startNode": "flight004",
+      "endNode": "ph_004_climb",
+      "properties": {}
+    },
+    {
+      "id": "r285",
+      "type": "HAS_PHASE",
+      "startNode": "flight004",
+      "endNode": "ph_004_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r286",
+      "type": "HAS_PHASE",
+      "startNode": "flight004",
+      "endNode": "ph_004_descent",
+      "properties": {}
+    },
+    {
+      "id": "r287",
+      "type": "HAS_PHASE",
+      "startNode": "flight004",
+      "endNode": "ph_004_approach",
+      "properties": {}
+    },
+    {
+      "id": "r288",
+      "type": "HAS_PHASE",
+      "startNode": "flight004",
+      "endNode": "ph_004_landing",
+      "properties": {}
+    },
+    {
+      "id": "r289",
+      "type": "FOLLOWS",
+      "startNode": "ph_004_preflight",
+      "endNode": "ph_004_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r290",
+      "type": "FOLLOWS",
+      "startNode": "ph_004_taxi",
+      "endNode": "ph_004_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r291",
+      "type": "FOLLOWS",
+      "startNode": "ph_004_takeoff",
+      "endNode": "ph_004_climb",
+      "properties": {}
+    },
+    {
+      "id": "r292",
+      "type": "FOLLOWS",
+      "startNode": "ph_004_climb",
+      "endNode": "ph_004_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r293",
+      "type": "FOLLOWS",
+      "startNode": "ph_004_cruise",
+      "endNode": "ph_004_descent",
+      "properties": {}
+    },
+    {
+      "id": "r294",
+      "type": "FOLLOWS",
+      "startNode": "ph_004_descent",
+      "endNode": "ph_004_approach",
+      "properties": {}
+    },
+    {
+      "id": "r295",
+      "type": "FOLLOWS",
+      "startNode": "ph_004_approach",
+      "endNode": "ph_004_landing",
+      "properties": {}
+    },
+    {
+      "id": "r296",
+      "type": "OCCURS_AT",
+      "startNode": "ph_004_preflight",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r297",
+      "type": "OCCURS_AT",
+      "startNode": "ph_004_taxi",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r298",
+      "type": "OCCURS_AT",
+      "startNode": "ph_004_takeoff",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r299",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_004_takeoff",
+      "endNode": "rwyEGGD27",
+      "properties": {}
+    },
+    {
+      "id": "r300",
+      "type": "OCCURS_AT",
+      "startNode": "ph_004_approach",
+      "endNode": "EGTE",
+      "properties": {}
+    },
+    {
+      "id": "r301",
+      "type": "OCCURS_AT",
+      "startNode": "ph_004_landing",
+      "endNode": "EGTE",
+      "properties": {}
+    },
+    {
+      "id": "r302",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_004_landing",
+      "endNode": "rwyEGTE08",
+      "properties": {}
+    },
+    {
+      "id": "r303",
+      "type": "HAS_PHASE",
+      "startNode": "flight005",
+      "endNode": "ph_005_preflight",
+      "properties": {}
+    },
+    {
+      "id": "r304",
+      "type": "HAS_PHASE",
+      "startNode": "flight005",
+      "endNode": "ph_005_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r305",
+      "type": "HAS_PHASE",
+      "startNode": "flight005",
+      "endNode": "ph_005_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r306",
+      "type": "HAS_PHASE",
+      "startNode": "flight005",
+      "endNode": "ph_005_climb",
+      "properties": {}
+    },
+    {
+      "id": "r307",
+      "type": "HAS_PHASE",
+      "startNode": "flight005",
+      "endNode": "ph_005_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r308",
+      "type": "HAS_PHASE",
+      "startNode": "flight005",
+      "endNode": "ph_005_descent",
+      "properties": {}
+    },
+    {
+      "id": "r309",
+      "type": "HAS_PHASE",
+      "startNode": "flight005",
+      "endNode": "ph_005_approach",
+      "properties": {}
+    },
+    {
+      "id": "r310",
+      "type": "HAS_PHASE",
+      "startNode": "flight005",
+      "endNode": "ph_005_landing",
+      "properties": {}
+    },
+    {
+      "id": "r311",
+      "type": "FOLLOWS",
+      "startNode": "ph_005_preflight",
+      "endNode": "ph_005_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r312",
+      "type": "FOLLOWS",
+      "startNode": "ph_005_taxi",
+      "endNode": "ph_005_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r313",
+      "type": "FOLLOWS",
+      "startNode": "ph_005_takeoff",
+      "endNode": "ph_005_climb",
+      "properties": {}
+    },
+    {
+      "id": "r314",
+      "type": "FOLLOWS",
+      "startNode": "ph_005_climb",
+      "endNode": "ph_005_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r315",
+      "type": "FOLLOWS",
+      "startNode": "ph_005_cruise",
+      "endNode": "ph_005_descent",
+      "properties": {}
+    },
+    {
+      "id": "r316",
+      "type": "FOLLOWS",
+      "startNode": "ph_005_descent",
+      "endNode": "ph_005_approach",
+      "properties": {}
+    },
+    {
+      "id": "r317",
+      "type": "FOLLOWS",
+      "startNode": "ph_005_approach",
+      "endNode": "ph_005_landing",
+      "properties": {}
+    },
+    {
+      "id": "r318",
+      "type": "OCCURS_AT",
+      "startNode": "ph_005_preflight",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r319",
+      "type": "OCCURS_AT",
+      "startNode": "ph_005_taxi",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r320",
+      "type": "OCCURS_AT",
+      "startNode": "ph_005_takeoff",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r321",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_005_takeoff",
+      "endNode": "rwyEGBP08",
+      "properties": {}
+    },
+    {
+      "id": "r322",
+      "type": "OCCURS_AT",
+      "startNode": "ph_005_approach",
+      "endNode": "EGTK",
+      "properties": {}
+    },
+    {
+      "id": "r323",
+      "type": "OCCURS_AT",
+      "startNode": "ph_005_landing",
+      "endNode": "EGTK",
+      "properties": {}
+    },
+    {
+      "id": "r324",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_005_landing",
+      "endNode": "rwyEGTK01",
+      "properties": {}
+    },
+    {
+      "id": "r325",
+      "type": "HAS_PHASE",
+      "startNode": "flight006",
+      "endNode": "ph_006_preflight",
+      "properties": {}
+    },
+    {
+      "id": "r326",
+      "type": "HAS_PHASE",
+      "startNode": "flight006",
+      "endNode": "ph_006_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r327",
+      "type": "HAS_PHASE",
+      "startNode": "flight006",
+      "endNode": "ph_006_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r328",
+      "type": "HAS_PHASE",
+      "startNode": "flight006",
+      "endNode": "ph_006_climb",
+      "properties": {}
+    },
+    {
+      "id": "r329",
+      "type": "HAS_PHASE",
+      "startNode": "flight006",
+      "endNode": "ph_006_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r330",
+      "type": "HAS_PHASE",
+      "startNode": "flight006",
+      "endNode": "ph_006_descent",
+      "properties": {}
+    },
+    {
+      "id": "r331",
+      "type": "HAS_PHASE",
+      "startNode": "flight006",
+      "endNode": "ph_006_approach",
+      "properties": {}
+    },
+    {
+      "id": "r332",
+      "type": "HAS_PHASE",
+      "startNode": "flight006",
+      "endNode": "ph_006_landing",
+      "properties": {}
+    },
+    {
+      "id": "r333",
+      "type": "FOLLOWS",
+      "startNode": "ph_006_preflight",
+      "endNode": "ph_006_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r334",
+      "type": "FOLLOWS",
+      "startNode": "ph_006_taxi",
+      "endNode": "ph_006_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r335",
+      "type": "FOLLOWS",
+      "startNode": "ph_006_takeoff",
+      "endNode": "ph_006_climb",
+      "properties": {}
+    },
+    {
+      "id": "r336",
+      "type": "FOLLOWS",
+      "startNode": "ph_006_climb",
+      "endNode": "ph_006_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r337",
+      "type": "FOLLOWS",
+      "startNode": "ph_006_cruise",
+      "endNode": "ph_006_descent",
+      "properties": {}
+    },
+    {
+      "id": "r338",
+      "type": "FOLLOWS",
+      "startNode": "ph_006_descent",
+      "endNode": "ph_006_approach",
+      "properties": {}
+    },
+    {
+      "id": "r339",
+      "type": "FOLLOWS",
+      "startNode": "ph_006_approach",
+      "endNode": "ph_006_landing",
+      "properties": {}
+    },
+    {
+      "id": "r340",
+      "type": "OCCURS_AT",
+      "startNode": "ph_006_preflight",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r341",
+      "type": "OCCURS_AT",
+      "startNode": "ph_006_taxi",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r342",
+      "type": "OCCURS_AT",
+      "startNode": "ph_006_takeoff",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r343",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_006_takeoff",
+      "endNode": "rwyEGGD27",
+      "properties": {}
+    },
+    {
+      "id": "r344",
+      "type": "OCCURS_AT",
+      "startNode": "ph_006_approach",
+      "endNode": "EGHH",
+      "properties": {}
+    },
+    {
+      "id": "r345",
+      "type": "OCCURS_AT",
+      "startNode": "ph_006_landing",
+      "endNode": "EGHH",
+      "properties": {}
+    },
+    {
+      "id": "r346",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_006_landing",
+      "endNode": "rwyEGHH08",
       "properties": {}
     }
   ]
