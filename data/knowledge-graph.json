@@ -596,6 +596,7 @@
         "groundspeed_kt": 10,
         "fieldElevation_ft": 622,
         "distance_nm": 0.8,
+        "groundRoll_m": 1482,
         "route": "apron to holding point"
       }
     },
@@ -1708,6 +1709,7 @@
         "groundspeed_kt": 10,
         "fieldElevation_ft": 433,
         "distance_nm": 0.8,
+        "groundRoll_m": 1482,
         "route": "apron to holding point"
       }
     },
@@ -1846,6 +1848,7 @@
         "groundspeed_kt": 10,
         "fieldElevation_ft": 622,
         "distance_nm": 0.8,
+        "groundRoll_m": 1482,
         "route": "apron to holding point"
       }
     },
@@ -1984,6 +1987,7 @@
         "groundspeed_kt": 10,
         "fieldElevation_ft": 622,
         "distance_nm": 0.8,
+        "groundRoll_m": 1482,
         "route": "apron to holding point"
       }
     },
@@ -2122,6 +2126,7 @@
         "groundspeed_kt": 10,
         "fieldElevation_ft": 433,
         "distance_nm": 0.8,
+        "groundRoll_m": 1482,
         "route": "apron to holding point"
       }
     },
@@ -2260,6 +2265,7 @@
         "groundspeed_kt": 10,
         "fieldElevation_ft": 622,
         "distance_nm": 0.8,
+        "groundRoll_m": 1482,
         "route": "apron to holding point"
       }
     },

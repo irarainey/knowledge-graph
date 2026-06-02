@@ -67,6 +67,10 @@ cmd = "pytest tests/ -v"
 help = "Import data/knowledge-graph.json into Neo4j (pass --clear to wipe first)"
 cmd = "python src/import_graph.py"
 
+[tool.poe.tasks.serve]
+help = "Run the FastAPI query API with autoreload"
+cmd = "uvicorn api:app --app-dir src --reload --host 0.0.0.0 --port 8080"
+
 # ── Ruff ────────────────────────────────────────────────────────
 
 [tool.ruff]

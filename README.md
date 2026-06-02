@@ -73,3 +73,28 @@ The import is idempotent, so re-running with the default (upsert) mode is safe.
 Use `--clear` after removing or renaming nodes/relationships to get a clean
 reload. See [backend/README.md](backend/README.md) for the underlying command and
 additional options.
+
+## Querying the graph over HTTP
+
+The backend exposes a FastAPI service that runs arbitrary Cypher against Neo4j.
+Connection details come from `backend/.env` (the same file used by the import).
+
+```bash
+cd backend
+uv run poe serve        # starts the API on http://localhost:8080 with autoreload
+```
+
+`POST /query` accepts a Cypher query plus optional parameters and returns the
+result rows:
+
+```bash
+curl -X POST http://localhost:8080/query \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "query": "MATCH (a:Aircraft)-[:HAS_SYSTEM]->(:System)-[:HAS_COMPONENT]->(e:PistonEngine {name: $engineName}) MATCH (f:Flight)-[:USES_AIRCRAFT]->(a) WHERE date(f.date) >= date($since) RETURN e.name AS engine, count(f) AS flights, sum(coalesce(f.flightTime_hours, 0)) AS hours",
+        "parameters": { "engineName": "Lycoming IO-360", "since": "2026-05-25" }
+      }'
+```
+
+See [backend/README.md](backend/README.md) for the full request/response shape and
+interactive docs.

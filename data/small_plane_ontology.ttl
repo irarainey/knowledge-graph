@@ -1432,6 +1432,7 @@ spo:ph_taxi a spo:Taxi ;
     spo:groundspeed_kt "10"^^xsd:integer ;
     spo:fieldElevation_ft "622"^^xsd:integer ;
     spo:distance_nm "0.8"^^xsd:decimal ;
+    spo:groundRoll_m "1482"^^xsd:integer ;
     spo:route "apron to holding point" ;
     spo:follows spo:ph_takeoff ;
     spo:occursAt spo:EGGD .
@@ -2023,6 +2024,7 @@ spo:ph_002_taxi a spo:Taxi ;
     spo:groundspeed_kt "10"^^xsd:integer ;
     spo:fieldElevation_ft "433"^^xsd:integer ;
     spo:distance_nm "0.8"^^xsd:decimal ;
+    spo:groundRoll_m "1482"^^xsd:integer ;
     spo:route "apron to holding point" ;
     spo:follows spo:ph_002_takeoff ;
     spo:occursAt spo:EGBP .
@@ -2119,6 +2121,7 @@ spo:ph_003_taxi a spo:Taxi ;
     spo:groundspeed_kt "10"^^xsd:integer ;
     spo:fieldElevation_ft "622"^^xsd:integer ;
     spo:distance_nm "0.8"^^xsd:decimal ;
+    spo:groundRoll_m "1482"^^xsd:integer ;
     spo:route "apron to holding point" ;
     spo:follows spo:ph_003_takeoff ;
     spo:occursAt spo:EGGD .
@@ -2215,6 +2218,7 @@ spo:ph_004_taxi a spo:Taxi ;
     spo:groundspeed_kt "10"^^xsd:integer ;
     spo:fieldElevation_ft "622"^^xsd:integer ;
     spo:distance_nm "0.8"^^xsd:decimal ;
+    spo:groundRoll_m "1482"^^xsd:integer ;
     spo:route "apron to holding point" ;
     spo:follows spo:ph_004_takeoff ;
     spo:occursAt spo:EGGD .
@@ -2311,6 +2315,7 @@ spo:ph_005_taxi a spo:Taxi ;
     spo:groundspeed_kt "10"^^xsd:integer ;
     spo:fieldElevation_ft "433"^^xsd:integer ;
     spo:distance_nm "0.8"^^xsd:decimal ;
+    spo:groundRoll_m "1482"^^xsd:integer ;
     spo:route "apron to holding point" ;
     spo:follows spo:ph_005_takeoff ;
     spo:occursAt spo:EGBP .
@@ -2407,6 +2412,7 @@ spo:ph_006_taxi a spo:Taxi ;
     spo:groundspeed_kt "10"^^xsd:integer ;
     spo:fieldElevation_ft "622"^^xsd:integer ;
     spo:distance_nm "0.8"^^xsd:decimal ;
+    spo:groundRoll_m "1482"^^xsd:integer ;
     spo:route "apron to holding point" ;
     spo:follows spo:ph_006_takeoff ;
     spo:occursAt spo:EGGD .
