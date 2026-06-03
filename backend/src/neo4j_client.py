@@ -28,6 +28,7 @@ SCHEMA_NODE_PROPERTIES = (
     "UNWIND lbls AS label UNWIND ks AS k "
     "RETURN label, collect(DISTINCT k) AS properties ORDER BY label"
 )
+SCHEMA_NODE_SAMPLES = "MATCH (n) RETURN labels(n) AS labels, properties(n) AS props"
 SCHEMA_RELATIONSHIPS = "MATCH (a)-[r]->(b) RETURN DISTINCT labels(a) AS startLabels, type(r) AS type, labels(b) AS endLabels ORDER BY type"
 SCHEMA_RELATIONSHIP_PROPERTIES = (
     "MATCH ()-[r]->() WITH type(r) AS type, keys(r) AS ks UNWIND ks AS k RETURN type, collect(DISTINCT k) AS properties ORDER BY type"

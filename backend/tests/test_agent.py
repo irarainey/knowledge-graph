@@ -53,15 +53,26 @@ class FakeSchemaDriver:
             rows = [FakeRecord(startLabels=["Aircraft"], type="HAS_SYSTEM", endLabels=["System"])]
         elif "type(r)" in query and "endLabels" not in query:  # relationship properties
             rows = [FakeRecord(type="FEEDS", properties=["fluid"])]
-        else:  # node properties
-            rows = [FakeRecord(label="Aircraft", properties=["registration"])]
+        else:  # node samples (labels + properties per node)
+            rows = [
+                FakeRecord(labels=["Flight"], props={"date": "2026-05-20", "flightTime_hours": 0.5}),
+                FakeRecord(labels=["System", "FuelSystem"], props={"name": "Fuel"}),
+                FakeRecord(labels=["System", "ElectricalSystem"], props={"name": "Elec"}),
+                FakeRecord(labels=["System", "LandingGearSystem"], props={"name": "Gear"}),
+                FakeRecord(labels=["System", "IgnitionSystem"], props={"name": "Ign"}),
+            ]
         return rows, None, None
 
 
 def test_fetch_schema_text_uses_database_and_formats() -> None:
     driver = FakeSchemaDriver()
     text = fetch_schema_text(driver, "graph")  # type: ignore[arg-type]
-    assert "Aircraft: registration" in text
+    # Specific labels are enriched with inferred types and example values.
+    assert 'date (str, e.g. "2026-05-20")' in text
+    assert "flightTime_hours (float, e.g. 0.5)" in text
+    # Generic super-labels (>= 4 sibling labels) are trimmed to property names only.
+    assert "- System: name\n" in text or text.endswith("- System: name")
+    assert "- System: name (str" not in text
     assert "(Aircraft)-[HAS_SYSTEM]->(System)" in text
     assert "FEEDS: fluid" in text
     assert all(db == "graph" for _, db in driver.calls)

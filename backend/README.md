@@ -167,15 +167,24 @@ Step by step, in `src/agent.py`:
    (`build_llm`), introspects the schema once (`fetch_schema_text`), and wires up a
    `Text2CypherRetriever` and a `GraphRAG` pipeline.
 
-2. **Schema introspection (`fetch_schema_text`).** Three read-only Cypher queries
-   collect node labels + properties, relationship types with the labels they
-   connect, and relationship properties. `format_schema` renders them as compact
-   text that anchors the LLM to the graph's exact names. No APOC is used.
+2. **Schema introspection (`fetch_schema_text`).** Read-only Cypher queries collect
+   node labels with their properties, the relationship types that connect labels, and
+   relationship properties (no APOC). Each property is rendered with an inferred **type
+   and example value** (e.g. `Flight: date (str, e.g. "2026-05-20")`) so the LLM can
+   see, for instance, that dates are ISO strings that need casting. Generic
+   super-labels shared across many node types (e.g. `System`, `Component`,
+   `FlightPhase`) are trimmed to property names only to keep the prompt focused.
 
 3. **Cypher generation.** When a question arrives, the retriever fills its
-   cypher-generation prompt with the schema, the few-shot `DEFAULT_EXAMPLES`
-   (question → Cypher pairs that pin down this graph's labels/relationships), and
-   the question, then asks the LLM for a single Cypher query.
+   `CYPHER_GENERATION_PROMPT` — a domain-tuned prompt — with the schema, the few-shot
+   `DEFAULT_EXAMPLES` (question → Cypher pairs), and the question, then asks the LLM for
+   a single Cypher query. The prompt encodes the rules that make queries actually
+   return data: cast ISO-string dates with `date()` on both sides, inline literals
+   (never use `$parameters`, which the retriever does not supply), traverse the
+   `Aircraft → System → Component → Part` hierarchy in full for component/part
+   questions (but query `:Flight` directly for flight/hours/date questions), use
+   `coalesce()`/`IS NOT NULL` for nullable numerics, never invent property names, and
+   aggregate for count/sum/total questions.
 
 4. **Read-only enforcement.** Before executing, the retriever runs `EXPLAIN` on the
    generated query and refuses anything Neo4j does not classify as read-only. The
@@ -244,8 +253,8 @@ curl -X POST http://localhost:8080/ask \
 ```json
 {
   "answer": "Since 2026-05-25, the engine has had 2.2 flying hours across 4 flights.",
-  "cypher_used": ["MATCH (e:PistonEngine) MATCH (f:Flight) WHERE f.date >= $since RETURN ..."],
-  "records": [{"engine": "Lycoming IO-360", "flying_hours": 2.2, "flights": 4}]
+  "cypher_used": ["MATCH (ac:Aircraft)-[:HAS_SYSTEM]->(:System)-[:HAS_COMPONENT]->(e:PistonEngine) MATCH (f:Flight)-[:USES_AIRCRAFT]->(ac) WHERE date(f.date) >= date('2026-05-25') RETURN e.name AS engine, count(f) AS flights, sum(coalesce(f.flightTime_hours, 0)) AS hours"],
+  "records": [{"engine": "Lycoming IO-360", "flights": 4, "hours": 2.2}]
 }
 ```
 

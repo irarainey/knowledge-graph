@@ -30,24 +30,82 @@ from neo4j_graphrag.retrievers import Text2CypherRetriever
 from neo4j_graphrag.types import RetrieverResultItem
 
 from neo4j_client import (
-    SCHEMA_NODE_PROPERTIES,
+    SCHEMA_NODE_SAMPLES,
     SCHEMA_RELATIONSHIP_PROPERTIES,
     SCHEMA_RELATIONSHIPS,
     Neo4jSettings,
-    format_schema,
     to_jsonable,
 )
 
 DEFAULT_API_VERSION = "2024-10-21"
 
 # Few-shot question/Cypher pairs that anchor the cypher-generation LLM to this
-# graph's exact labels and relationship types.
+# graph's exact labels, relationship types and conventions: ISO-string dates cast
+# with date(), inlined literals (no $parameters), full hierarchy traversal for
+# component/part questions, and aggregation for totals.
 DEFAULT_EXAMPLES = [
     "USER INPUT: 'How many flights are recorded?' QUERY: MATCH (f:Flight) RETURN count(f) AS flights",
-    "USER INPUT: 'What is the total flight time across all flights?' QUERY: MATCH (f:Flight) RETURN sum(f.flightTime_hours) AS totalFlightHours",
-    "USER INPUT: 'Which systems does the aircraft have?' QUERY: MATCH (a:Aircraft)-[:HAS_SYSTEM]->(s) RETURN s.name AS system",
-    "USER INPUT: 'List the components of the fuel system.' QUERY: MATCH (:FuelSystem)-[:HAS_COMPONENT]->(c) RETURN c.name AS component",
+    "USER INPUT: 'Which aerodromes has the aircraft flown to?' "
+    "QUERY: MATCH (:Flight)-[:ARRIVES_AT]->(a:Aerodrome) RETURN DISTINCT a.name AS aerodrome",
+    "USER INPUT: 'How many flying hours has the engine had since 2026-05-25?' "
+    "QUERY: MATCH (ac:Aircraft)-[:HAS_SYSTEM]->(:System)-[:HAS_COMPONENT]->(e:PistonEngine) "
+    "MATCH (f:Flight)-[:USES_AIRCRAFT]->(ac) WHERE date(f.date) >= date('2026-05-25') "
+    "RETURN e.name AS engine, count(f) AS flights, sum(coalesce(f.flightTime_hours, 0)) AS hours",
+    "USER INPUT: 'How much ground distance has the front tyre covered between 2026-05-01 and 2026-05-31?' "
+    "QUERY: MATCH (f:Flight)-[:USES_AIRCRAFT]->(:Aircraft)-[:HAS_SYSTEM]->(:LandingGearSystem)"
+    "-[:HAS_COMPONENT]->(:NoseWheel)-[:HAS_PART]->(tyre:Tyre) "
+    "WHERE date(f.date) >= date('2026-05-01') AND date(f.date) <= date('2026-05-31') "
+    "MATCH (f)-[:HAS_PHASE]->(phase:FlightPhase) WHERE phase.groundRoll_m IS NOT NULL "
+    "RETURN tyre.name AS tyre, sum(phase.groundRoll_m) AS totalGroundDistance_m",
 ]
+
+# Cypher-generation prompt. Replaces the package default so we can inject
+# domain rules. Text2CypherRetriever substitutes {schema}, {examples} and
+# {query_text}; any other literal braces would need doubling.
+CYPHER_GENERATION_PROMPT = """\
+Task: write a single read-only Cypher query that answers the user's question using the \
+Neo4j graph described below.
+
+Graph schema:
+{schema}
+
+Rules:
+- Use ONLY the node labels, relationship types and properties that appear in the schema. \
+Never invent or guess names. For example, an engine has no "total hours" property — derive \
+engine flying hours from the flightTime_hours of the Flights that use the aircraft.
+- Inline literal values directly in the query. NEVER use query parameters such as $since or \
+$start — the query is executed exactly as written with no parameters supplied.
+- Dates are stored as ISO-8601 STRINGS (e.g. "2026-05-20"). For ANY date comparison you MUST \
+cast both sides with date(), and use explicit AND for ranges, e.g. \
+`WHERE date(f.date) >= date('2026-05-01') AND date(f.date) <= date('2026-05-31')`. \
+Never compare Flight.date directly against a date value.
+- Systems, components and parts form a hierarchy: \
+(:Aircraft)-[:HAS_SYSTEM]->(:System)-[:HAS_COMPONENT]->(component)-[:HAS_PART]->(part). \
+To reach a specific component or part, traverse the full path; do not read a property off a \
+shortcut node. Only traverse this hierarchy when the question is about a system, component, \
+part, engine, tyre or maintenance item. For questions purely about flights, hours or dates, \
+query :Flight directly.
+- Flights connect to the aircraft via (:Flight)-[:USES_AIRCRAFT]->(:Aircraft) and to their \
+phases via (:Flight)-[:HAS_PHASE]->(:FlightPhase). Specific phases also carry labels such as \
+:Taxi, :Takeoff and :Landing.
+- Wrap nullable numeric properties in coalesce(...) when summing, and add `IS NOT NULL` filters \
+for properties that may be absent.
+- If the question asks for a count, sum, total, average, maximum or minimum, return that \
+aggregate with a clear alias; otherwise return the relevant rows with clear column aliases.
+
+Examples:
+{examples}
+
+Question:
+{query_text}
+
+Return only the Cypher query, with no backticks, comments or any other text.
+"""
+
+# A label shared by at least this many distinct sibling labels is treated as a
+# generic super-label (e.g. System, Component); its property union is noisy, so we
+# render only property names for it rather than typed examples.
+GENERIC_LABEL_SIBLING_THRESHOLD = 4
 
 # Answer-generation prompt. Keeps the numeric-fidelity and concise/factual
 # guidance from the previous agent. Only {context}, {examples} and {query_text}
@@ -138,22 +196,93 @@ def _record_to_item(record: Any) -> RetrieverResultItem:
     return RetrieverResultItem(content=json.dumps(data), metadata={"record": data})
 
 
+def _scalar_type(value: Any) -> str:
+    if isinstance(value, bool):
+        return "bool"
+    if isinstance(value, int):
+        return "int"
+    if isinstance(value, float):
+        return "float"
+    if isinstance(value, str):
+        return "str"
+    if isinstance(value, list):
+        return "list"
+    return type(value).__name__
+
+
+def _example_literal(value: Any) -> str:
+    try:
+        text = json.dumps(to_jsonable(value), default=str)
+    except (TypeError, ValueError):
+        text = str(value)
+    if len(text) > 40:
+        text = text[:39] + "…"
+    return text
+
+
+def _build_node_section(node_rows: list[dict[str, Any]]) -> list[str]:
+    """Render per-label properties with types/examples, trimming generic super-labels.
+
+    For each label we keep the first non-null example value seen for each property.
+    Labels shared across many sibling labels (super-labels like ``System``) get a
+    names-only listing so their large property unions don't swamp the prompt.
+    """
+    siblings: dict[str, set[str]] = {}
+    examples: dict[str, dict[str, Any]] = {}
+    for row in node_rows:
+        labels: list[str] = row.get("labels") or []
+        props: dict[str, Any] = row.get("props") or {}
+        label_set = set(labels)
+        for label in labels:
+            siblings.setdefault(label, set()).update(label_set - {label})
+            store = examples.setdefault(label, {})
+            for key, value in props.items():
+                if value is not None and key not in store:
+                    store[key] = value
+
+    lines = ["Node labels and their properties:"]
+    for label in sorted(examples):
+        props = examples[label]
+        if not props:
+            lines.append(f"- {label}: (no properties)")
+        elif len(siblings.get(label, set())) >= GENERIC_LABEL_SIBLING_THRESHOLD:
+            lines.append(f"- {label}: {', '.join(sorted(props))}")
+        else:
+            rendered = ", ".join(f"{key} ({_scalar_type(props[key])}, e.g. {_example_literal(props[key])})" for key in sorted(props))
+            lines.append(f"- {label}: {rendered}")
+    return lines
+
+
 def fetch_schema_text(driver: Driver, database: str) -> str:
     """Introspect the graph over a synchronous driver and render it as prompt text.
 
     Uses plain Cypher (no APOC) so it works on a stock Neo4j Community container.
+    Node properties are shown with inferred types and example values so the LLM can
+    see, for instance, that ``Flight.date`` is an ISO string that needs casting.
     """
 
     def rows(query: str) -> list[dict[str, Any]]:
         records, _, _ = driver.execute_query(query, database_=database, routing_=RoutingControl.READ)
         return [dict(record) for record in records]
 
-    schema = {
-        "nodes": rows(SCHEMA_NODE_PROPERTIES),
-        "relationships": rows(SCHEMA_RELATIONSHIPS),
-        "relationshipProperties": rows(SCHEMA_RELATIONSHIP_PROPERTIES),
-    }
-    return format_schema(schema)
+    lines = _build_node_section(rows(SCHEMA_NODE_SAMPLES))
+
+    lines.append("")
+    lines.append("Relationships (startLabels)-[TYPE]->(endLabels):")
+    for row in rows(SCHEMA_RELATIONSHIPS):
+        start = ":".join(row.get("startLabels", []))
+        end = ":".join(row.get("endLabels", []))
+        lines.append(f"- ({start})-[{row['type']}]->({end})")
+
+    rel_props = rows(SCHEMA_RELATIONSHIP_PROPERTIES)
+    if rel_props:
+        lines.append("")
+        lines.append("Relationship properties:")
+        for row in rel_props:
+            props = ", ".join(row.get("properties", []))
+            lines.append(f"- {row['type']}: {props}")
+
+    return "\n".join(lines)
 
 
 class KnowledgeGraphAgent:
@@ -176,6 +305,7 @@ class KnowledgeGraphAgent:
             llm=llm,
             neo4j_schema=schema,
             examples=examples if examples is not None else DEFAULT_EXAMPLES,
+            custom_prompt=CYPHER_GENERATION_PROMPT,
             result_formatter=_record_to_item,
             neo4j_database=database,
         )
