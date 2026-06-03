@@ -1,0 +1,14 @@
+[server]
+# Run without trying to open a browser (suitable for a dev container) and listen
+# on all interfaces so the port can be forwarded.
+headless = true
+address = "0.0.0.0"
+port = 8501
+
+[browser]
+# Don't prompt for an email on first run and don't phone home.
+gatherUsageStats = false
+
+[client]
+# Hide the "Deploy" button and trim the toolbar to the essentials.
+toolbarMode = "minimal"

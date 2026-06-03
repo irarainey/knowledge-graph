@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -190,10 +192,135 @@ def test_close_closes_driver() -> None:
     assert driver.closed is True
 
 
+# ── KnowledgeGraphAgent.ask_stream (token streaming) ─────────────────────────
+class FakeStreamRetriever:
+    """Stands in for Text2CypherRetriever.search (sync)."""
+
+    def __init__(self, *, result: RetrieverResult | None = None, error: Exception | None = None) -> None:
+        self._result = result
+        self._error = error
+        self.calls: list[str] = []
+
+    def search(self, query_text: str) -> RetrieverResult:
+        self.calls.append(query_text)
+        if self._error is not None:
+            raise self._error
+        assert self._result is not None
+        return self._result
+
+
+class FakeChunkStream:
+    """Async iterator of OpenAI-style streaming chunks built from plain strings."""
+
+    def __init__(self, texts: list[str]) -> None:
+        self._texts = texts
+        self.closed = False
+
+    def __aiter__(self) -> FakeChunkStream:
+        self._iter = iter(self._texts)
+        return self
+
+    async def __anext__(self) -> Any:
+        try:
+            text = next(self._iter)
+        except StopIteration as exc:
+            raise StopAsyncIteration from exc
+        return SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=text))])
+
+    async def aclose(self) -> None:
+        self.closed = True
+
+
+class FakeCompletions:
+    def __init__(self, texts: list[str]) -> None:
+        self._texts = texts
+        self.last_kwargs: dict[str, Any] | None = None
+
+    async def create(self, **kwargs: Any) -> FakeChunkStream:
+        self.last_kwargs = kwargs
+        return FakeChunkStream(self._texts)
+
+
+class FakeStreamLLM:
+    """Minimal stand-in for OpenAILLM exposing the bits _stream_answer uses."""
+
+    def __init__(self, texts: list[str]) -> None:
+        self.model_name = "fake-model"
+        self.model_params: dict[str, Any] = {}
+        self.completions = FakeCompletions(texts)
+        self.async_client = SimpleNamespace(chat=SimpleNamespace(completions=self.completions))
+
+    def get_messages(self, input: str, message_history: Any = None, system_instruction: str | None = None) -> list[dict[str, str]]:
+        messages: list[dict[str, str]] = []
+        if system_instruction:
+            messages.append({"role": "system", "content": system_instruction})
+        messages.append({"role": "user", "content": input})
+        return messages
+
+
+class FakePromptTemplate:
+    system_instructions = "Answer the user question using the provided context."
+
+    def format(self, query_text: str, context: str, examples: str) -> str:
+        return f"Q: {query_text}\nCTX: {context}"
+
+
+def _make_stream_agent(retriever: FakeStreamRetriever, llm: FakeStreamLLM) -> KnowledgeGraphAgent:
+    agent = object.__new__(KnowledgeGraphAgent)
+    agent._driver = FakeDriver()  # type: ignore[assignment]
+    agent._retriever = retriever  # type: ignore[assignment]
+    agent._llm = llm  # type: ignore[assignment]
+    agent._prompt_template = FakePromptTemplate()  # type: ignore[assignment]
+    return agent
+
+
+async def test_ask_stream_emits_metadata_tokens_and_done() -> None:
+    result = RetrieverResult(
+        items=[RetrieverResultItem(content='{"flights": 6}', metadata={"record": {"flights": 6}})],
+        metadata={"cypher": "MATCH (f:Flight) RETURN count(f) AS flights"},
+    )
+    retriever = FakeStreamRetriever(result=result)
+    llm = FakeStreamLLM(["There ", "are 6 ", "flights."])
+    agent = _make_stream_agent(retriever, llm)
+
+    events = [event async for event in agent.ask_stream("How many flights?")]
+
+    assert events[0] == {
+        "type": "metadata",
+        "cypher_used": ["MATCH (f:Flight) RETURN count(f) AS flights"],
+        "records": [{"flights": 6}],
+    }
+    tokens = [event["text"] for event in events if event["type"] == "token"]
+    assert "".join(tokens) == "There are 6 flights."
+    assert events[-1] == {"type": "done"}
+    assert retriever.calls == ["How many flights?"]
+    # The native streaming call must request streaming and pass the model through.
+    assert llm.completions.last_kwargs is not None
+    assert llm.completions.last_kwargs["stream"] is True
+    assert llm.completions.last_kwargs["model"] == "fake-model"
+
+
+async def test_ask_stream_degrades_on_retrieval_error() -> None:
+    retriever = FakeStreamRetriever(error=Text2CypherRetrievalError("bad cypher"))
+    llm = FakeStreamLLM([])
+    agent = _make_stream_agent(retriever, llm)
+
+    events = [event async for event in agent.ask_stream("nonsense")]
+
+    assert events[0] == {"type": "metadata", "cypher_used": [], "records": []}
+    assert any(event["type"] == "token" and "couldn't" in event["text"].lower() for event in events)
+    assert events[-1] == {"type": "done"}
+
+
 # ── /ask endpoint ────────────────────────────────────────────────────────────
 class FakeKGAgent:
     async def ask(self, question: str) -> AskResult:
         return AskResult(answer="42", cypher_used=["MATCH (n) RETURN count(n)"], records=[{"count": 1}])
+
+    async def ask_stream(self, question: str) -> Any:
+        yield {"type": "metadata", "cypher_used": ["MATCH (n) RETURN count(n)"], "records": [{"count": 1}]}
+        yield {"type": "token", "text": "42"}
+        yield {"type": "done"}
 
 
 async def test_ask_endpoint_returns_answer() -> None:
@@ -226,3 +353,27 @@ async def test_ask_endpoint_rejects_empty_question() -> None:
     finally:
         api.app.dependency_overrides.clear()
     assert response.status_code == 422
+
+
+async def test_ask_stream_endpoint_streams_ndjson() -> None:
+    api.app.dependency_overrides[api.get_agent] = lambda: FakeKGAgent()
+    transport = ASGITransport(app=api.app)
+    try:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post("/ask/stream", json={"question": "How many nodes?"})
+    finally:
+        api.app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/x-ndjson")
+    events = [json.loads(line) for line in response.text.splitlines() if line]
+    assert events[0]["type"] == "metadata"
+    assert any(event["type"] == "token" and event["text"] == "42" for event in events)
+    assert events[-1] == {"type": "done"}
+
+
+async def test_ask_stream_endpoint_503_when_agent_unconfigured() -> None:
+    api.app.state.agent = None
+    transport = ASGITransport(app=api.app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post("/ask/stream", json={"question": "anything"})
+    assert response.status_code == 503

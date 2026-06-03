@@ -70,6 +70,10 @@ cmd = "python src/import_graph.py"
 help = "Run the FastAPI query API with autoreload"
 cmd = "uvicorn api:app --app-dir src --reload --host 0.0.0.0 --port 8080"
 
+[tool.poe.tasks.dev]
+help = "Run the backend API, Streamlit UI and Vue frontend together (Ctrl-C stops all)"
+cmd = "bash ../scripts/start-dev.sh"
+
 # ── Ruff ────────────────────────────────────────────────────────
 
 [tool.ruff]

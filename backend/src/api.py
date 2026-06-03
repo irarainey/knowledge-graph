@@ -12,11 +12,13 @@ Connection and model details come from the environment / ``backend/.env``.
 
 from __future__ import annotations
 
+import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from neo4j.exceptions import Neo4jError
 from pydantic import BaseModel, Field
 
@@ -111,3 +113,19 @@ async def run_query(payload: QueryRequest, client: Annotated[Neo4jClient, Depend
 async def ask(payload: AskRequest, agent: Annotated[KnowledgeGraphAgent, Depends(get_agent)]) -> AskResponse:
     result = await agent.ask(payload.question)
     return AskResponse(answer=result.answer, cypher_used=result.cypher_used, records=result.records)
+
+
+@app.post("/ask/stream")
+async def ask_stream(payload: AskRequest, agent: Annotated[KnowledgeGraphAgent, Depends(get_agent)]) -> StreamingResponse:
+    """Stream the answer as newline-delimited JSON events (metadata, tokens, done).
+
+    The 503-when-unconfigured check happens in ``get_agent`` before the response
+    starts. Any failure after streaming begins is reported as an in-band event
+    (``{"type": "error"}``) rather than an HTTP status, since headers are already sent.
+    """
+
+    async def event_generator() -> AsyncIterator[bytes]:
+        async for event in agent.ask_stream(payload.question):
+            yield (json.dumps(event) + "\n").encode("utf-8")
+
+    return StreamingResponse(event_generator(), media_type="application/x-ndjson")

@@ -1,25 +1,38 @@
 # Knowledge Graph
 
-A proof-of-concept for displaying and querying knowledge graphs. Users explore a visual knowledge graph in the browser and ask natural-language questions that are answered via knowledge-graph-augmented RAG (Retrieval-Augmented Generation) powered by Azure OpenAI.
+A proof-of-concept for displaying and querying a knowledge graph of a **Cessna 172S Skyhawk** (registration **G-ECHO**). Users explore a visual knowledge graph in the browser and ask natural-language questions that are answered via knowledge-graph-augmented RAG (Retrieval-Augmented Generation) powered by Azure OpenAI.
+
+There are two front ends over a single backend:
+
+- a **Vue** SPA that renders the interactive knowledge graph, and
+- a **Streamlit** chat UI for asking natural-language questions, with answers **streamed** token-by-token.
 
 ## Architecture
 
 ```
-┌───────────────┐       ┌───────────────┐       ┌───────────────┐
-│   Frontend    │◄─────►│   Backend     │◄─────►│    Neo4j      │
-│  Vue / TS     │  API  │  FastAPI      │ Bolt  │   (container) │
-│  (pnpm)       │       │  (uv)         │       │               │
-└───────────────┘       └───────┬───────┘       └───────────────┘
-                                │
-                                ▼
-                        ┌───────────────┐
-                        │ Azure OpenAI  │
-                        └───────────────┘
+┌───────────────┐       ┌───────────────┐
+│  Frontend     │       │  Streamlit UI │
+│  Vue / TS     │       │  chat (uv)    │
+│  graph render │       │  /ask/stream  │
+└───────┬───────┘       └───────┬───────┘
+        │  API                  │  API (NDJSON stream)
+        └───────────┬───────────┘
+                    ▼
+            ┌───────────────┐       ┌───────────────┐
+            │   Backend     │◄─────►│    Neo4j      │
+            │  FastAPI (uv) │ Bolt  │   (container) │
+            └───────┬───────┘       └───────────────┘
+                    │
+                    ▼
+            ┌───────────────┐
+            │ Azure OpenAI  │
+            └───────────────┘
 ```
 
-- **Frontend** — Vue 3 / TypeScript SPA that renders knowledge graphs and provides a query interface. Uses pnpm for package management.
-- **Backend** — Python FastAPI service that queries Neo4j for graph-based retrieval, then calls Azure OpenAI to generate answers (knowledge RAG). Uses uv for package management.
-- **Neo4j** — Graph database running as a Docker container, storing knowledge graph nodes and relationships.
+- **Frontend** — Vue 3 / TypeScript SPA that renders the knowledge graph. Uses pnpm. Runs on <http://localhost:5173>.
+- **Streamlit UI** — Python chat front end for the backend's `/ask` endpoint with live token streaming. Uses uv. Runs on <http://localhost:8501>. A sidebar button opens the Vue graph renderer in a new tab.
+- **Backend** — Python FastAPI service that runs **text-to-Cypher GraphRAG** (Neo4j's `neo4j-graphrag` package) against Neo4j, then calls Azure OpenAI to generate answers. Uses uv. Runs on <http://localhost:8080>.
+- **Neo4j** — Graph database running as a Docker container, storing the aircraft's nodes and relationships.
 
 ## Getting Started
 
@@ -37,12 +50,37 @@ A proof-of-concept for displaying and querying knowledge graphs. Users explore a
 cd backend
 uv sync
 
+# Streamlit UI
+cd streamlit-ui
+uv sync
+
 # Frontend
 cd frontend
 pnpm install
 ```
 
-See [backend/README.md](backend/README.md) and [frontend/README.md](frontend/README.md) for component-specific details.
+See [backend/README.md](backend/README.md) and [streamlit-ui/README.md](streamlit-ui/README.md) for component-specific details.
+
+## Running everything
+
+Once Neo4j is running (`scripts/start-database.sh`) and `backend/.env` is configured, you can start all three apps at once.
+
+**From VS Code (recommended):** press **F5** and choose the **“Launch All (Backend + Streamlit + Frontend)”** profile. This starts the FastAPI backend (:8080), the Streamlit UI (:8501) and the Vue frontend (:5173) together; stopping one stops them all.
+
+**From the terminal:**
+
+```bash
+scripts/start-dev.sh
+```
+
+This launches the same three processes in the foreground — press `Ctrl-C` once to stop them all. Open the Streamlit UI at <http://localhost:8501> to ask questions. Its sidebar has two shortcut buttons that open in a new tab:
+
+- **“Open graph renderer ↗”** — the Vue knowledge-graph view at <http://localhost:5173>.
+- **“Open Neo4j browser ↗”** — the Neo4j database browser at <http://localhost:7474/browser/> (host taken from `NEO4J_URI`).
+
+> The backend alone can be started with `cd backend && uv run poe serve`. The
+> `cd backend && uv run poe dev` task is equivalent to `scripts/start-dev.sh` (it
+> starts all three apps).
 
 ## Importing data into Neo4j
 
@@ -101,11 +139,12 @@ interactive docs.
 
 ## Asking questions in natural language
 
-The backend also exposes an LLM agent (built with Microsoft Agent Framework) that
-answers natural-language questions. It uses a **text-to-Cypher** GraphRAG pattern:
-the agent reads the live graph schema, writes a read-only Cypher query, runs it as
-context, and answers from the results. Set the `AZURE_OPENAI_*` variables in
-`backend/.env` (see `backend/.env.example`) to enable it.
+The backend answers natural-language questions using Neo4j's
+[`neo4j-graphrag`](https://neo4j.com/docs/neo4j-graphrag-python/current/) package in
+a **text-to-Cypher** GraphRAG pattern: it reads the live graph schema, has the LLM
+write a read-only Cypher query, runs it as context, and answers from the results.
+Set the `AZURE_OPENAI_*` variables in `backend/.env` (see `backend/.env.example`) to
+enable it.
 
 ```bash
 curl -X POST http://localhost:8080/ask \
@@ -121,5 +160,27 @@ curl -X POST http://localhost:8080/ask \
 }
 ```
 
-The agent's queries run in a read transaction, so it can never modify the graph.
+The generated queries run in a read transaction, so they can never modify the graph.
 See [backend/README.md](backend/README.md) for configuration and response details.
+
+### Streaming answers
+
+`POST /ask/stream` returns the same result as a stream of newline-delimited JSON
+(NDJSON) events so answers can be rendered token-by-token: one `metadata` event
+(the Cypher and rows), many `token` events, then a final `done` event. The Streamlit
+UI consumes this endpoint to stream answers live.
+
+## Streamlit chat UI
+
+The [`streamlit-ui`](streamlit-ui) project is a chat front end for `/ask` with live
+token streaming. It shows the answer as it is generated, plus expanders for the
+**Cypher used** and the **retrieved rows**, and sidebar buttons to open the Vue graph
+renderer and the Neo4j browser. Run it on its own with:
+
+```bash
+cd streamlit-ui
+uv sync
+uv run streamlit run app.py    # http://localhost:8501
+```
+
+See [streamlit-ui/README.md](streamlit-ui/README.md) for details.

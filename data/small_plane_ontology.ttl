@@ -1136,6 +1136,8 @@ spo:longitude a owl:DatatypeProperty ;
 spo:G-ECHO a spo:LightAircraft ;
     rdfs:label "G-ECHO" ;
     spo:registration "G-ECHO" ;
+    spo:manufacturer "Cessna" ;
+    spo:model "172S Skyhawk" ;
     spo:mtow_kg "1111"^^xsd:integer ;
     spo:engineCount "1"^^xsd:integer ;
     spo:hasSystem spo:airframe, spo:powerplant, spo:fuel, spo:electrical, spo:avionics, spo:flightControls, spo:landingGear, spo:pitotStatic ;

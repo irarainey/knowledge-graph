@@ -9,6 +9,8 @@
       "properties": {
         "name": "G-ECHO",
         "registration": "G-ECHO",
+        "manufacturer": "Cessna",
+        "model": "172S Skyhawk",
         "mtow_kg": 1111,
         "engineCount": 1
       }

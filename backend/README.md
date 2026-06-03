@@ -258,6 +258,49 @@ curl -X POST http://localhost:8080/ask \
 }
 ```
 
+### `POST /ask/stream` (streaming)
+
+The same question pipeline, but the answer is **streamed** as the LLM generates it.
+The response is `application/x-ndjson` — a stream of newline-delimited JSON events,
+one object per line:
+
+| Event | Shape | When |
+| --- | --- | --- |
+| `metadata` | `{ "type": "metadata", "cypher_used": [...], "records": [...] }` | Once, first — after retrieval, before any tokens. |
+| `token` | `{ "type": "token", "text": "..." }` | Repeated, as answer tokens arrive. |
+| `error` | `{ "type": "error", "message": "..." }` | Only on failure (in-band, since headers are already sent). |
+| `done` | `{ "type": "done" }` | Always last. |
+
+Because retrieval runs first, the client receives the Cypher and rows up front and can
+render the answer progressively. The retrieval step runs in a worker thread while
+tokens are produced via the async OpenAI client; `asyncio.CancelledError` (client
+disconnect) closes the upstream stream cleanly. The same 503 applies if Azure OpenAI
+is not configured (raised before streaming begins).
+
+```bash
+curl -N -X POST http://localhost:8080/ask/stream \
+  -H 'Content-Type: application/json' \
+  -d '{"question": "How many flying hours has the engine had since 2026-05-25?"}'
+```
+
+```
+{"type": "metadata", "cypher_used": ["MATCH (ac:Aircraft)-..."], "records": [{"engine": "Lycoming IO-360", "flights": 4, "hours": 2.2}]}
+{"type": "token", "text": "Since "}
+{"type": "token", "text": "2026-05-25"}
+...
+{"type": "done"}
+```
+
+The [`streamlit-ui`](../streamlit-ui) project consumes this endpoint to stream answers
+into a chat interface.
+
+## Running with the UIs
+
+`uv run poe serve` starts only the API. To start the backend together with the
+Streamlit UI, use `uv run poe dev` (runs `scripts/start-dev.sh`, which also starts the
+Vue frontend). In VS Code, press **F5** and choose **“Launch All (Backend + Streamlit
++ Frontend)”** to launch everything at once.
+
 ## Stack
 
 - **Python 3.13+** with **FastAPI** and **uvicorn**

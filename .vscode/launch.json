@@ -21,6 +21,35 @@
       "args": ["api:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8080"],
       "console": "integratedTerminal",
       "justMyCode": false
+    },
+    {
+      "name": "Launch Streamlit UI",
+      "type": "debugpy",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/streamlit-ui",
+      "python": "${workspaceFolder}/streamlit-ui/.venv/bin/python",
+      "module": "streamlit",
+      "args": ["run", "app.py"],
+      "console": "integratedTerminal",
+      "justMyCode": false
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Launch All (Backend + Streamlit + Frontend)",
+      "configurations": ["Launch Backend (FastAPI)", "Launch Streamlit UI", "Launch Frontend (Vite)"],
+      "stopAll": true,
+      "presentation": {
+        "order": 1
+      }
+    },
+    {
+      "name": "Launch Backend + Streamlit UI",
+      "configurations": ["Launch Backend (FastAPI)", "Launch Streamlit UI"],
+      "stopAll": true,
+      "presentation": {
+        "order": 2
+      }
     }
   ]
 }

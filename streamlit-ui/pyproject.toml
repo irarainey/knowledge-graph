@@ -1,0 +1,13 @@
+[project]
+name = "streamlit-ui"
+version = "1.0.0"
+description = "Streamlit chat UI for the Knowledge Graph /ask endpoint"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "streamlit>=1.40.0",
+    "requests>=2.32.0",
+    "python-dotenv>=1.0.1",
+]
+
+[tool.uv]

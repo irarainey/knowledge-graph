@@ -16,8 +16,10 @@ graph even if it generates a write/delete.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import os
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -27,7 +29,7 @@ from neo4j_graphrag.generation import GraphRAG, RagTemplate
 from neo4j_graphrag.llm import AzureOpenAILLM, OpenAILLM
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.retrievers import Text2CypherRetriever
-from neo4j_graphrag.types import RetrieverResultItem
+from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
 from neo4j_client import (
     SCHEMA_NODE_SAMPLES,
@@ -38,6 +40,10 @@ from neo4j_client import (
 )
 
 DEFAULT_API_VERSION = "2024-10-21"
+
+# Shown to the user when retrieval or generation fails, so the API degrades
+# gracefully instead of returning a 500.
+FALLBACK_ANSWER = "I couldn't find an answer to that question in the knowledge graph."
 
 # Few-shot question/Cypher pairs that anchor the cypher-generation LLM to this
 # graph's exact labels, relationship types and conventions: ISO-string dates cast
@@ -196,6 +202,15 @@ def _record_to_item(record: Any) -> RetrieverResultItem:
     return RetrieverResultItem(content=json.dumps(data), metadata={"record": data})
 
 
+def _extract_cypher_and_records(retriever_result: RetrieverResult | None) -> tuple[list[str], list[dict[str, Any]]]:
+    """Pull the generated Cypher and the JSON-serialisable rows out of a retriever result."""
+    metadata = (retriever_result.metadata or {}) if retriever_result else {}
+    cypher = metadata.get("cypher")
+    items = retriever_result.items if retriever_result else []
+    records = [item.metadata["record"] for item in items if item.metadata and "record" in item.metadata]
+    return ([cypher] if cypher else [], records)
+
+
 def _scalar_type(value: Any) -> str:
     if isinstance(value, bool):
         return "bool"
@@ -310,6 +325,11 @@ class KnowledgeGraphAgent:
             neo4j_database=database,
         )
         prompt_template = RagTemplate(template=RAG_TEMPLATE, expected_inputs=["context", "query_text", "examples"])
+        # Keep direct references so the streaming path can drive retrieval and answer
+        # generation itself (neo4j-graphrag's GraphRAG/LLM offer no token streaming).
+        self._llm = llm
+        self._retriever = retriever
+        self._prompt_template = prompt_template
         self._rag = GraphRAG(retriever=retriever, llm=llm, prompt_template=prompt_template)
 
     @classmethod
@@ -331,22 +351,107 @@ class KnowledgeGraphAgent:
             response = self._rag.search(query_text=question, return_context=True)
         except Text2CypherRetrievalError as exc:
             print(f"/ask cypher retrieval failed: {exc}")
-            return AskResult(answer="I couldn't find an answer to that question in the knowledge graph.")
+            return AskResult(answer=FALLBACK_ANSWER)
         except Exception as exc:
             # Degrade gracefully on any LLM/connectivity error rather than 500.
             print(f"/ask failed: {type(exc).__name__}: {exc}")
-            return AskResult(answer="I couldn't find an answer to that question in the knowledge graph.")
+            return AskResult(answer=FALLBACK_ANSWER)
 
         retriever_result = response.retriever_result
-        metadata = (retriever_result.metadata or {}) if retriever_result else {}
-        cypher = metadata.get("cypher")
-        items = retriever_result.items if retriever_result else []
-        records = [item.metadata["record"] for item in items if item.metadata and "record" in item.metadata]
-        return AskResult(
-            answer=response.answer,
-            cypher_used=[cypher] if cypher else [],
-            records=records,
-        )
+        cypher_used, records = _extract_cypher_and_records(retriever_result)
+        return AskResult(answer=response.answer, cypher_used=cypher_used, records=records)
+
+    async def ask_stream(self, question: str) -> AsyncIterator[dict[str, Any]]:
+        """Answer a question while streaming the LLM's tokens.
+
+        Yields newline-delimited-JSON-friendly event dicts in order:
+
+        * ``{"type": "metadata", "cypher_used": [...], "records": [...]}`` — emitted
+          once, after retrieval, before any answer tokens.
+        * ``{"type": "token", "text": "..."}`` — repeated, the streamed answer.
+        * ``{"type": "error", "message": "..."}`` — only on failure.
+        * ``{"type": "done"}`` — always emitted last.
+
+        Retrieval (text-to-Cypher) is synchronous, so it runs in a worker thread; the
+        answer is then streamed natively from the async OpenAI client.
+        """
+        try:
+            retriever_result = await asyncio.to_thread(self._retriever.search, query_text=question)
+        except Text2CypherRetrievalError as exc:
+            print(f"/ask/stream cypher retrieval failed: {exc}")
+            yield {"type": "metadata", "cypher_used": [], "records": []}
+            yield {"type": "token", "text": FALLBACK_ANSWER}
+            yield {"type": "done"}
+            return
+        except Exception as exc:
+            print(f"/ask/stream retrieval failed: {type(exc).__name__}: {exc}")
+            yield {"type": "metadata", "cypher_used": [], "records": []}
+            yield {"type": "token", "text": FALLBACK_ANSWER}
+            yield {"type": "done"}
+            return
+
+        cypher_used, records = _extract_cypher_and_records(retriever_result)
+        yield {"type": "metadata", "cypher_used": cypher_used, "records": records}
+
+        # Build the answer prompt exactly as GraphRAG.search would, so streamed and
+        # non-streamed answers stay consistent.
+        context = "\n".join(item.content for item in retriever_result.items)
+        prompt = self._prompt_template.format(query_text=question, context=context, examples="")
+        system_instruction = self._prompt_template.system_instructions
+
+        try:
+            async for text in self._stream_answer(prompt, system_instruction):
+                yield {"type": "token", "text": text}
+        except asyncio.CancelledError:
+            # Client disconnected — let cancellation propagate so the upstream
+            # OpenAI stream is torn down promptly.
+            raise
+        except Exception as exc:
+            print(f"/ask/stream generation failed: {type(exc).__name__}: {exc}")
+            yield {"type": "error", "message": "Answer generation failed."}
+
+        yield {"type": "done"}
+
+    async def _stream_answer(self, prompt: str, system_instruction: str | None) -> AsyncIterator[str]:
+        """Stream answer tokens from the LLM's async OpenAI client.
+
+        Falls back to a single non-streaming ``invoke`` if the underlying client is
+        not the expected OpenAI client (keeps the agent usable with custom LLMs).
+        """
+        client = getattr(self._llm, "async_client", None)
+        model = getattr(self._llm, "model_name", None)
+        if client is None or model is None:
+            result = await asyncio.to_thread(self._llm.invoke, prompt, None, system_instruction)
+            yield result.content
+            return
+
+        # Reuse the package's message construction so streaming matches invoke().
+        get_messages = getattr(self._llm, "get_messages", None)
+        if callable(get_messages):
+            messages = get_messages(prompt, None, system_instruction)
+        else:
+            messages = []
+            if system_instruction:
+                messages.append({"role": "system", "content": system_instruction})
+            messages.append({"role": "user", "content": prompt})
+
+        model_params = getattr(self._llm, "model_params", None) or {}
+        stream = await client.chat.completions.create(model=model, messages=messages, stream=True, **model_params)
+        try:
+            async for chunk in stream:
+                choices = getattr(chunk, "choices", None)
+                if not choices:
+                    continue
+                delta = getattr(choices[0], "delta", None)
+                text = getattr(delta, "content", None) if delta is not None else None
+                if text:
+                    yield text
+        finally:
+            close = getattr(stream, "aclose", None) or getattr(stream, "close", None)
+            if close is not None:
+                result = close()
+                if inspect.isawaitable(result):
+                    await result
 
     def close(self) -> None:
         """Close the agent's synchronous Neo4j driver."""
