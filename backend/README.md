@@ -120,14 +120,19 @@ curl -X POST http://localhost:8080/query \
 
 ## Natural-language questions (GraphRAG agent)
 
-`src/agent.py` adds a Microsoft Agent Framework agent that answers natural-language
-questions over the graph using a **text-to-Cypher** pattern: the agent inspects the
-live schema, writes a **read-only** Cypher query, runs it as context, and answers
-from the rows. The graph is exposed to the model as two tools (`get_graph_schema`
-and `query_knowledge_graph`).
+`src/agent.py` answers natural-language questions over the graph using Neo4j's
+[`neo4j-graphrag`](https://neo4j.com/docs/neo4j-graphrag-python/current/) package
+in a **text-to-Cypher** pattern. A `Text2CypherRetriever` asks the LLM to write a
+Cypher query from the question and the live graph schema, validates that it is
+**read-only** (via `EXPLAIN`), runs it, and feeds the rows to `GraphRAG`, which
+generates the final answer.
 
-Queries run inside a Neo4j read transaction, so the model can never modify the
-graph even if it generates a write.
+Read-only execution is enforced by the package itself, so the model can never
+modify the graph even if it generates a write.
+
+The graph schema is introspected with plain Cypher (no APOC required), so it works
+against a stock Neo4j Community container. The schema is read once at startup —
+**restart the backend after re-importing the graph** so the agent picks up changes.
 
 ### Configuration
 
@@ -178,6 +183,6 @@ curl -X POST http://localhost:8080/ask \
 
 - **Python 3.13+** with **FastAPI** and **uvicorn**
 - **Neo4j** for graph storage and Cypher queries
-- **Azure OpenAI** (via agent-framework-openai) for LLM calls
+- **neo4j-graphrag** (text-to-Cypher GraphRAG) with **Azure OpenAI** for LLM calls
 - **uv** for dependency management, **poethepoet** for task running
 - **ruff** for linting/formatting, **mypy** for type checking, **pytest** for tests

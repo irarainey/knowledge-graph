@@ -16,18 +16,20 @@ from typing import Any
 
 from dotenv import load_dotenv
 from neo4j import AsyncGraphDatabase, AsyncManagedTransaction
+from neo4j.graph import Node, Relationship
+from neo4j.graph import Path as GraphPath
 
 # JSON-native scalar types that need no conversion.
 _JSON_SCALARS = (str, bool, int, float)
 
-# Schema-introspection queries (read-only). Cheap on a small PoC graph.
-_SCHEMA_NODE_PROPERTIES = (
+# Schema-introspection queries (read-only, APOC-free). Cheap on a small PoC graph.
+SCHEMA_NODE_PROPERTIES = (
     "MATCH (n) WITH labels(n) AS lbls, keys(n) AS ks "
     "UNWIND lbls AS label UNWIND ks AS k "
     "RETURN label, collect(DISTINCT k) AS properties ORDER BY label"
 )
-_SCHEMA_RELATIONSHIPS = "MATCH (a)-[r]->(b) RETURN DISTINCT labels(a) AS startLabels, type(r) AS type, labels(b) AS endLabels ORDER BY type"
-_SCHEMA_RELATIONSHIP_PROPERTIES = (
+SCHEMA_RELATIONSHIPS = "MATCH (a)-[r]->(b) RETURN DISTINCT labels(a) AS startLabels, type(r) AS type, labels(b) AS endLabels ORDER BY type"
+SCHEMA_RELATIONSHIP_PROPERTIES = (
     "MATCH ()-[r]->() WITH type(r) AS type, keys(r) AS ks UNWIND ks AS k RETURN type, collect(DISTINCT k) AS properties ORDER BY type"
 )
 
@@ -68,14 +70,20 @@ class Neo4jSettings:
 def to_jsonable(value: Any) -> Any:
     """Recursively convert a Neo4j record value into JSON-serialisable data.
 
-    Scalars and nested lists/dicts pass through; temporal, spatial and other
-    driver-specific objects (which the JSON encoder cannot handle) fall back to
-    their string representation.
+    Scalars and nested lists/dicts pass through; nodes and relationships become
+    their property maps (with ``_labels``/``_type`` markers); temporal, spatial
+    and other driver-specific objects fall back to their string representation.
     """
     if value is None or isinstance(value, _JSON_SCALARS):
         return value
     if isinstance(value, (dt.date, dt.time, dt.datetime)):
         return value.isoformat()
+    if isinstance(value, Node):
+        return {"_labels": sorted(value.labels), **{str(key): to_jsonable(item) for key, item in value.items()}}
+    if isinstance(value, Relationship):
+        return {"_type": value.type, **{str(key): to_jsonable(item) for key, item in value.items()}}
+    if isinstance(value, GraphPath):
+        return str(value)
     if isinstance(value, Mapping):
         return {str(key): to_jsonable(item) for key, item in value.items()}
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
@@ -145,11 +153,40 @@ class Neo4jClient:
         their property keys, the relationship types that connect them, and any
         relationship property keys.
         """
-        _, node_properties = await self.run_read_query(_SCHEMA_NODE_PROPERTIES, database=database)
-        _, relationships = await self.run_read_query(_SCHEMA_RELATIONSHIPS, database=database)
-        _, relationship_properties = await self.run_read_query(_SCHEMA_RELATIONSHIP_PROPERTIES, database=database)
+        _, node_properties = await self.run_read_query(SCHEMA_NODE_PROPERTIES, database=database)
+        _, relationships = await self.run_read_query(SCHEMA_RELATIONSHIPS, database=database)
+        _, relationship_properties = await self.run_read_query(SCHEMA_RELATIONSHIP_PROPERTIES, database=database)
         return {
             "nodes": node_properties,
             "relationships": relationships,
             "relationshipProperties": relationship_properties,
         }
+
+
+def format_schema(schema: dict[str, list[dict[str, Any]]]) -> str:
+    """Render a schema dict (from :meth:`Neo4jClient.fetch_schema`) as compact text.
+
+    The output is intended as context for an LLM writing Cypher: node labels with
+    their properties, the relationship types that connect labels, and any
+    relationship properties.
+    """
+    lines: list[str] = ["Node labels and their properties:"]
+    for row in schema.get("nodes", []):
+        props = ", ".join(row.get("properties", []))
+        lines.append(f"- {row['label']}: {props}")
+
+    lines.append("")
+    lines.append("Relationships (startLabels)-[TYPE]->(endLabels):")
+    for row in schema.get("relationships", []):
+        start = ":".join(row.get("startLabels", []))
+        end = ":".join(row.get("endLabels", []))
+        lines.append(f"- ({start})-[{row['type']}]->({end})")
+
+    rel_props = schema.get("relationshipProperties", [])
+    if rel_props:
+        lines.append("")
+        lines.append("Relationship properties:")
+        for row in rel_props:
+            props = ", ".join(row.get("properties", []))
+            lines.append(f"- {row['type']}: {props}")
+    return "\n".join(lines)

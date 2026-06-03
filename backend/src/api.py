@@ -20,7 +20,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from neo4j.exceptions import Neo4jError
 from pydantic import BaseModel, Field
 
-from agent import AzureOpenAISettings, KnowledgeGraphAgent, build_chat_client
+from agent import AzureOpenAISettings, KnowledgeGraphAgent
 from neo4j_client import Neo4jClient, Neo4jSettings, load_env
 
 
@@ -48,16 +48,17 @@ class AskResponse(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Open the shared Neo4j driver (and LLM agent, if configured) on startup."""
+    """Open the shared Neo4j driver (and GraphRAG agent, if configured) on startup."""
     load_env()
-    client = Neo4jClient(Neo4jSettings.from_env())
+    neo4j_settings = Neo4jSettings.from_env()
+    client = Neo4jClient(neo4j_settings)
     await client.verify_connectivity()
     app.state.neo4j = client
 
-    # The agent is optional: /query works without Azure OpenAI credentials.
+    # The agent is optional: /query works without Azure OpenAI credentials. It owns
+    # a dedicated synchronous Neo4j driver (neo4j-graphrag is sync-only).
     try:
-        chat_client = build_chat_client(AzureOpenAISettings.from_env())
-        app.state.agent = KnowledgeGraphAgent(chat_client, client)
+        app.state.agent = KnowledgeGraphAgent.from_settings(AzureOpenAISettings.from_env(), neo4j_settings)
     except RuntimeError as exc:
         app.state.agent = None
         print(f"Azure OpenAI not configured ({exc}); /ask endpoint disabled.")
@@ -65,6 +66,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        if app.state.agent is not None:
+            app.state.agent.close()
         await client.close()
 
 

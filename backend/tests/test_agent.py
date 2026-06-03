@@ -1,4 +1,4 @@
-"""Unit tests for the knowledge-graph agent (text-to-Cypher GraphRAG) and /ask."""
+"""Unit tests for the neo4j-graphrag text-to-Cypher agent and the /ask endpoint."""
 
 from __future__ import annotations
 
@@ -6,45 +6,21 @@ from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from neo4j_graphrag.exceptions import Text2CypherRetrievalError
+from neo4j_graphrag.generation.types import RagResultModel
+from neo4j_graphrag.llm import AzureOpenAILLM, OpenAILLM
+from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
 import api
 from agent import (
     AskResult,
     AzureOpenAISettings,
     KnowledgeGraphAgent,
-    azure_client_kwargs,
-    ensure_read_only,
-    format_schema,
+    _record_to_item,
+    build_llm,
+    fetch_schema_text,
 )
-
-
-# ── ensure_read_only ─────────────────────────────────────────────────────────
-@pytest.mark.parametrize(
-    "cypher",
-    [
-        "CREATE (n:Foo) RETURN n",
-        "MATCH (n) DETACH DELETE n",
-        "MATCH (n) SET n.x = 1",
-        "MATCH (n) REMOVE n.x",
-        "MERGE (n:Foo {id: 1})",
-        "LOAD CSV FROM 'x' AS row RETURN row",
-    ],
-)
-def test_ensure_read_only_rejects_writes(cypher: str) -> None:
-    with pytest.raises(ValueError, match="read-only"):
-        ensure_read_only(cypher)
-
-
-@pytest.mark.parametrize(
-    "cypher",
-    [
-        "MATCH (n:Aircraft) RETURN n",
-        "MATCH (f:Flight) WHERE date(f.date) >= date($since) RETURN sum(f.flightTime_hours)",
-        "MATCH (a)-[:HAS_SYSTEM]->(s) RETURN a, s LIMIT 10",
-    ],
-)
-def test_ensure_read_only_allows_reads(cypher: str) -> None:
-    ensure_read_only(cypher)  # should not raise
+from neo4j_client import format_schema
 
 
 # ── format_schema ────────────────────────────────────────────────────────────
@@ -58,6 +34,44 @@ def test_format_schema_renders_sections() -> None:
     assert "Aircraft: id, registration" in text
     assert "(Aircraft)-[HAS_SYSTEM]->(System:PowerplantSystem)" in text
     assert "FEEDS: fluid" in text
+
+
+# ── fetch_schema_text ────────────────────────────────────────────────────────
+class FakeRecord(dict):
+    """A neo4j.Record stand-in that supports dict(record)."""
+
+
+class FakeSchemaDriver:
+    """Returns canned rows per schema-introspection query."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str | None]] = []
+
+    def execute_query(self, query: str, database_: str | None = None, routing_: Any = None) -> tuple[list[Any], None, None]:
+        self.calls.append((query, database_))
+        if "labels(a)" in query:  # relationships
+            rows = [FakeRecord(startLabels=["Aircraft"], type="HAS_SYSTEM", endLabels=["System"])]
+        elif "type(r)" in query and "endLabels" not in query:  # relationship properties
+            rows = [FakeRecord(type="FEEDS", properties=["fluid"])]
+        else:  # node properties
+            rows = [FakeRecord(label="Aircraft", properties=["registration"])]
+        return rows, None, None
+
+
+def test_fetch_schema_text_uses_database_and_formats() -> None:
+    driver = FakeSchemaDriver()
+    text = fetch_schema_text(driver, "graph")  # type: ignore[arg-type]
+    assert "Aircraft: registration" in text
+    assert "(Aircraft)-[HAS_SYSTEM]->(System)" in text
+    assert "FEEDS: fluid" in text
+    assert all(db == "graph" for _, db in driver.calls)
+
+
+# ── _record_to_item ──────────────────────────────────────────────────────────
+def test_record_to_item_serialises_and_keeps_record() -> None:
+    item = _record_to_item(FakeRecord(flights=6, hours=3.0))
+    assert item.metadata == {"record": {"flights": 6, "hours": 3.0}}
+    assert '"flights": 6' in item.content
 
 
 # ── AzureOpenAISettings.from_env ─────────────────────────────────────────────
@@ -78,85 +92,91 @@ def test_azure_settings_from_env_raises_when_missing(monkeypatch: pytest.MonkeyP
         AzureOpenAISettings.from_env()
 
 
-# ── azure_client_kwargs ──────────────────────────────────────────────────────
-def test_azure_client_kwargs_v1_uses_base_url() -> None:
+# ── build_llm ────────────────────────────────────────────────────────────────
+def test_build_llm_uses_openai_client_for_v1_endpoint() -> None:
     settings = AzureOpenAISettings("https://res.openai.azure.com/openai/v1", "key", "gpt-5.4", "2024-10-21")
-    kwargs = azure_client_kwargs(settings)
-    assert kwargs["base_url"] == "https://res.openai.azure.com/openai/v1"
-    assert "azure_endpoint" not in kwargs
-    assert kwargs["model"] == "gpt-5.4"
+    llm = build_llm(settings)
+    assert isinstance(llm, OpenAILLM)
 
 
-def test_azure_client_kwargs_classic_uses_azure_endpoint() -> None:
+def test_build_llm_uses_azure_client_for_classic_endpoint() -> None:
     settings = AzureOpenAISettings("https://res.openai.azure.com/", "key", "gpt-4o", "2024-10-21")
-    kwargs = azure_client_kwargs(settings)
-    assert kwargs["azure_endpoint"] == "https://res.openai.azure.com"
-    assert kwargs["api_version"] == "2024-10-21"
-    assert "base_url" not in kwargs
+    llm = build_llm(settings)
+    assert isinstance(llm, AzureOpenAILLM)
 
 
-# ── KnowledgeGraphAgent tool behaviour ───────────────────────────────────────
-class FakeNeo4j:
-    """Captures read queries and returns canned schema/rows."""
-
+# ── KnowledgeGraphAgent.ask (result extraction) ──────────────────────────────
+class FakeDriver:
     def __init__(self) -> None:
-        self.read_calls: list[tuple[str, dict[str, Any]]] = []
-        self.rows: list[dict[str, Any]] = [{"hours": 3.0}]
+        self.closed = False
 
-    async def fetch_schema(self, database: str | None = None) -> dict[str, list[dict[str, Any]]]:
-        return {"nodes": [{"label": "Flight", "properties": ["flightTime_hours"]}], "relationships": [], "relationshipProperties": []}
-
-    async def run_read_query(
-        self, query: str, parameters: dict[str, Any] | None = None, database: str | None = None
-    ) -> tuple[list[str], list[dict[str, Any]]]:
-        self.read_calls.append((query, parameters or {}))
-        return ["hours"], self.rows
+    def close(self) -> None:
+        self.closed = True
 
 
-class FakeAgentResponse:
-    def __init__(self, text: str) -> None:
-        self.text = text
+class FakeRag:
+    """Stands in for GraphRAG: returns a canned result or raises."""
+
+    def __init__(self, *, result: RagResultModel | None = None, error: Exception | None = None) -> None:
+        self._result = result
+        self._error = error
+        self.calls: list[str] = []
+
+    def search(self, query_text: str, return_context: bool | None = None) -> RagResultModel:
+        self.calls.append(query_text)
+        if self._error is not None:
+            raise self._error
+        assert self._result is not None
+        return self._result
 
 
-class FakeAgent:
-    """Simulates an LLM that calls get_graph_schema then query_knowledge_graph."""
-
-    def __init__(self, tools: list[Any]) -> None:
-        self.tools = {t.name: t for t in tools}
-
-    async def run(self, question: str) -> FakeAgentResponse:
-        await self.tools["get_graph_schema"].func()
-        await self.tools["query_knowledge_graph"].func(cypher="MATCH (f:Flight) RETURN sum(f.flightTime_hours) AS hours", parameters={})
-        return FakeAgentResponse("The aircraft has flown 3.0 hours.")
+def _make_agent(rag: FakeRag) -> tuple[KnowledgeGraphAgent, FakeDriver]:
+    agent = object.__new__(KnowledgeGraphAgent)
+    driver = FakeDriver()
+    agent._driver = driver  # type: ignore[assignment]
+    agent._rag = rag  # type: ignore[assignment]
+    return agent, driver
 
 
-class FakeChatClient:
-    """Stands in for OpenAIChatClient; returns a FakeAgent wired to the agent's tools."""
+async def test_ask_extracts_answer_cypher_and_records() -> None:
+    result = RagResultModel(
+        answer="There are 6 flights.",
+        retriever_result=RetrieverResult(
+            items=[RetrieverResultItem(content="{}", metadata={"record": {"flights": 6}})],
+            metadata={"cypher": "MATCH (f:Flight) RETURN count(f) AS flights"},
+        ),
+    )
+    rag = FakeRag(result=result)
+    agent, _ = _make_agent(rag)
+    ask_result = await agent.ask("How many flights?")
+    assert isinstance(ask_result, AskResult)
+    assert ask_result.answer == "There are 6 flights."
+    assert ask_result.cypher_used == ["MATCH (f:Flight) RETURN count(f) AS flights"]
+    assert ask_result.records == [{"flights": 6}]
+    assert rag.calls == ["How many flights?"]
 
-    def as_agent(self, *, name: str, instructions: str, tools: list[Any]) -> FakeAgent:
-        return FakeAgent(tools)
+
+async def test_ask_degrades_gracefully_on_retrieval_error() -> None:
+    rag = FakeRag(error=Text2CypherRetrievalError("bad cypher"))
+    agent, _ = _make_agent(rag)
+    ask_result = await agent.ask("nonsense")
+    assert ask_result.cypher_used == []
+    assert ask_result.records == []
+    assert "couldn't" in ask_result.answer.lower()
 
 
-async def test_agent_ask_records_cypher_and_returns_answer() -> None:
-    neo4j = FakeNeo4j()
-    agent = KnowledgeGraphAgent(FakeChatClient(), neo4j)  # type: ignore[arg-type]
-    result = await agent.ask("How many hours has it flown?")
-    assert isinstance(result, AskResult)
-    assert result.answer == "The aircraft has flown 3.0 hours."
-    assert result.cypher_used == ["MATCH (f:Flight) RETURN sum(f.flightTime_hours) AS hours"]
-    assert result.records == [{"hours": 3.0}]
-    assert len(neo4j.read_calls) == 1
+async def test_ask_degrades_gracefully_on_unexpected_error() -> None:
+    rag = FakeRag(error=RuntimeError("LLM down"))
+    agent, _ = _make_agent(rag)
+    ask_result = await agent.ask("anything")
+    assert ask_result.cypher_used == []
+    assert "couldn't" in ask_result.answer.lower()
 
 
-async def test_agent_query_tool_reports_write_rejection() -> None:
-    neo4j = FakeNeo4j()
-    agent = KnowledgeGraphAgent(FakeChatClient(), neo4j)  # type: ignore[arg-type]
-    result = AskResult(answer="")
-    tools = {t.name: t for t in agent._build_tools(result)}
-    output = await tools["query_knowledge_graph"].func(cypher="MATCH (n) DETACH DELETE n")
-    assert "read-only" in output
-    assert result.cypher_used == []
-    assert neo4j.read_calls == []
+def test_close_closes_driver() -> None:
+    agent, driver = _make_agent(FakeRag(error=RuntimeError()))
+    agent.close()
+    assert driver.closed is True
 
 
 # ── /ask endpoint ────────────────────────────────────────────────────────────
