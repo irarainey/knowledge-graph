@@ -1,8 +1,13 @@
 """FastAPI service exposing the Neo4j knowledge graph over HTTP.
 
-A single ``POST /query`` endpoint runs an arbitrary Cypher query (with optional
-parameters) supplied in the request body and returns the resulting records.
-Connection details come from the environment / ``backend/.env``.
+Endpoints:
+
+* ``POST /query`` runs an arbitrary Cypher query (with optional parameters) and
+  returns the resulting records.
+* ``POST /ask`` answers a natural-language question by letting an LLM agent write
+  read-only Cypher against the graph (text-to-Cypher GraphRAG).
+
+Connection and model details come from the environment / ``backend/.env``.
 """
 
 from __future__ import annotations
@@ -15,6 +20,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from neo4j.exceptions import Neo4jError
 from pydantic import BaseModel, Field
 
+from agent import AzureOpenAISettings, KnowledgeGraphAgent, build_chat_client
 from neo4j_client import Neo4jClient, Neo4jSettings, load_env
 
 
@@ -30,13 +36,32 @@ class QueryResponse(BaseModel):
     count: int = Field(description="Number of rows returned.")
 
 
+class AskRequest(BaseModel):
+    question: str = Field(..., min_length=1, description="A natural-language question about the knowledge graph.")
+
+
+class AskResponse(BaseModel):
+    answer: str = Field(description="The agent's natural-language answer.")
+    cypher_used: list[str] = Field(description="The Cypher queries the agent ran to find the answer.")
+    records: list[dict[str, Any]] = Field(description="The graph rows the agent retrieved as context.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Open the shared Neo4j driver on startup and close it on shutdown."""
+    """Open the shared Neo4j driver (and LLM agent, if configured) on startup."""
     load_env()
     client = Neo4jClient(Neo4jSettings.from_env())
     await client.verify_connectivity()
     app.state.neo4j = client
+
+    # The agent is optional: /query works without Azure OpenAI credentials.
+    try:
+        chat_client = build_chat_client(AzureOpenAISettings.from_env())
+        app.state.agent = KnowledgeGraphAgent(chat_client, client)
+    except RuntimeError as exc:
+        app.state.agent = None
+        print(f"Azure OpenAI not configured ({exc}); /ask endpoint disabled.")
+
     try:
         yield
     finally:
@@ -45,7 +70,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="Knowledge Graph API",
-    description="Query the Neo4j knowledge graph with arbitrary Cypher.",
+    description="Query the Neo4j knowledge graph with Cypher, or ask natural-language questions.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -61,6 +86,14 @@ def get_client(request: Request) -> Neo4jClient:
     return request.app.state.neo4j  # type: ignore[no-any-return]
 
 
+def get_agent(request: Request) -> KnowledgeGraphAgent:
+    """Return the shared knowledge-graph agent, or 503 if Azure OpenAI is unconfigured."""
+    agent = request.app.state.agent
+    if agent is None:
+        raise HTTPException(status_code=503, detail="The /ask endpoint requires Azure OpenAI settings (AZURE_OPENAI_*) in the environment.")
+    return agent  # type: ignore[no-any-return]
+
+
 @app.post("/query", response_model=QueryResponse)
 async def run_query(payload: QueryRequest, client: Annotated[Neo4jClient, Depends(get_client)]) -> QueryResponse:
     try:
@@ -69,3 +102,9 @@ async def run_query(payload: QueryRequest, client: Annotated[Neo4jClient, Depend
         # Surface Cypher/syntax/constraint errors to the caller as a 400.
         raise HTTPException(status_code=400, detail=exc.message or str(exc)) from exc
     return QueryResponse(columns=columns, records=records, count=len(records))
+
+
+@app.post("/ask", response_model=AskResponse)
+async def ask(payload: AskRequest, agent: Annotated[KnowledgeGraphAgent, Depends(get_agent)]) -> AskResponse:
+    result = await agent.ask(payload.question)
+    return AskResponse(answer=result.answer, cypher_used=result.cypher_used, records=result.records)

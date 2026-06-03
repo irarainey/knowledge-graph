@@ -98,3 +98,28 @@ curl -X POST http://localhost:8080/query \
 
 See [backend/README.md](backend/README.md) for the full request/response shape and
 interactive docs.
+
+## Asking questions in natural language
+
+The backend also exposes an LLM agent (built with Microsoft Agent Framework) that
+answers natural-language questions. It uses a **text-to-Cypher** GraphRAG pattern:
+the agent reads the live graph schema, writes a read-only Cypher query, runs it as
+context, and answers from the results. Set the `AZURE_OPENAI_*` variables in
+`backend/.env` (see `backend/.env.example`) to enable it.
+
+```bash
+curl -X POST http://localhost:8080/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"question": "How many flying hours has the engine had since 2026-05-25?"}'
+```
+
+```json
+{
+  "answer": "Since 2026-05-25, the engine has had 2.2 flying hours across 4 flights.",
+  "cypher_used": ["MATCH (e:PistonEngine) MATCH (f:Flight) WHERE f.date >= $since RETURN ..."],
+  "records": [{"engine": "Lycoming IO-360", "flying_hours": 2.2, "flights": 4}]
+}
+```
+
+The agent's queries run in a read transaction, so it can never modify the graph.
+See [backend/README.md](backend/README.md) for configuration and response details.

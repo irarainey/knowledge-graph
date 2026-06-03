@@ -15,10 +15,21 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from neo4j import AsyncGraphDatabase
+from neo4j import AsyncGraphDatabase, AsyncManagedTransaction
 
 # JSON-native scalar types that need no conversion.
 _JSON_SCALARS = (str, bool, int, float)
+
+# Schema-introspection queries (read-only). Cheap on a small PoC graph.
+_SCHEMA_NODE_PROPERTIES = (
+    "MATCH (n) WITH labels(n) AS lbls, keys(n) AS ks "
+    "UNWIND lbls AS label UNWIND ks AS k "
+    "RETURN label, collect(DISTINCT k) AS properties ORDER BY label"
+)
+_SCHEMA_RELATIONSHIPS = "MATCH (a)-[r]->(b) RETURN DISTINCT labels(a) AS startLabels, type(r) AS type, labels(b) AS endLabels ORDER BY type"
+_SCHEMA_RELATIONSHIP_PROPERTIES = (
+    "MATCH ()-[r]->() WITH type(r) AS type, keys(r) AS ks UNWIND ks AS k RETURN type, collect(DISTINCT k) AS properties ORDER BY type"
+)
 
 
 def load_env(env_file: Path | None = None) -> None:
@@ -102,3 +113,43 @@ class Neo4jClient:
             columns = list(result.keys())
         records = [{key: to_jsonable(value) for key, value in row.items()} for row in rows]
         return columns, records
+
+    async def run_read_query(
+        self,
+        query: str,
+        parameters: dict[str, Any] | None = None,
+        database: str | None = None,
+    ) -> tuple[list[str], list[dict[str, Any]]]:
+        """Execute a Cypher query in a read transaction and return ``(columns, records)``.
+
+        Running inside ``execute_read`` makes Neo4j reject any write/delete at the
+        database level, so this is safe to expose to an LLM-generated query.
+        """
+        db = database or self._settings.database
+
+        async def work(tx: AsyncManagedTransaction) -> tuple[list[str], list[dict[str, Any]]]:
+            result = await tx.run(query, parameters or {})
+            rows = [record async for record in result]
+            columns = list(result.keys())
+            return columns, [dict(row) for row in rows]
+
+        async with self._driver.session(database=db) as session:
+            columns, raw_rows = await session.execute_read(work)
+        records = [{key: to_jsonable(value) for key, value in row.items()} for row in raw_rows]
+        return columns, records
+
+    async def fetch_schema(self, database: str | None = None) -> dict[str, list[dict[str, Any]]]:
+        """Introspect the graph and return its labels, relationships and properties.
+
+        The result is intended as context for an LLM writing Cypher: node labels with
+        their property keys, the relationship types that connect them, and any
+        relationship property keys.
+        """
+        _, node_properties = await self.run_read_query(_SCHEMA_NODE_PROPERTIES, database=database)
+        _, relationships = await self.run_read_query(_SCHEMA_RELATIONSHIPS, database=database)
+        _, relationship_properties = await self.run_read_query(_SCHEMA_RELATIONSHIP_PROPERTIES, database=database)
+        return {
+            "nodes": node_properties,
+            "relationships": relationships,
+            "relationshipProperties": relationship_properties,
+        }

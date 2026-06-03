@@ -118,6 +118,62 @@ curl -X POST http://localhost:8080/query \
 > intended for trusted, local PoC use — do not expose it publicly without adding
 > authentication and query restrictions.
 
+## Natural-language questions (GraphRAG agent)
+
+`src/agent.py` adds a Microsoft Agent Framework agent that answers natural-language
+questions over the graph using a **text-to-Cypher** pattern: the agent inspects the
+live schema, writes a **read-only** Cypher query, runs it as context, and answers
+from the rows. The graph is exposed to the model as two tools (`get_graph_schema`
+and `query_knowledge_graph`).
+
+Queries run inside a Neo4j read transaction, so the model can never modify the
+graph even if it generates a write.
+
+### Configuration
+
+Set the Azure OpenAI variables in `backend/.env` (see `.env.example`). They are
+optional — `/query` works without them, but `/ask` returns HTTP `503` until they
+are present.
+
+| Variable | Example | Description |
+| --- | --- | --- |
+| `AZURE_OPENAI_ENDPOINT` | `https://<res>.openai.azure.com/openai/v1` | Endpoint. Use the `/openai/v1` form for Azure AI Foundry deployments; a bare resource URL for classic Azure OpenAI. |
+| `AZURE_OPENAI_API_KEY` | `<key>` | API key. |
+| `AZURE_OPENAI_DEPLOYMENT` | `gpt-5.4` | Deployment (model) name. |
+| `AZURE_OPENAI_API_VERSION` | `2024-10-21` | API version (used only for classic, non-`/openai/v1` endpoints). |
+
+### `POST /ask`
+
+Request body:
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `question` | string | yes | A natural-language question about the graph. |
+
+Response body:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `answer` | string | The agent's natural-language answer. |
+| `cypher_used` | string[] | The Cypher queries the agent ran. |
+| `records` | object[] | The graph rows it retrieved as context. |
+
+Example:
+
+```bash
+curl -X POST http://localhost:8080/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"question": "How many flying hours has the engine had since 2026-05-25?"}'
+```
+
+```json
+{
+  "answer": "Since 2026-05-25, the engine has had 2.2 flying hours across 4 flights.",
+  "cypher_used": ["MATCH (e:PistonEngine) MATCH (f:Flight) WHERE f.date >= $since RETURN ..."],
+  "records": [{"engine": "Lycoming IO-360", "flying_hours": 2.2, "flights": 4}]
+}
+```
+
 ## Stack
 
 - **Python 3.13+** with **FastAPI** and **uvicorn**
