@@ -1,16 +1,14 @@
 {
   "name": "Knowledge Graph",
   "image": "mcr.microsoft.com/devcontainers/python:3.13-bookworm",
+  "runArgs": ["--network=host"],
   "features": {
     "ghcr.io/devcontainers-extra/features/uv:1": {},
     "ghcr.io/devcontainers/features/node:1": {
       "version": "24"
-    }
+    },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
   },
-  "mounts": [
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/node/.ssh,type=bind,consistency=cached"
-  ],
-  "runArgs": ["--network=host"],
   "customizations": {
     "vscode": {
       "extensions": [
