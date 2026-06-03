@@ -106,15 +106,22 @@ onMounted(loadGraph)
     @close="selectedNode = null"
   />
 
-  <div class="corner bl">
-    DRAG TO PAN · SCROLL TO ZOOM · CLICK NODE TO FOCUS · CLICK AGAIN OR BACKGROUND TO CLEAR
-  </div>
-  <div class="corner br">SPO:// v1.0.0</div>
+  <div class="hint">Drag to pan · Scroll to zoom · Click a node to focus</div>
 
   <div v-if="error" class="load-error">{{ error }}</div>
 </template>
 
 <style scoped>
+.hint {
+  position: fixed;
+  bottom: 12px;
+  left: 232px;
+  z-index: 10;
+  font-size: 11px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
 .load-error {
   position: fixed;
   inset: 0;
@@ -124,7 +131,7 @@ onMounted(loadGraph)
   text-align: center;
   padding: 24px;
   color: var(--red);
-  font-size: 12px;
+  font-size: 14px;
   z-index: 200;
 }
 </style>

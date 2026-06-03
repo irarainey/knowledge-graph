@@ -15,17 +15,21 @@ defineEmits<{
 
 <template>
   <header>
-    <div class="logo">ONTOLOGY</div>
-    <div class="header-divider"></div>
-    <div class="stat-pill">
-      NODES <strong>{{ nodeCount }}</strong>
+    <div class="brand">
+      <span class="brand-title">✈ Cessna 172S Skyhawk</span>
+      <span class="brand-sub">G-ECHO · Knowledge Graph</span>
     </div>
-    <div class="header-divider"></div>
-    <div class="stat-pill">
-      EDGES <strong>{{ edgeCount }}</strong>
+
+    <div class="stats">
+      <span class="stat"
+        ><strong>{{ nodeCount }}</strong> nodes</span
+      >
+      <span class="stat-divider"></span>
+      <span class="stat"
+        ><strong>{{ edgeCount }}</strong> edges</span
+      >
     </div>
-    <div class="header-divider"></div>
-    <div class="stat-pill">EXAMPLE <strong>G-ECHO · C172S</strong></div>
+
     <div class="header-right">
       <div class="layout-toggle">
         <button
@@ -33,17 +37,17 @@ defineEmits<{
           :class="{ active: layout === 'force' }"
           @click="$emit('set-layout', 'force')"
         >
-          ✦ FORCE
+          Force
         </button>
         <button
           class="btn-layout"
           :class="{ active: layout === 'radial' }"
           @click="$emit('set-layout', 'radial')"
         >
-          ◎ RADIAL
+          Radial
         </button>
       </div>
-      <button class="btn-reset" @click="$emit('reset')">⟳ RESET</button>
+      <button class="btn-reset" @click="$emit('reset')">Reset view</button>
     </div>
   </header>
 </template>
@@ -55,49 +59,45 @@ header {
   left: 0;
   right: 0;
   z-index: 100;
-  background: linear-gradient(180deg, rgba(8, 12, 16, 0.98) 0%, rgba(8, 12, 16, 0.85) 100%);
+  background: var(--panel);
   border-bottom: 1px solid var(--border);
-  padding: 0 24px;
+  padding: 0 20px;
   height: 56px;
   display: flex;
   align-items: center;
   gap: 24px;
-  backdrop-filter: blur(8px);
 }
 
-.logo {
-  font-family: 'Orbitron', sans-serif;
-  font-weight: 900;
-  font-size: 13px;
-  letter-spacing: 0.15em;
-  color: var(--amber);
-  text-shadow: 0 0 20px rgba(232, 160, 32, 0.5);
-  white-space: nowrap;
+.brand {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
 }
-
-.logo span {
+.brand-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.brand-sub {
+  font-size: 11px;
   color: var(--text-dim);
-  font-weight: 400;
 }
 
-.header-divider {
-  width: 1px;
-  height: 28px;
-  background: var(--border);
-  flex-shrink: 0;
-}
-
-.stat-pill {
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  color: var(--text-dim);
+.stats {
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-.stat-pill strong {
-  color: var(--amber);
+  gap: 12px;
   font-size: 13px;
+  color: var(--text-dim);
+}
+.stats strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.stat-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
 }
 
 .header-right {
@@ -110,46 +110,45 @@ header {
 .layout-toggle {
   display: flex;
   border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 .btn-layout {
   background: transparent;
   border: none;
   border-right: 1px solid var(--border);
   color: var(--text-dim);
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  padding: 5px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 6px 14px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 .btn-layout:last-child {
   border-right: none;
 }
 .btn-layout:hover {
-  color: var(--amber);
-  background: rgba(232, 160, 32, 0.08);
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
 }
 .btn-layout.active {
-  color: var(--amber);
-  background: rgba(232, 160, 32, 0.15);
-  text-shadow: 0 0 8px rgba(232, 160, 32, 0.4);
+  color: var(--accent);
+  background: var(--accent-weak);
 }
 
 .btn-reset {
   background: transparent;
   border: 1px solid var(--border);
-  color: var(--amber);
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  padding: 5px 12px;
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 6px 14px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 .btn-reset:hover {
-  background: rgba(232, 160, 32, 0.1);
-  border-color: var(--amber);
-  box-shadow: 0 0 12px rgba(232, 160, 32, 0.2);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 </style>

@@ -20,7 +20,7 @@ function countFor(type: string): number {
 
 <template>
   <div id="sidebar">
-    <div class="sidebar-heading">NODE TYPES</div>
+    <div class="sidebar-heading">Node types</div>
     <button
       v-for="type in types"
       :key="type"
@@ -28,10 +28,7 @@ function countFor(type: string): number {
       :class="{ active: activeTypes.has(type) }"
       @click="$emit('toggle', type)"
     >
-      <span
-        class="dot"
-        :style="{ background: styleFor(type).color, color: styleFor(type).color }"
-      ></span>
+      <span class="dot" :style="{ background: styleFor(type).color }"></span>
       {{ styleFor(type).label }}
       <span class="count">{{ countFor(type) }}</span>
     </button>
@@ -46,58 +43,56 @@ function countFor(type: string): number {
   bottom: 0;
   width: 220px;
   z-index: 50;
-  background: rgba(8, 12, 16, 0.92);
+  background: var(--panel);
   border-right: 1px solid var(--border);
   padding: 16px 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  backdrop-filter: blur(6px);
+  gap: 2px;
   overflow-y: auto;
 }
 
 .sidebar-heading {
-  font-size: 9px;
-  letter-spacing: 0.2em;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--text-dim);
-  margin: 8px 4px 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding-bottom: 4px;
+  margin: 4px 6px 10px;
 }
 
 .filter-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   background: transparent;
   border: 1px solid transparent;
+  border-radius: var(--radius);
   color: var(--text);
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
   cursor: pointer;
   transition: all 0.15s;
   width: 100%;
   text-align: left;
 }
 .filter-btn .dot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   flex-shrink: 0;
-  box-shadow: 0 0 6px currentColor;
 }
 .filter-btn.active {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--panel-2);
+  border-color: var(--border);
 }
 .filter-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
 }
 .filter-btn .count {
   margin-left: auto;
-  font-size: 9px;
+  font-size: 12px;
   color: var(--text-dim);
 }
 </style>

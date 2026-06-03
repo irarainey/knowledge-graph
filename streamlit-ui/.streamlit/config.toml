@@ -12,3 +12,14 @@ gatherUsageStats = false
 [client]
 # Hide the "Deploy" button and trim the toolbar to the essentials.
 toolbarMode = "minimal"
+
+[theme]
+# Shared design language with the Vue graph renderer (frontend/src/styles.css) so
+# the two apps read as one product: dark slate base, amber accent, Inter font.
+base = "dark"
+primaryColor = "#e8a020"
+backgroundColor = "#0e1117"
+secondaryBackgroundColor = "#161b22"
+textColor = "#e6edf3"
+font = "sans-serif"
+

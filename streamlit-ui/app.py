@@ -179,8 +179,26 @@ def main() -> None:
     st.markdown(
         """
         <style>
-        .block-container { max-width: 900px; }
-        h1 { font-size: 2rem; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        html, body, [class*="css"], button, input, textarea {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+                Helvetica, Arial, sans-serif;
+        }
+
+        /* Match the renderer's comfortable reading column and spacing. */
+        .block-container { max-width: 900px; padding-top: 3rem; }
+        h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.01em; }
+
+        /* Consistent rounded controls, matching the Vue app's 8px radius. */
+        .stButton button, .stLinkButton a, [data-testid="stChatInput"] textarea {
+            border-radius: 8px;
+        }
+        section[data-testid="stSidebar"] .stButton button,
+        section[data-testid="stSidebar"] .stLinkButton a {
+            text-align: left;
+            justify-content: flex-start;
+        }
         </style>
         """,
         unsafe_allow_html=True,

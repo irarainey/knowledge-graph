@@ -70,12 +70,11 @@ const propEntries = computed(() => (props.node ? Object.entries(props.node.props
   right: 0;
   top: 56px;
   bottom: 0;
-  width: 260px;
+  width: 280px;
   z-index: 50;
-  background: rgba(8, 12, 16, 0.95);
+  background: var(--panel);
   border-left: 1px solid var(--border);
-  padding: 20px 16px;
-  backdrop-filter: blur(6px);
+  padding: 20px 18px;
   overflow-y: auto;
   transform: translateX(100%);
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -85,54 +84,57 @@ const propEntries = computed(() => (props.node ? Object.entries(props.node.props
 }
 
 .info-type {
-  font-size: 9px;
-  letter-spacing: 0.2em;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--text-dim);
   margin-bottom: 4px;
 }
 .info-label {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 700;
-  color: var(--amber);
-  text-shadow: 0 0 16px rgba(232, 160, 32, 0.4);
-  margin-bottom: 12px;
+  color: var(--text);
+  margin-bottom: 14px;
   line-height: 1.3;
 }
 .info-section {
-  margin-top: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding-top: 10px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
 }
 .info-section-title {
-  font-size: 9px;
-  letter-spacing: 0.15em;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--text-dim);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .info-row {
   display: flex;
   gap: 6px;
-  font-size: 10px;
+  font-size: 13px;
   color: var(--text);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   align-items: flex-start;
+  line-height: 1.4;
 }
 .info-row .arrow {
-  color: var(--amber-dim);
+  color: var(--text-dim);
   flex-shrink: 0;
 }
 .info-row .target {
-  color: var(--green);
+  color: var(--text);
 }
 .info-row .rel {
-  color: var(--amber-dim);
+  color: var(--accent);
 }
 
 .close-btn {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 14px;
+  right: 14px;
   background: transparent;
   border: none;
   color: var(--text-dim);
@@ -142,6 +144,6 @@ const propEntries = computed(() => (props.node ? Object.entries(props.node.props
   padding: 4px;
 }
 .close-btn:hover {
-  color: var(--amber);
+  color: var(--text);
 }
 </style>
