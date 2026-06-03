@@ -269,7 +269,19 @@ one object per line:
 | `metadata` | `{ "type": "metadata", "cypher_used": [...], "records": [...] }` | Once, first — after retrieval, before any tokens. |
 | `token` | `{ "type": "token", "text": "..." }` | Repeated, as answer tokens arrive. |
 | `error` | `{ "type": "error", "message": "..." }` | Only on failure (in-band, since headers are already sent). |
+| `stats` | `{ "type": "stats", "model": ..., "llm_calls": N, "tokens": {...}, "calls": [...], "durations_ms": {...}, "cypher_count": N, "record_count": N }` | Once, just before `done` — debug/telemetry for the request. |
 | `done` | `{ "type": "done" }` | Always last. |
+
+The `stats` event reports debug telemetry for the request: the model, the number of
+LLM calls (cypher-generation + answer-generation), aggregated token usage with a
+per-call breakdown, and timings. Each entry in `calls` carries its own `duration_ms`,
+and `durations_ms` reports `retrieval`, `graph_query` (the Neo4j execution, i.e.
+retrieval minus the cypher-generation LLM call), `generation` and `total`. Token and
+duration fields per call let the UI show how long each LLM call and the graph query
+took. Answer-generation tokens come from the OpenAI stream's
+`stream_options={"include_usage": True}`; cypher-generation tokens and timing are
+captured from the retriever's internal `llm.invoke` call. Token fields are `null` when
+the endpoint does not report usage.
 
 Because retrieval runs first, the client receives the Cypher and rows up front and can
 render the answer progressively. The retrieval step runs in a worker thread while
@@ -288,6 +300,7 @@ curl -N -X POST http://localhost:8080/ask/stream \
 {"type": "token", "text": "Since "}
 {"type": "token", "text": "2026-05-25"}
 ...
+{"type": "stats", "model": "gpt-5.4", "llm_calls": 2, "tokens": {"prompt": 10667, "completion": 67, "total": 10734}, "calls": [{"stage": "cypher_generation", "prompt": 10390, "completion": 28, "total": 10418, "duration_ms": 1850.4}, {"stage": "answer_generation", "prompt": 277, "completion": 39, "total": 316, "duration_ms": 1269.9}], "durations_ms": {"retrieval": 1859.5, "graph_query": 9.1, "generation": 1269.9, "total": 3129.5}, "cypher_count": 1, "record_count": 6}
 {"type": "done"}
 ```
 

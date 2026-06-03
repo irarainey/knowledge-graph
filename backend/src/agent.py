@@ -19,7 +19,9 @@ import asyncio
 import inspect
 import json
 import os
+import time
 from collections.abc import AsyncIterator
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -44,6 +46,106 @@ DEFAULT_API_VERSION = "2024-10-21"
 # Shown to the user when retrieval or generation fails, so the API degrades
 # gracefully instead of returning a 500.
 FALLBACK_ANSWER = "I couldn't find an answer to that question in the knowledge graph."
+
+_EMPTY_USAGE: dict[str, int | None] = {"prompt": None, "completion": None, "total": None}
+
+# Per-request sink for cypher-generation token usage. The Text2CypherRetriever
+# does not surface the usage of its internal ``llm.invoke`` call, so the agent
+# wraps ``invoke`` to append usage here. ``asyncio.to_thread`` copies the calling
+# context into the worker thread, and because the value is a shared mutable list,
+# appends made inside the thread are visible to the request task afterwards. Each
+# request binds its own list, so concurrent requests stay isolated.
+_usage_sink: ContextVar[list[dict[str, Any]] | None] = ContextVar("_kg_usage_sink", default=None)
+
+
+def _elapsed_ms(start: float) -> float:
+    return round((time.perf_counter() - start) * 1000, 1)
+
+
+def _normalize_llm_usage(usage: Any) -> dict[str, int | None]:
+    """Normalize a neo4j-graphrag ``LLMUsage`` into a plain token dict."""
+    if usage is None:
+        return dict(_EMPTY_USAGE)
+    return {
+        "prompt": getattr(usage, "request_tokens", None),
+        "completion": getattr(usage, "response_tokens", None),
+        "total": getattr(usage, "total_tokens", None),
+    }
+
+
+def _normalize_openai_usage(usage: Any) -> dict[str, int | None]:
+    """Normalize an OpenAI streaming ``usage`` object into a plain token dict."""
+    if usage is None:
+        return dict(_EMPTY_USAGE)
+    return {
+        "prompt": getattr(usage, "prompt_tokens", None),
+        "completion": getattr(usage, "completion_tokens", None),
+        "total": getattr(usage, "total_tokens", None),
+    }
+
+
+def _messages(system: str | None, user: Any) -> list[dict[str, str]]:
+    """Build a ``[{role, content}]`` request representation for the debug telemetry."""
+    request: list[dict[str, str]] = []
+    if system:
+        request.append({"role": "system", "content": str(system)})
+    if user is not None:
+        request.append({"role": "user", "content": str(user)})
+    return request
+
+
+def _build_stats(
+    *,
+    model: str | None,
+    cypher_usages: list[dict[str, Any]],
+    answer_usage: dict[str, Any] | None,
+    answer_request: list[dict[str, str]] | None,
+    answer_call_made: bool,
+    retrieval_ms: float,
+    generation_ms: float,
+    total_ms: float,
+    cypher_count: int,
+    record_count: int,
+) -> dict[str, Any]:
+    """Assemble the ``stats`` debug event from observed per-call usage and timings.
+
+    Token counts are aggregated only across calls that actually reported usage;
+    when none did, the aggregate stays ``None`` (unknown) rather than ``0``. Each
+    call carries its own ``duration_ms`` and the ``request`` messages sent to the
+    LLM; the graph-query duration is whatever's left of retrieval after the
+    cypher-generation LLM call.
+    """
+    calls: list[dict[str, Any]] = [{"stage": "cypher_generation", **usage} for usage in cypher_usages]
+    cypher_llm_ms = sum(usage.get("duration_ms") or 0.0 for usage in cypher_usages)
+    if answer_call_made:
+        answer_call = {
+            "stage": "answer_generation",
+            **(answer_usage or dict(_EMPTY_USAGE)),
+            "duration_ms": round(generation_ms, 1),
+            "request": answer_request or [],
+        }
+        calls.append(answer_call)
+
+    def aggregate(key: str) -> int | None:
+        values = [call[key] for call in calls if call.get(key) is not None]
+        return sum(values) if values else None
+
+    return {
+        "type": "stats",
+        "model": model,
+        "llm_calls": len(calls),
+        "tokens": {"prompt": aggregate("prompt"), "completion": aggregate("completion"), "total": aggregate("total")},
+        "calls": calls,
+        "durations_ms": {
+            "retrieval": retrieval_ms,
+            "graph_query": round(max(retrieval_ms - cypher_llm_ms, 0.0), 1),
+            "generation": generation_ms,
+            "total": total_ms,
+        },
+        "cypher_count": cypher_count,
+        "record_count": record_count,
+    }
+
 
 # Few-shot question/Cypher pairs that anchor the cypher-generation LLM to this
 # graph's exact labels, relationship types and conventions: ISO-string dates cast
@@ -331,6 +433,43 @@ class KnowledgeGraphAgent:
         self._retriever = retriever
         self._prompt_template = prompt_template
         self._rag = GraphRAG(retriever=retriever, llm=llm, prompt_template=prompt_template)
+        self._install_usage_recorder()
+
+    def _install_usage_recorder(self) -> None:
+        """Wrap ``self._llm.invoke`` so cypher-generation token usage is captured.
+
+        The Text2CypherRetriever calls ``llm.invoke`` to generate Cypher but does
+        not expose its usage. The wrapper appends each call's normalized usage to
+        the request-scoped :data:`_usage_sink` (when one is active). The original
+        bound method is preserved and double-wrapping is guarded against.
+        """
+        if getattr(self._llm, "_kg_usage_wrapped", False):
+            return
+        original_invoke = self._llm.invoke
+
+        def recording_invoke(*args: Any, **kwargs: Any) -> Any:
+            # LLMInterface.invoke(input, message_history=None, system_instruction=None).
+            request_input = args[0] if args else kwargs.get("input")
+            request_system = args[2] if len(args) >= 3 else kwargs.get("system_instruction")
+            start = time.perf_counter()
+            response = original_invoke(*args, **kwargs)
+            duration_ms = _elapsed_ms(start)
+            sink = _usage_sink.get()
+            if sink is not None:
+                sink.append(
+                    {
+                        **_normalize_llm_usage(getattr(response, "usage", None)),
+                        "duration_ms": duration_ms,
+                        "request": _messages(request_system, request_input),
+                    }
+                )
+            return response
+
+        try:
+            self._llm.invoke = recording_invoke  # type: ignore[method-assign]
+            self._llm._kg_usage_wrapped = True  # type: ignore[attr-defined]
+        except Exception as exc:  # pragma: no cover - defensive: some LLMs forbid attr assignment
+            print(f"/ask/stream usage recorder not installed: {type(exc).__name__}: {exc}")
 
     @classmethod
     def from_settings(cls, azure: AzureOpenAISettings, neo4j_settings: Neo4jSettings) -> KnowledgeGraphAgent:
@@ -370,23 +509,50 @@ class KnowledgeGraphAgent:
           once, after retrieval, before any answer tokens.
         * ``{"type": "token", "text": "..."}`` — repeated, the streamed answer.
         * ``{"type": "error", "message": "..."}`` — only on failure.
+        * ``{"type": "stats", ...}`` — debug telemetry (model, llm_calls, tokens,
+          durations, counts), emitted once just before ``done``.
         * ``{"type": "done"}`` — always emitted last.
 
         Retrieval (text-to-Cypher) is synchronous, so it runs in a worker thread; the
         answer is then streamed natively from the async OpenAI client.
         """
+        model = getattr(self._llm, "model_name", None)
+        total_start = time.perf_counter()
+
+        # Bind a fresh sink so the wrapped invoke records this request's cypher-gen
+        # usage; reset immediately after retrieval (generation makes no invoke call).
+        cypher_usages: list[dict[str, Any]] = []
+        sink_token = _usage_sink.set(cypher_usages)
+        retrieval_start = time.perf_counter()
+        retriever_result: RetrieverResult | None = None
+        retrieval_error: Exception | None = None
         try:
             retriever_result = await asyncio.to_thread(self._retriever.search, query_text=question)
         except Text2CypherRetrievalError as exc:
+            retrieval_error = exc
             print(f"/ask/stream cypher retrieval failed: {exc}")
-            yield {"type": "metadata", "cypher_used": [], "records": []}
-            yield {"type": "token", "text": FALLBACK_ANSWER}
-            yield {"type": "done"}
-            return
         except Exception as exc:
+            retrieval_error = exc
             print(f"/ask/stream retrieval failed: {type(exc).__name__}: {exc}")
+        finally:
+            _usage_sink.reset(sink_token)
+        retrieval_ms = _elapsed_ms(retrieval_start)
+
+        if retrieval_error is not None:
             yield {"type": "metadata", "cypher_used": [], "records": []}
             yield {"type": "token", "text": FALLBACK_ANSWER}
+            yield _build_stats(
+                model=model,
+                cypher_usages=cypher_usages,
+                answer_usage=None,
+                answer_request=None,
+                answer_call_made=False,
+                retrieval_ms=retrieval_ms,
+                generation_ms=0.0,
+                total_ms=_elapsed_ms(total_start),
+                cypher_count=0,
+                record_count=0,
+            )
             yield {"type": "done"}
             return
 
@@ -395,12 +561,14 @@ class KnowledgeGraphAgent:
 
         # Build the answer prompt exactly as GraphRAG.search would, so streamed and
         # non-streamed answers stay consistent.
-        context = "\n".join(item.content for item in retriever_result.items)
+        context = "\n".join(item.content for item in retriever_result.items) if retriever_result else ""
         prompt = self._prompt_template.format(query_text=question, context=context, examples="")
         system_instruction = self._prompt_template.system_instructions
 
+        metrics: dict[str, Any] = {}
+        generation_start = time.perf_counter()
         try:
-            async for text in self._stream_answer(prompt, system_instruction):
+            async for text in self._stream_answer(prompt, system_instruction, metrics):
                 yield {"type": "token", "text": text}
         except asyncio.CancelledError:
             # Client disconnected — let cancellation propagate so the upstream
@@ -409,19 +577,40 @@ class KnowledgeGraphAgent:
         except Exception as exc:
             print(f"/ask/stream generation failed: {type(exc).__name__}: {exc}")
             yield {"type": "error", "message": "Answer generation failed."}
+        generation_ms = _elapsed_ms(generation_start)
 
+        yield _build_stats(
+            model=model,
+            cypher_usages=cypher_usages,
+            answer_usage=metrics.get("answer_usage"),
+            answer_request=metrics.get("answer_request"),
+            answer_call_made=bool(metrics.get("answer_call_made")),
+            retrieval_ms=retrieval_ms,
+            generation_ms=generation_ms,
+            total_ms=_elapsed_ms(total_start),
+            cypher_count=len(cypher_used),
+            record_count=len(records),
+        )
         yield {"type": "done"}
 
-    async def _stream_answer(self, prompt: str, system_instruction: str | None) -> AsyncIterator[str]:
+    async def _stream_answer(
+        self, prompt: str, system_instruction: str | None, metrics: dict[str, Any] | None = None
+    ) -> AsyncIterator[str]:
         """Stream answer tokens from the LLM's async OpenAI client.
 
         Falls back to a single non-streaming ``invoke`` if the underlying client is
         not the expected OpenAI client (keeps the agent usable with custom LLMs).
+        When ``metrics`` is given, records ``answer_call_made`` and the answer-gen
+        token ``answer_usage`` (when the endpoint reports it).
         """
         client = getattr(self._llm, "async_client", None)
         model = getattr(self._llm, "model_name", None)
         if client is None or model is None:
             result = await asyncio.to_thread(self._llm.invoke, prompt, None, system_instruction)
+            if metrics is not None:
+                metrics["answer_call_made"] = True
+                metrics["answer_usage"] = _normalize_llm_usage(getattr(result, "usage", None))
+                metrics["answer_request"] = _messages(system_instruction, prompt)
             yield result.content
             return
 
@@ -436,9 +625,23 @@ class KnowledgeGraphAgent:
             messages.append({"role": "user", "content": prompt})
 
         model_params = getattr(self._llm, "model_params", None) or {}
-        stream = await client.chat.completions.create(model=model, messages=messages, stream=True, **model_params)
+        # Request token usage on the final chunk; retry without it if the endpoint
+        # rejects stream_options, so unsupported usage never breaks generation.
+        try:
+            stream = await client.chat.completions.create(
+                model=model, messages=messages, stream=True, stream_options={"include_usage": True}, **model_params
+            )
+        except Exception as exc:
+            print(f"/ask/stream stream_options unsupported, retrying without usage: {type(exc).__name__}: {exc}")
+            stream = await client.chat.completions.create(model=model, messages=messages, stream=True, **model_params)
+        if metrics is not None:
+            metrics["answer_call_made"] = True
+            metrics["answer_request"] = [{"role": str(m.get("role", "")), "content": str(m.get("content", ""))} for m in messages]
         try:
             async for chunk in stream:
+                usage = getattr(chunk, "usage", None)
+                if usage is not None and metrics is not None:
+                    metrics["answer_usage"] = _normalize_openai_usage(usage)
                 choices = getattr(chunk, "choices", None)
                 if not choices:
                     continue

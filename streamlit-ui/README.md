@@ -57,9 +57,17 @@ cp .env.example .env
 ## Features
 
 - Chat-style history of questions and answers.
-- **Live token streaming** with a "thinking" status indicator that moves from
-  *querying the knowledge graph* → *generating answer* → *done*.
-- Per-answer expanders showing the **Cypher used** and the **retrieved rows**.
+- **Live token streaming** with a "thinking" status indicator that reflects the
+  current phase: *asking the LLM for the graph data* (cypher generation) → *asking
+  the LLM to generate the answer* (answer generation), then it clears so the answer
+  sits at the top.
+- A single **Debug details** expander per answer that bundles everything about the
+  request: the **actual requests sent to the LLM** (the cypher-generation and
+  answer-generation prompts, each with their role-tagged messages), the model, the
+  number of LLM calls, the tokens used (prompt/completion/total, with a per-call
+  breakdown of cypher- and answer-generation), the **duration of each LLM call and
+  of the graph query**, and the **Cypher used** and **retrieved rows** — sourced
+  from a `stats` event the backend emits on the stream.
 - Sidebar with a **New conversation** button, one-click **example questions**, and
   shortcut buttons to **open the graph renderer** (Vue app) and **open the Neo4j
   browser** in a new tab.

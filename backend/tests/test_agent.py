@@ -19,6 +19,7 @@ from agent import (
     AzureOpenAISettings,
     KnowledgeGraphAgent,
     _record_to_item,
+    _usage_sink,
     build_llm,
     fetch_schema_text,
 )
@@ -212,18 +213,25 @@ class FakeStreamRetriever:
 class FakeChunkStream:
     """Async iterator of OpenAI-style streaming chunks built from plain strings."""
 
-    def __init__(self, texts: list[str]) -> None:
+    def __init__(self, texts: list[str], usage: Any = None) -> None:
         self._texts = texts
+        self._usage = usage
         self.closed = False
 
     def __aiter__(self) -> FakeChunkStream:
         self._iter = iter(self._texts)
+        self._usage_sent = False
         return self
 
     async def __anext__(self) -> Any:
         try:
             text = next(self._iter)
         except StopIteration as exc:
+            # After the text chunks, emit a final usage-only chunk (empty choices),
+            # mirroring OpenAI's stream_options={"include_usage": True} behaviour.
+            if self._usage is not None and not self._usage_sent:
+                self._usage_sent = True
+                return SimpleNamespace(choices=[], usage=self._usage)
             raise StopAsyncIteration from exc
         return SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=text))])
 
@@ -232,22 +240,23 @@ class FakeChunkStream:
 
 
 class FakeCompletions:
-    def __init__(self, texts: list[str]) -> None:
+    def __init__(self, texts: list[str], usage: Any = None) -> None:
         self._texts = texts
+        self._usage = usage
         self.last_kwargs: dict[str, Any] | None = None
 
     async def create(self, **kwargs: Any) -> FakeChunkStream:
         self.last_kwargs = kwargs
-        return FakeChunkStream(self._texts)
+        return FakeChunkStream(self._texts, self._usage)
 
 
 class FakeStreamLLM:
     """Minimal stand-in for OpenAILLM exposing the bits _stream_answer uses."""
 
-    def __init__(self, texts: list[str]) -> None:
+    def __init__(self, texts: list[str], usage: Any = None) -> None:
         self.model_name = "fake-model"
         self.model_params: dict[str, Any] = {}
-        self.completions = FakeCompletions(texts)
+        self.completions = FakeCompletions(texts, usage)
         self.async_client = SimpleNamespace(chat=SimpleNamespace(completions=self.completions))
 
     def get_messages(self, input: str, message_history: Any = None, system_instruction: str | None = None) -> list[dict[str, str]]:
@@ -280,7 +289,10 @@ async def test_ask_stream_emits_metadata_tokens_and_done() -> None:
         metadata={"cypher": "MATCH (f:Flight) RETURN count(f) AS flights"},
     )
     retriever = FakeStreamRetriever(result=result)
-    llm = FakeStreamLLM(["There ", "are 6 ", "flights."])
+    llm = FakeStreamLLM(
+        ["There ", "are 6 ", "flights."],
+        usage=SimpleNamespace(prompt_tokens=120, completion_tokens=8, total_tokens=128),
+    )
     agent = _make_stream_agent(retriever, llm)
 
     events = [event async for event in agent.ask_stream("How many flights?")]
@@ -294,10 +306,31 @@ async def test_ask_stream_emits_metadata_tokens_and_done() -> None:
     assert "".join(tokens) == "There are 6 flights."
     assert events[-1] == {"type": "done"}
     assert retriever.calls == ["How many flights?"]
-    # The native streaming call must request streaming and pass the model through.
+    # The native streaming call must request streaming, pass the model through, and
+    # request token usage on the final chunk.
     assert llm.completions.last_kwargs is not None
     assert llm.completions.last_kwargs["stream"] is True
     assert llm.completions.last_kwargs["model"] == "fake-model"
+    assert llm.completions.last_kwargs["stream_options"] == {"include_usage": True}
+    # A stats event with the answer-generation token usage precedes done.
+    stats = next(event for event in events if event["type"] == "stats")
+    assert events.index(stats) == len(events) - 2
+    assert stats["model"] == "fake-model"
+    assert stats["llm_calls"] == 1
+    assert stats["tokens"] == {"prompt": 120, "completion": 8, "total": 128}
+    assert len(stats["calls"]) == 1
+    answer_call = stats["calls"][0]
+    assert answer_call["stage"] == "answer_generation"
+    assert {answer_call["prompt"], answer_call["completion"], answer_call["total"]} == {120, 8, 128}
+    assert isinstance(answer_call["duration_ms"], float)
+    # The answer-generation request (the messages sent to the LLM) is surfaced.
+    assert answer_call["request"] == [
+        {"role": "system", "content": "Answer the user question using the provided context."},
+        {"role": "user", "content": 'Q: How many flights?\nCTX: {"flights": 6}'},
+    ]
+    assert stats["cypher_count"] == 1
+    assert stats["record_count"] == 1
+    assert set(stats["durations_ms"]) == {"retrieval", "graph_query", "generation", "total"}
 
 
 async def test_ask_stream_degrades_on_retrieval_error() -> None:
@@ -309,7 +342,40 @@ async def test_ask_stream_degrades_on_retrieval_error() -> None:
 
     assert events[0] == {"type": "metadata", "cypher_used": [], "records": []}
     assert any(event["type"] == "token" and "couldn't" in event["text"].lower() for event in events)
+    stats = next(event for event in events if event["type"] == "stats")
+    assert stats["llm_calls"] == 0
+    assert stats["calls"] == []
+    assert stats["tokens"] == {"prompt": None, "completion": None, "total": None}
     assert events[-1] == {"type": "done"}
+
+
+def test_install_usage_recorder_captures_invoke_usage() -> None:
+    agent = object.__new__(KnowledgeGraphAgent)
+    llm = SimpleNamespace(
+        invoke=lambda *a, **k: SimpleNamespace(
+            content="MATCH (n) RETURN n",
+            usage=SimpleNamespace(request_tokens=40, response_tokens=12, total_tokens=52),
+        )
+    )
+    agent._llm = llm  # type: ignore[assignment]
+    agent._install_usage_recorder()
+
+    sink: list[dict[str, Any]] = []
+    token = _usage_sink.set(sink)
+    try:
+        agent._llm.invoke("the cypher prompt")
+    finally:
+        _usage_sink.reset(token)
+
+    assert len(sink) == 1
+    assert sink[0]["prompt"] == 40
+    assert sink[0]["completion"] == 12
+    assert sink[0]["total"] == 52
+    assert isinstance(sink[0]["duration_ms"], float)
+    # The cypher-generation request (the prompt sent to the LLM) is captured.
+    assert sink[0]["request"] == [{"role": "user", "content": "the cypher prompt"}]
+    # Re-installing must not double-wrap.
+    assert getattr(agent._llm, "_kg_usage_wrapped", False) is True
 
 
 # ── /ask endpoint ────────────────────────────────────────────────────────────
@@ -320,6 +386,16 @@ class FakeKGAgent:
     async def ask_stream(self, question: str) -> Any:
         yield {"type": "metadata", "cypher_used": ["MATCH (n) RETURN count(n)"], "records": [{"count": 1}]}
         yield {"type": "token", "text": "42"}
+        yield {
+            "type": "stats",
+            "model": "fake-model",
+            "llm_calls": 2,
+            "tokens": {"prompt": 100, "completion": 10, "total": 110},
+            "calls": [],
+            "durations_ms": {"retrieval": 1.0, "graph_query": 0.5, "generation": 2.0, "total": 3.0},
+            "cypher_count": 1,
+            "record_count": 1,
+        }
         yield {"type": "done"}
 
 
