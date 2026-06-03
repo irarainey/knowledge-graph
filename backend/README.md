@@ -134,6 +134,76 @@ The graph schema is introspected with plain Cypher (no APOC required), so it wor
 against a stock Neo4j Community container. The schema is read once at startup —
 **restart the backend after re-importing the graph** so the agent picks up changes.
 
+### How it works
+
+A request to `/ask` flows through a two-stage **retrieve → generate** pipeline:
+
+```
+question
+   │
+   ▼
+┌─────────────────────────── Text2CypherRetriever ───────────────────────────┐
+│ 1. Build a cypher-generation prompt from: the graph schema + few-shot       │
+│    examples + the user's question.                                          │
+│ 2. LLM writes a Cypher query.                                               │
+│ 3. EXPLAIN the query; reject it unless Neo4j reports it as read-only.        │
+│ 4. Run the query (READ routing) and format each row as JSON.                │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                    │ rows (context) + the generated Cypher
+                                    ▼
+┌──────────────────────────────────── GraphRAG ───────────────────────────────┐
+│ 5. Build an answer prompt from the rows (context) + the question.            │
+│ 6. LLM writes the final natural-language answer.                            │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                    ▼
+              AskResponse { answer, cypher_used, records }
+```
+
+Step by step, in `src/agent.py`:
+
+1. **Startup (`KnowledgeGraphAgent.from_settings`).** The agent opens its own
+   **synchronous** Neo4j driver (the `neo4j-graphrag` retrievers are sync-only,
+   separate from the async driver that backs `/query`), builds the LLM client
+   (`build_llm`), introspects the schema once (`fetch_schema_text`), and wires up a
+   `Text2CypherRetriever` and a `GraphRAG` pipeline.
+
+2. **Schema introspection (`fetch_schema_text`).** Three read-only Cypher queries
+   collect node labels + properties, relationship types with the labels they
+   connect, and relationship properties. `format_schema` renders them as compact
+   text that anchors the LLM to the graph's exact names. No APOC is used.
+
+3. **Cypher generation.** When a question arrives, the retriever fills its
+   cypher-generation prompt with the schema, the few-shot `DEFAULT_EXAMPLES`
+   (question → Cypher pairs that pin down this graph's labels/relationships), and
+   the question, then asks the LLM for a single Cypher query.
+
+4. **Read-only enforcement.** Before executing, the retriever runs `EXPLAIN` on the
+   generated query and refuses anything Neo4j does not classify as read-only. The
+   query then executes with READ routing. This is a database-level guarantee — the
+   model cannot mutate the graph even if it emits `CREATE`/`DELETE`/`SET`.
+
+5. **Row formatting (`_record_to_item`).** Each returned record is converted to a
+   JSON-serialisable dict (via `to_jsonable`, which unpacks nodes/relationships into
+   property maps). The JSON becomes the LLM's context; the structured dict is kept
+   so the API can return the raw `records`.
+
+6. **Answer generation.** `GraphRAG` fills the custom `RAG_TEMPLATE` with the rows
+   (context) and the question, and the LLM writes the answer. The template instructs
+   the model to answer **only** from the retrieved rows, to say so when the data has
+   no answer, and to report numbers **exactly** (no rounding/reformatting).
+
+7. **Response assembly (`ask`).** Because the pipeline is synchronous, `ask` runs it
+   in a worker thread (`asyncio.to_thread`) so the FastAPI event loop stays
+   responsive; the shared sync driver is thread-safe for concurrent queries. The
+   result is packed into `AskResult(answer, cypher_used, records)`. If cypher
+   generation/execution fails (e.g. `Text2CypherRetrievalError`) or any LLM/network
+   error occurs, `/ask` **degrades gracefully** with a plain "couldn't find an
+   answer" message instead of returning a 500.
+
+The two LLM calls (cypher generation and answer generation) share a single LLM
+client. Built-in rate-limit handling (retry with exponential backoff) is provided by
+`neo4j-graphrag`.
+
 ### Configuration
 
 Set the Azure OpenAI variables in `backend/.env` (see `.env.example`). They are
