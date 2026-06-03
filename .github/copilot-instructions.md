@@ -8,9 +8,10 @@
 
 ## Architecture
 
-This is a knowledge graph PoC with three components:
+This is a knowledge graph PoC with four components:
 
-- **Frontend** (`frontend/`) — Vue 3 / TypeScript SPA using pnpm. Renders knowledge graphs and provides a query interface.
+- **Frontend** (`frontend/`) — Vue 3 / TypeScript SPA using pnpm. Renders the knowledge graph from the static `data/knowledge-graph.json` export (no backend calls).
+- **Streamlit UI** (`streamlit-ui/`) — Python chat front end using uv. Streams natural-language answers from the backend's `/ask/stream` endpoint with a per-answer debug panel.
 - **Backend** (`backend/`) — Python FastAPI service using uv. Queries Neo4j for graph-based retrieval, then calls Azure OpenAI to generate answers (knowledge RAG).
 - **Neo4j** — Graph database running as a Docker container. Stores knowledge graph nodes and relationships with Cypher queries.
 

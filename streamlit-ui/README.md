@@ -61,13 +61,18 @@ cp .env.example .env
   current phase: *asking the LLM for the graph data* (cypher generation) → *asking
   the LLM to generate the answer* (answer generation), then it clears so the answer
   sits at the top.
-- A single **Debug details** expander per answer that bundles everything about the
-  request: the **actual requests sent to the LLM** (the cypher-generation and
-  answer-generation prompts, each with their role-tagged messages), the model, the
-  number of LLM calls, the tokens used (prompt/completion/total, with a per-call
-  breakdown of cypher- and answer-generation), the **duration of each LLM call and
-  of the graph query**, and the **Cypher used** and **retrieved rows** — sourced
-  from a `stats` event the backend emits on the stream.
+- A single **Debug details** expander per answer, laid out as the request **workflow**
+  in chronological order so it reads top-to-bottom like the steps the agent ran:
+  1. **Call the LLM with the graph schema** — timing/tokens, with the prompt in a
+     collapsible panel (collapsed by default).
+  2. **Generate the Cypher query** — the Cypher the LLM produced.
+  3. **Query the graph database** — the graph-query duration and the retrieved rows.
+  4. **Call the LLM with the retrieved data** — timing/tokens, with the answer prompt
+     in a collapsible panel (collapsed by default).
+
+  A **Summary** at the bottom lists the model, LLM-call count, a token table
+  (prompt/completion/total per call) and a timings table. All telemetry comes from a
+  `stats` event the backend emits on the stream.
 - Sidebar with a **New conversation** button, one-click **example questions**, and
   shortcut buttons to **open the graph renderer** (Vue app) and **open the Neo4j
   browser** in a new tab.
