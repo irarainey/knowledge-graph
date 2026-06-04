@@ -14,7 +14,7 @@ gatherUsageStats = false
 toolbarMode = "minimal"
 
 [theme]
-# Shared design language with the Vue graph renderer (frontend/src/styles.css) so
+# Shared design language with the Vue graph renderer (frontend/graph-renderer/src/styles.css) so
 # the two apps read as one product: dark slate base, amber accent, Inter font.
 base = "dark"
 primaryColor = "#e8a020"

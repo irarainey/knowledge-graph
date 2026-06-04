@@ -7,7 +7,7 @@ in the backend (see ``backend/src/agents/knowledge_graph_agent.py``).
 
 Run with:
 
-    cd streamlit-ui
+    cd frontend/chat-ui
     uv sync
     uv run streamlit run app.py
 

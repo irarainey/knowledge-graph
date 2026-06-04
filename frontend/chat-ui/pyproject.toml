@@ -1,5 +1,5 @@
 [project]
-name = "streamlit-ui"
+name = "chat-ui"
 version = "1.0.0"
 description = "Streamlit chat UI for the Knowledge Graph /ask endpoint"
 readme = "README.md"

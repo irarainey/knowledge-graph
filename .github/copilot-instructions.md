@@ -10,8 +10,8 @@
 
 This is a knowledge graph PoC with four components:
 
-- **Frontend** (`frontend/`) — Vue 3 / TypeScript SPA using pnpm. Renders the knowledge graph from the static `data/knowledge-graph.json` export (no backend calls).
-- **Streamlit UI** (`streamlit-ui/`) — Python chat front end using uv. Streams natural-language answers from the backend's `/ask/stream` endpoint with a per-answer debug panel.
+- **Graph renderer** (`frontend/graph-renderer/`) — Vue 3 / TypeScript SPA using pnpm. Renders the knowledge graph from the static `data/knowledge-graph.json` export (no backend calls).
+- **Chat UI** (`frontend/chat-ui/`) — Python chat front end using uv. Streams natural-language answers from the backend's `/ask/stream` endpoint with a per-answer debug panel.
 - **Backend** (`backend/`) — Python FastAPI service using uv. Retrieves from Neo4j with text-to-Cypher (`neo4j-graphrag`), then generates answers with a Microsoft Agent Framework agent backed by Azure OpenAI.
 - **Neo4j** — Graph database running as a Docker container. Stores knowledge graph nodes and relationships with Cypher queries.
 
@@ -46,9 +46,13 @@ uv run pytest tests/test_foo.py::test_bar -v
 
 ## Frontend
 
+The `frontend/` directory holds two front ends: the Vue **graph renderer**
+(`frontend/graph-renderer/`) and the Streamlit **chat UI** (`frontend/chat-ui/`, a
+uv/Python project — see the chat UI's own README).
+
 ### Setup & Commands
 
-All commands run from the `frontend/` directory:
+All commands below run from the `frontend/graph-renderer/` directory:
 
 ```bash
 pnpm install             # install dependencies

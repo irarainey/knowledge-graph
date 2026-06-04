@@ -45,9 +45,15 @@ if [ -f "backend/pyproject.toml" ]; then
 fi
 
 # Install frontend dependencies via pnpm
-if [ -f "frontend/package.json" ]; then
-    echo "🎨 Installing frontend dependencies via pnpm..."
-    (cd frontend && pnpm install)
+if [ -f "frontend/graph-renderer/package.json" ]; then
+    echo "🎨 Installing graph renderer dependencies via pnpm..."
+    (cd frontend/graph-renderer && pnpm install)
+fi
+
+# Install chat UI dependencies via uv
+if [ -f "frontend/chat-ui/pyproject.toml" ]; then
+    echo "🎈 Installing chat UI dependencies via uv..."
+    (cd frontend/chat-ui && uv sync)
 fi
 
 echo "✅ Dev container ready!"

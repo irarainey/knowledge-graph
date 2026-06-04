@@ -1,6 +1,6 @@
 :root {
   /* Shared design tokens — kept in sync with the Streamlit theme
-     (streamlit-ui/.streamlit/config.toml) so both apps read as one product. */
+     (frontend/chat-ui/.streamlit/config.toml) so both apps read as one product. */
   --bg: #0e1117;
   --panel: #161b22;
   --panel-2: #1c222b;

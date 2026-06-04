@@ -311,7 +311,7 @@ curl -N -X POST http://localhost:8080/ask/stream \
 {"type": "done"}
 ```
 
-The [`streamlit-ui`](../streamlit-ui) project consumes this endpoint to stream answers
+The [`frontend/chat-ui`](../frontend/chat-ui) project consumes this endpoint to stream answers
 into a chat interface.
 
 ## Running with the UIs

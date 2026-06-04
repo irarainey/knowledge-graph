@@ -7,7 +7,7 @@ import vue from '@vitejs/plugin-vue'
 
 // Absolute path to the repo-level data directory that holds the knowledge graph
 // JSON and the optional node-style overrides.
-const dataDir = fileURLToPath(new URL('../data', import.meta.url))
+const dataDir = fileURLToPath(new URL('../../data', import.meta.url))
 
 // Serve files from ../data under the /data/ URL during dev, and copy them into
 // the build output so the same fetch('/data/...') calls work in production.

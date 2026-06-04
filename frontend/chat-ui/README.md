@@ -1,4 +1,4 @@
-# Streamlit UI
+# Chat UI (Streamlit)
 
 A chat-style Streamlit front end for the Knowledge Graph **`/ask`** endpoint, titled
 for the modelled aircraft (**Cessna 172S Skyhawk — G-ECHO**). Type a natural-language
@@ -7,7 +7,7 @@ answer with a Microsoft Agent Framework agent, **streamed token-by-token**. Each
 also shows the Cypher it ran and the graph rows it retrieved.
 
 This is a thin HTTP client — all retrieval and reasoning live in the
-[`backend`](../backend). It consumes the streaming endpoint `POST /ask/stream`
+[`backend`](../../backend). It consumes the streaming endpoint `POST /ask/stream`
 (newline-delimited JSON), falling back to a clear message if the backend is
 unreachable or unconfigured.
 
@@ -27,7 +27,7 @@ clear message.
 ## Run
 
 ```bash
-cd streamlit-ui
+cd frontend/chat-ui
 uv sync
 uv run streamlit run app.py
 ```
