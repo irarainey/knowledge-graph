@@ -28,7 +28,7 @@ There are two front ends, both under [`frontend/`](frontend):
                   │  Streamlit UI │    │   Backend     │
                   │  chat  :8501  │──▶ │  FastAPI:8080 │
                   └───────────────┘    │  text2cypher  │
-                   POST /ask    │  + MAF Agent  │
+                   POST /ask           │  + MAF Agent  │
                        (NDJSON)        └───────┬───────┘
                                               │ cypher-gen + answer-gen
                                               ▼

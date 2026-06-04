@@ -41,11 +41,15 @@ dev`).
 
 ## Configuration
 
-Copy `.env.example` to `.env` and adjust as needed:
+The chat UI works with **no `.env`** when everything runs on the default localhost
+ports — every setting has a built-in default. Copy `.env.example` to `.env` only if you
+need to override a URL (e.g. the backend or Neo4j runs elsewhere):
 
 ```bash
 cp .env.example .env
 ```
+
+The chat UI needs no secrets of its own; Azure OpenAI credentials live in `backend/.env`.
 
 | Variable | Default | Description |
 | --- | --- | --- |

@@ -93,7 +93,7 @@ async def run_query(payload: QueryRequest, client: Annotated[Neo4jClient, Depend
 async def ask(payload: AskRequest, agent: Annotated[KnowledgeGraphAgent, Depends(_get_agent)]) -> StreamingResponse:
     """Stream the answer as newline-delimited JSON events (metadata, tokens, done).
 
-    The 503-when-unconfigured check happens in ``get_agent`` before the response
+    The 503-when-unconfigured check happens in ``_get_agent`` before the response
     starts. Any failure after streaming begins is reported as an in-band event
     (``{"type": "error"}``) rather than an HTTP status, since headers are already sent.
     """
