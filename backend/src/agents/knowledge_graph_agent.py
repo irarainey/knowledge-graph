@@ -1,7 +1,7 @@
 """Natural-language querying of the knowledge graph.
 
-The ``/ask`` endpoint answers questions with a deterministic retrieve-then-generate
-pipeline:
+The ``/ask/stream`` endpoint answers questions with a deterministic
+retrieve-then-generate pipeline:
 
 1. :class:`~neo4j_graphrag.retrievers.Text2CypherRetriever` asks an LLM to write a
    Cypher query from the user's question and the live graph schema, validates it
@@ -21,7 +21,6 @@ import asyncio
 import inspect
 import time
 from collections.abc import AsyncIterator
-from dataclasses import dataclass, field
 from typing import Any
 
 from agent_framework import Agent
@@ -47,7 +46,7 @@ from common.telemetry import (
 from neo4j_client import Neo4jSettings
 from prompts import CYPHER_GENERATION_PROMPT, DEFAULT_EXAMPLES, RAG_TEMPLATE
 
-__all__ = ["AskResult", "AzureOpenAISettings", "KnowledgeGraphAgent"]
+__all__ = ["AzureOpenAISettings", "KnowledgeGraphAgent"]
 
 # Shown to the user when retrieval or generation fails, so the API degrades
 # gracefully instead of returning a 500.
@@ -105,15 +104,6 @@ def _build_stats(
         "cypher_count": cypher_count,
         "record_count": record_count,
     }
-
-
-@dataclass
-class AskResult:
-    """Outcome of an agent run: the answer plus the Cypher/context it relied on."""
-
-    answer: str
-    cypher_used: list[str] = field(default_factory=list)
-    records: list[dict[str, Any]] = field(default_factory=list)
 
 
 class KnowledgeGraphAgent:
@@ -205,43 +195,23 @@ class KnowledgeGraphAgent:
         context = "\n".join(item.content for item in retriever_result.items) if retriever_result else ""
         return self._prompt_template.format(query_text=question, context=context, examples="")
 
-    async def _retrieve(self, question: str, *, log_prefix: str) -> tuple[RetrieverResult | None, Exception | None]:
+    async def _retrieve(self, question: str) -> tuple[RetrieverResult | None, Exception | None]:
         """Run text-to-Cypher retrieval in a worker thread, degrading gracefully on error.
 
         Retrieval (neo4j-graphrag) is synchronous, so it runs via ``asyncio.to_thread``.
         Returns ``(result, None)`` on success or ``(None, error)`` on any failure, so
-        callers can fall back to ``FALLBACK_ANSWER`` rather than surfacing a 500.
+        the caller can fall back to ``FALLBACK_ANSWER`` rather than surfacing a 500.
         """
         try:
             result = await asyncio.to_thread(self._retriever.search, query_text=question)
             return result, None
         except Text2CypherRetrievalError as exc:
-            print(f"{log_prefix} cypher retrieval failed: {exc}")
+            print(f"/ask/stream cypher retrieval failed: {exc}")
             return None, exc
         except Exception as exc:
             # Degrade gracefully on any retrieval/connectivity error rather than 500.
-            print(f"{log_prefix} retrieval failed: {type(exc).__name__}: {exc}")
+            print(f"/ask/stream retrieval failed: {type(exc).__name__}: {exc}")
             return None, exc
-
-    async def ask(self, question: str) -> AskResult:
-        """Answer a natural-language question over the knowledge graph.
-
-        Retrieval (text-to-Cypher) runs first; the retrieved rows are then handed to
-        the MAF agent to generate the answer.
-        """
-        retriever_result, retrieval_error = await self._retrieve(question, log_prefix="/ask")
-        if retrieval_error is not None:
-            return AskResult(answer=FALLBACK_ANSWER)
-
-        cypher_used, records = extract_cypher_and_records(retriever_result)
-        prompt = self._format_prompt(question, retriever_result)
-        try:
-            response = await self._agent.run(prompt)
-            answer = response.text
-        except Exception as exc:
-            print(f"/ask generation failed: {type(exc).__name__}: {exc}")
-            answer = FALLBACK_ANSWER
-        return AskResult(answer=answer, cypher_used=cypher_used, records=records)
 
     async def ask_stream(self, question: str) -> AsyncIterator[dict[str, Any]]:
         """Answer a question while streaming the LLM's tokens.
@@ -268,7 +238,7 @@ class KnowledgeGraphAgent:
         sink_token = usage_sink.set(cypher_usages)
         retrieval_start = time.perf_counter()
         try:
-            retriever_result, retrieval_error = await self._retrieve(question, log_prefix="/ask/stream")
+            retriever_result, retrieval_error = await self._retrieve(question)
         finally:
             usage_sink.reset(sink_token)
         retrieval_ms = elapsed_ms(retrieval_start)

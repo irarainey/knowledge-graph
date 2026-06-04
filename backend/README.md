@@ -138,7 +138,7 @@ against a stock Neo4j Community container. The schema is read once at startup �
 
 ### How it works
 
-A request to `/ask` flows through a two-stage **retrieve → generate** pipeline:
+A request to `/ask/stream` flows through a two-stage **retrieve → generate** pipeline:
 
 ```
 question
@@ -158,7 +158,7 @@ question
 │ 6. The Microsoft Agent Framework agent writes the final answer.              │
 └──────────────────────────────────┬──────────────────────────────────────────┘
                                     ▼
-              AskResponse { answer, cypher_used, records }
+              NDJSON stream { metadata, token…, stats, done }
 ```
 
 Step by step, in `src/agents/knowledge_graph_agent.py`:
@@ -206,14 +206,16 @@ Step by step, in `src/agents/knowledge_graph_agent.py`:
    **only** from the retrieved rows, to say so when the data has no answer, and to
    report numbers **exactly** (no rounding/reformatting).
 
-7. **Response assembly (`ask`).** The synchronous retrieval step runs in a worker
-   thread (`asyncio.to_thread`) so the FastAPI event loop stays responsive; the shared
-   sync driver is thread-safe for concurrent queries. The MAF agent is then awaited
-   natively (`await self._agent.run(...)`). The result is packed into
-   `AskResult(answer, cypher_used, records)`. If cypher generation/execution fails
-   (e.g. `Text2CypherRetrievalError`) or any LLM/network error occurs, `/ask`
-   **degrades gracefully** with a plain "couldn't find an answer" message instead of
-   returning a 500.
+7. **Response assembly (`ask_stream`).** The synchronous retrieval step (`_retrieve`)
+   runs in a worker thread (`asyncio.to_thread`) so the FastAPI event loop stays
+   responsive; the shared sync driver is thread-safe for concurrent queries. The
+   retrieved Cypher and rows are emitted up front as a `metadata` event, then the MAF
+   agent is streamed natively (`self._agent.run(..., stream=True)`) so answer tokens are
+   forwarded as they arrive, followed by a `stats` and a `done` event. If cypher
+   generation/execution fails (e.g. `Text2CypherRetrievalError`) or any LLM/network
+   error occurs, `/ask/stream` **degrades gracefully** — retrieval failures fall back to
+   a plain "couldn't find an answer" message, and generation failures emit an in-band
+   `error` event instead of returning a 500.
 
 The two LLM calls use separate clients: cypher generation uses the `neo4j-graphrag` LLM
 client, and answer generation uses the Microsoft Agent Framework chat client. Both target
@@ -223,7 +225,7 @@ backoff) is provided by `neo4j-graphrag` for the retrieval call.
 ### Configuration
 
 Set the Azure OpenAI variables in `backend/.env` (see `.env.example`). They are
-optional — `/query` works without them, but `/ask` returns HTTP `503` until they
+optional — `/query` works without them, but `/ask/stream` returns HTTP `503` until they
 are present.
 
 | Variable | Example | Description |
@@ -233,41 +235,14 @@ are present.
 | `AZURE_OPENAI_DEPLOYMENT` | `gpt-5.4` | Deployment (model) name. |
 | `AZURE_OPENAI_API_VERSION` | `2024-10-21` | API version (used only for classic, non-`/openai/v1` endpoints). |
 
-### `POST /ask`
+### `POST /ask/stream`
 
-Request body:
+The question pipeline streams the answer as the LLM generates it. The request body is:
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `question` | string | yes | A natural-language question about the graph. |
 
-Response body:
-
-| Field | Type | Description |
-| --- | --- | --- |
-| `answer` | string | The agent's natural-language answer. |
-| `cypher_used` | string[] | The Cypher queries the agent ran. |
-| `records` | object[] | The graph rows it retrieved as context. |
-
-Example:
-
-```bash
-curl -X POST http://localhost:8080/ask \
-  -H 'Content-Type: application/json' \
-  -d '{"question": "How many flying hours has the engine had since 2026-05-25?"}'
-```
-
-```json
-{
-  "answer": "Since 2026-05-25, the engine has had 2.2 flying hours across 4 flights.",
-  "cypher_used": ["MATCH (ac:Aircraft)-[:HAS_SYSTEM]->(:System)-[:HAS_COMPONENT]->(e:PistonEngine) MATCH (f:Flight)-[:USES_AIRCRAFT]->(ac) WHERE date(f.date) >= date('2026-05-25') RETURN e.name AS engine, count(f) AS flights, sum(coalesce(f.flightTime_hours, 0)) AS hours"],
-  "records": [{"engine": "Lycoming IO-360", "flights": 4, "hours": 2.2}]
-}
-```
-
-### `POST /ask/stream` (streaming)
-
-The same question pipeline, but the answer is **streamed** as the LLM generates it.
 The response is `application/x-ndjson` — a stream of newline-delimited JSON events,
 one object per line:
 

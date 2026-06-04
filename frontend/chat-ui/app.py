@@ -1,8 +1,8 @@
-"""Streamlit chat UI for the Knowledge Graph natural-language `/ask` endpoint.
+"""Streamlit chat UI for the Knowledge Graph natural-language `/ask/stream` endpoint.
 
-This is a thin client: it sends a question to the FastAPI backend's ``POST /ask``
-endpoint and renders the answer along with the Cypher the agent ran and the graph
-rows it retrieved. It holds no business logic — all retrieval and reasoning happen
+This is a thin client: it sends a question to the FastAPI backend's ``POST /ask/stream``
+endpoint and renders the streamed answer along with the Cypher the agent ran and the
+graph rows it retrieved. It holds no business logic — all retrieval and reasoning happen
 in the backend (see ``backend/src/agents/knowledge_graph_agent.py``).
 
 The supporting pieces live in sibling modules: configuration in ``config``, the
@@ -17,7 +17,7 @@ Run with:
     uv run streamlit run app.py
 
 The backend must be running (``cd backend && uv run poe serve``) and configured with
-Azure OpenAI credentials for ``/ask`` to work.
+Azure OpenAI credentials for ``/ask/stream`` to work.
 """
 
 from __future__ import annotations

@@ -24,7 +24,7 @@ def stream_answer(base_url: str, question: str, holder: dict[str, Any]) -> Itera
     try:
         with requests.post(f"{base_url}/ask/stream", json={"question": question}, stream=True, timeout=timeout) as response:
             if response.status_code == 503:
-                holder["error"] = "The /ask endpoint is disabled because the backend has no Azure OpenAI credentials configured."
+                holder["error"] = "The /ask/stream endpoint is disabled because the backend has no Azure OpenAI credentials configured."
                 return
             if not response.ok:
                 holder["error"] = f"Backend returned HTTP {response.status_code}: {response.reason}"

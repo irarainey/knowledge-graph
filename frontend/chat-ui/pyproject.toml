@@ -1,7 +1,7 @@
 [project]
 name = "chat-ui"
 version = "1.0.0"
-description = "Streamlit chat UI for the Knowledge Graph /ask endpoint"
+description = "Streamlit chat UI for the Knowledge Graph /ask/stream endpoint"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

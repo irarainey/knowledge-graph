@@ -4,8 +4,9 @@ Endpoints:
 
 * ``POST /query`` runs an arbitrary Cypher query (with optional parameters) and
   returns the resulting records.
-* ``POST /ask`` answers a natural-language question by letting an LLM agent write
-  read-only Cypher against the graph (text-to-Cypher GraphRAG).
+* ``POST /ask/stream`` answers a natural-language question by letting an LLM agent
+  write read-only Cypher against the graph (text-to-Cypher GraphRAG), streaming the
+  answer back as newline-delimited JSON events.
 
 Connection and model details come from the environment / ``backend/.env``.
 """
@@ -23,7 +24,7 @@ from neo4j.exceptions import Neo4jError
 
 from agents import AzureOpenAISettings, KnowledgeGraphAgent
 from common.env import load_env
-from models import AskRequest, AskResponse, QueryRequest, QueryResponse
+from models import AskRequest, QueryRequest, QueryResponse
 from neo4j_client import Neo4jClient, Neo4jSettings
 
 
@@ -42,7 +43,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.agent = KnowledgeGraphAgent.from_settings(AzureOpenAISettings.from_env(), neo4j_settings)
     except RuntimeError as exc:
         app.state.agent = None
-        print(f"Azure OpenAI not configured ({exc}); /ask endpoint disabled.")
+        print(f"Azure OpenAI not configured ({exc}); /ask/stream endpoint disabled.")
 
     try:
         yield
@@ -74,7 +75,9 @@ def _get_agent(request: Request) -> KnowledgeGraphAgent:
     """Return the shared knowledge-graph agent, or 503 if Azure OpenAI is unconfigured."""
     agent = request.app.state.agent
     if agent is None:
-        raise HTTPException(status_code=503, detail="The /ask endpoint requires Azure OpenAI settings (AZURE_OPENAI_*) in the environment.")
+        raise HTTPException(
+            status_code=503, detail="The /ask/stream endpoint requires Azure OpenAI settings (AZURE_OPENAI_*) in the environment."
+        )
     return agent  # type: ignore[no-any-return]
 
 
@@ -86,12 +89,6 @@ async def run_query(payload: QueryRequest, client: Annotated[Neo4jClient, Depend
         # Surface Cypher/syntax/constraint errors to the caller as a 400.
         raise HTTPException(status_code=400, detail=exc.message or str(exc)) from exc
     return QueryResponse(columns=columns, records=records, count=len(records))
-
-
-@app.post("/ask", response_model=AskResponse)
-async def ask(payload: AskRequest, agent: Annotated[KnowledgeGraphAgent, Depends(_get_agent)]) -> AskResponse:
-    result = await agent.ask(payload.question)
-    return AskResponse(answer=result.answer, cypher_used=result.cypher_used, records=result.records)
 
 
 @app.post("/ask/stream")

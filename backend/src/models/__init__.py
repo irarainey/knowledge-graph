@@ -1,12 +1,12 @@
-"""Pydantic request/response models for the knowledge-graph API.
+"""Models for the knowledge-graph API.
 
 Re-exports the public models so callers can
-``from models import QueryRequest, AskResponse``.
+``from models import QueryRequest, AskRequest``.
 """
 
 from __future__ import annotations
 
-from models.ask import AskRequest, AskResponse
+from models.ask import AskRequest
 from models.query import QueryRequest, QueryResponse
 
-__all__ = ["AskRequest", "AskResponse", "QueryRequest", "QueryResponse"]
+__all__ = ["AskRequest", "QueryRequest", "QueryResponse"]

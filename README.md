@@ -201,30 +201,29 @@ Set the `AZURE_OPENAI_*` variables in `backend/.env` (see `backend/.env.example`
 enable it.
 
 ```bash
-curl -X POST http://localhost:8080/ask \
+curl -N -X POST http://localhost:8080/ask/stream \
   -H 'Content-Type: application/json' \
   -d '{"question": "How many flying hours has the engine had since 2026-05-25?"}'
 ```
 
-```json
-{
-  "answer": "Since 2026-05-25, the engine has had 2.2 flying hours across 4 flights.",
-  "cypher_used": ["MATCH (e:PistonEngine) MATCH (f:Flight) WHERE f.date >= $since RETURN ..."],
-  "records": [{"engine": "Lycoming IO-360", "flying_hours": 2.2, "flights": 4}]
-}
+`POST /ask/stream` returns the answer as a stream of newline-delimited JSON (NDJSON)
+events so it can be rendered token-by-token: one `metadata` event (the Cypher and rows),
+many `token` events, a `stats` event (debug telemetry — tokens and per-step durations),
+then a final `done` event.
+
+```
+{"type": "metadata", "cypher_used": ["MATCH (ac:Aircraft)-..."], "records": [{"engine": "Lycoming IO-360", "flights": 4, "hours": 2.2}]}
+{"type": "token", "text": "Since "}
+{"type": "token", "text": "2026-05-25"}
+...
+{"type": "stats", "model": "gpt-5.4", "llm_calls": 2, "tokens": {"prompt": 10667, "completion": 67, "total": 10734}, ...}
+{"type": "done"}
 ```
 
 The generated queries run in a read transaction, so they can never modify the graph.
-See [backend/README.md](backend/README.md) for configuration and response details.
-
-### Streaming answers
-
-`POST /ask/stream` returns the same result as a stream of newline-delimited JSON
-(NDJSON) events so answers can be rendered token-by-token: one `metadata` event (the
-Cypher and rows), many `token` events, a `stats` event (debug telemetry — tokens and
-per-step durations), then a final `done` event. The Streamlit UI consumes this endpoint
-to stream answers live. See [backend/README.md](backend/README.md#post-askstream-streaming)
-for the full event table.
+The Streamlit UI consumes this endpoint to stream answers live. See
+[backend/README.md](backend/README.md#post-askstream) for configuration and the full
+event table.
 
 ## Streamlit chat UI
 

@@ -1,6 +1,6 @@
 # Chat UI (Streamlit)
 
-A chat-style Streamlit front end for the Knowledge Graph **`/ask`** endpoint, titled
+A chat-style Streamlit front end for the Knowledge Graph **`/ask/stream`** endpoint, titled
 for the modelled aircraft (**Cessna 172S Skyhawk — G-ECHO**). Type a natural-language
 question and the backend retrieves from the graph (text-to-Cypher) and generates the
 answer with a Microsoft Agent Framework agent, **streamed token-by-token**. Each answer
@@ -20,7 +20,7 @@ cd backend
 uv run poe serve          # starts FastAPI on http://localhost:8080
 ```
 
-`/ask` also requires Azure OpenAI credentials in `backend/.env` (see
+`/ask/stream` also requires Azure OpenAI credentials in `backend/.env` (see
 `backend/.env.example`). Without them the endpoint returns 503 and the UI shows a
 clear message.
 

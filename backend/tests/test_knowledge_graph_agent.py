@@ -1,4 +1,4 @@
-"""Unit tests for the neo4j-graphrag text-to-Cypher agent and the /ask endpoint."""
+"""Unit tests for the neo4j-graphrag text-to-Cypher agent and the /ask/stream endpoint."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from neo4j_graphrag.llm import AzureOpenAILLM, OpenAILLM
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
 import app
-from agents.knowledge_graph_agent import AskResult, KnowledgeGraphAgent
+from agents.knowledge_graph_agent import KnowledgeGraphAgent
 from common.azure_openai import AzureOpenAISettings, build_llm
 from common.graph_schema import fetch_schema_text
 from common.retrieval import record_to_item
@@ -100,21 +100,13 @@ def test_build_llm_uses_azure_client_for_classic_endpoint() -> None:
     assert isinstance(llm, AzureOpenAILLM)
 
 
-# ── KnowledgeGraphAgent.ask (result extraction) ──────────────────────────────
+# ── Test fakes ───────────────────────────────────────────────────────────────
 class FakeDriver:
     def __init__(self) -> None:
         self.closed = False
 
     def close(self) -> None:
         self.closed = True
-
-
-async def _value_coro(value: Any) -> Any:
-    return value
-
-
-async def _raise_coro(exc: Exception) -> Any:
-    raise exc
 
 
 class FakeUpdate:
@@ -165,24 +157,18 @@ class FakeMafAgent:
         text: str = "answer",
         usage_details: dict[str, Any] | None = None,
         stream_texts: list[str] | None = None,
-        error: Exception | None = None,
         stream_error: Exception | None = None,
     ) -> None:
         self._text = text
         self._usage = usage_details
         self._stream_texts = stream_texts or []
-        self._error = error
         self._stream_error = stream_error
         self.prompts: list[str] = []
 
-    def run(self, messages: str, *, stream: bool = False) -> Any:
+    def run(self, messages: str, *, stream: bool = True) -> FakeResponseStream:
         self.prompts.append(messages)
         final = FakeAgentResponse(self._text, self._usage)
-        if stream:
-            return FakeResponseStream(self._stream_texts, final, error=self._stream_error)
-        if self._error is not None:
-            return _raise_coro(self._error)
-        return _value_coro(final)
+        return FakeResponseStream(self._stream_texts, final, error=self._stream_error)
 
 
 class FakePromptTemplate:
@@ -192,72 +178,10 @@ class FakePromptTemplate:
         return f"Q: {query_text}\nCTX: {context}"
 
 
-def _make_ask_agent(retriever: Any, maf_agent: FakeMafAgent) -> tuple[KnowledgeGraphAgent, FakeDriver]:
+def test_close_closes_driver() -> None:
     agent = object.__new__(KnowledgeGraphAgent)
     driver = FakeDriver()
     agent._driver = driver  # type: ignore[assignment]
-    agent._retriever = retriever  # type: ignore[assignment]
-    agent._agent = maf_agent  # type: ignore[assignment]
-    agent._prompt_template = FakePromptTemplate()  # type: ignore[assignment]
-    agent._instructions = FakePromptTemplate.system_instructions  # type: ignore[assignment]
-    return agent, driver
-
-
-async def test_ask_extracts_answer_cypher_and_records() -> None:
-    result = RetrieverResult(
-        items=[RetrieverResultItem(content="{}", metadata={"record": {"flights": 6}})],
-        metadata={"cypher": "MATCH (f:Flight) RETURN count(f) AS flights"},
-    )
-    retriever = FakeStreamRetriever(result=result)
-    maf = FakeMafAgent(text="There are 6 flights.")
-    agent, _ = _make_ask_agent(retriever, maf)
-    ask_result = await agent.ask("How many flights?")
-    assert isinstance(ask_result, AskResult)
-    assert ask_result.answer == "There are 6 flights."
-    assert ask_result.cypher_used == ["MATCH (f:Flight) RETURN count(f) AS flights"]
-    assert ask_result.records == [{"flights": 6}]
-    assert retriever.calls == ["How many flights?"]
-    # The MAF agent is handed the formatted prompt built from the retrieved rows.
-    assert maf.prompts == ["Q: How many flights?\nCTX: {}"]
-
-
-async def test_ask_degrades_gracefully_on_retrieval_error() -> None:
-    retriever = FakeStreamRetriever(error=Text2CypherRetrievalError("bad cypher"))
-    maf = FakeMafAgent()
-    agent, _ = _make_ask_agent(retriever, maf)
-    ask_result = await agent.ask("nonsense")
-    assert ask_result.cypher_used == []
-    assert ask_result.records == []
-    assert "couldn't" in ask_result.answer.lower()
-    assert maf.prompts == []  # generation never attempted when retrieval fails
-
-
-async def test_ask_degrades_gracefully_on_unexpected_error() -> None:
-    retriever = FakeStreamRetriever(error=RuntimeError("driver down"))
-    maf = FakeMafAgent()
-    agent, _ = _make_ask_agent(retriever, maf)
-    ask_result = await agent.ask("anything")
-    assert ask_result.cypher_used == []
-    assert "couldn't" in ask_result.answer.lower()
-
-
-async def test_ask_degrades_gracefully_on_generation_error() -> None:
-    result = RetrieverResult(
-        items=[RetrieverResultItem(content="{}", metadata={"record": {"flights": 6}})],
-        metadata={"cypher": "MATCH (f:Flight) RETURN count(f) AS flights"},
-    )
-    retriever = FakeStreamRetriever(result=result)
-    maf = FakeMafAgent(error=RuntimeError("LLM down"))
-    agent, _ = _make_ask_agent(retriever, maf)
-    ask_result = await agent.ask("How many flights?")
-    # The Cypher/records the retriever found are still returned even if the answer fails.
-    assert ask_result.cypher_used == ["MATCH (f:Flight) RETURN count(f) AS flights"]
-    assert ask_result.records == [{"flights": 6}]
-    assert "couldn't" in ask_result.answer.lower()
-
-
-def test_close_closes_driver() -> None:
-    agent, driver = _make_ask_agent(FakeStreamRetriever(error=RuntimeError()), FakeMafAgent())
     agent.close()
     assert driver.closed is True
 
@@ -419,11 +343,8 @@ def test_install_usage_recorder_captures_invoke_usage() -> None:
     assert getattr(agent._llm, "_kg_usage_wrapped", False) is True
 
 
-# ── /ask endpoint ────────────────────────────────────────────────────────────
+# ── /ask/stream endpoint ─────────────────────────────────────────────────────
 class FakeKGAgent:
-    async def ask(self, question: str) -> AskResult:
-        return AskResult(answer="42", cypher_used=["MATCH (n) RETURN count(n)"], records=[{"count": 1}])
-
     async def ask_stream(self, question: str) -> Any:
         yield {"type": "metadata", "cypher_used": ["MATCH (n) RETURN count(n)"], "records": [{"count": 1}]}
         yield {"type": "token", "text": "42"}
@@ -440,33 +361,12 @@ class FakeKGAgent:
         yield {"type": "done"}
 
 
-async def test_ask_endpoint_returns_answer() -> None:
+async def test_ask_stream_endpoint_rejects_empty_question() -> None:
     app.app.dependency_overrides[app._get_agent] = lambda: FakeKGAgent()
     transport = ASGITransport(app=app.app)
     try:
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.post("/ask", json={"question": "How many nodes?"})
-    finally:
-        app.app.dependency_overrides.clear()
-    assert response.status_code == 200
-    assert response.json() == {"answer": "42", "cypher_used": ["MATCH (n) RETURN count(n)"], "records": [{"count": 1}]}
-
-
-async def test_ask_endpoint_503_when_agent_unconfigured() -> None:
-    # No dependency override and no app.state.agent -> get_agent raises 503.
-    app.app.state.agent = None
-    transport = ASGITransport(app=app.app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post("/ask", json={"question": "anything"})
-    assert response.status_code == 503
-
-
-async def test_ask_endpoint_rejects_empty_question() -> None:
-    app.app.dependency_overrides[app._get_agent] = lambda: FakeKGAgent()
-    transport = ASGITransport(app=app.app)
-    try:
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.post("/ask", json={"question": ""})
+            response = await client.post("/ask/stream", json={"question": ""})
     finally:
         app.app.dependency_overrides.clear()
     assert response.status_code == 422
