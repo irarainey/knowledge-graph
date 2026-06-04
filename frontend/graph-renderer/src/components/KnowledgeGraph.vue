@@ -383,8 +383,15 @@ function resetView(): void {
   simulation?.alpha(0.5).restart()
 }
 
+// Resizes fire rapidly; debounce so the canvas rebuilds once the gesture settles
+// instead of tearing down and re-running the simulation on every event.
+let resizeTimer: ReturnType<typeof setTimeout> | null = null
 function onResize(): void {
-  if (props.graph.nodes.length) build()
+  if (resizeTimer !== null) clearTimeout(resizeTimer)
+  resizeTimer = setTimeout(() => {
+    resizeTimer = null
+    if (props.graph.nodes.length) build()
+  }, 180)
 }
 
 defineExpose({ resetView })
@@ -396,6 +403,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
+  if (resizeTimer !== null) clearTimeout(resizeTimer)
   teardown()
 })
 

@@ -205,20 +205,32 @@ class KnowledgeGraphAgent:
         context = "\n".join(item.content for item in retriever_result.items) if retriever_result else ""
         return self._prompt_template.format(query_text=question, context=context, examples="")
 
+    async def _retrieve(self, question: str, *, log_prefix: str) -> tuple[RetrieverResult | None, Exception | None]:
+        """Run text-to-Cypher retrieval in a worker thread, degrading gracefully on error.
+
+        Retrieval (neo4j-graphrag) is synchronous, so it runs via ``asyncio.to_thread``.
+        Returns ``(result, None)`` on success or ``(None, error)`` on any failure, so
+        callers can fall back to ``FALLBACK_ANSWER`` rather than surfacing a 500.
+        """
+        try:
+            result = await asyncio.to_thread(self._retriever.search, query_text=question)
+            return result, None
+        except Text2CypherRetrievalError as exc:
+            print(f"{log_prefix} cypher retrieval failed: {exc}")
+            return None, exc
+        except Exception as exc:
+            # Degrade gracefully on any retrieval/connectivity error rather than 500.
+            print(f"{log_prefix} retrieval failed: {type(exc).__name__}: {exc}")
+            return None, exc
+
     async def ask(self, question: str) -> AskResult:
         """Answer a natural-language question over the knowledge graph.
 
-        Retrieval (text-to-Cypher) is synchronous, so it runs in a worker thread; the
-        retrieved rows are then handed to the MAF agent to generate the answer.
+        Retrieval (text-to-Cypher) runs first; the retrieved rows are then handed to
+        the MAF agent to generate the answer.
         """
-        try:
-            retriever_result = await asyncio.to_thread(self._retriever.search, query_text=question)
-        except Text2CypherRetrievalError as exc:
-            print(f"/ask cypher retrieval failed: {exc}")
-            return AskResult(answer=FALLBACK_ANSWER)
-        except Exception as exc:
-            # Degrade gracefully on any retrieval/connectivity error rather than 500.
-            print(f"/ask retrieval failed: {type(exc).__name__}: {exc}")
+        retriever_result, retrieval_error = await self._retrieve(question, log_prefix="/ask")
+        if retrieval_error is not None:
             return AskResult(answer=FALLBACK_ANSWER)
 
         cypher_used, records = extract_cypher_and_records(retriever_result)
@@ -255,16 +267,8 @@ class KnowledgeGraphAgent:
         cypher_usages: list[dict[str, Any]] = []
         sink_token = usage_sink.set(cypher_usages)
         retrieval_start = time.perf_counter()
-        retriever_result: RetrieverResult | None = None
-        retrieval_error: Exception | None = None
         try:
-            retriever_result = await asyncio.to_thread(self._retriever.search, query_text=question)
-        except Text2CypherRetrievalError as exc:
-            retrieval_error = exc
-            print(f"/ask/stream cypher retrieval failed: {exc}")
-        except Exception as exc:
-            retrieval_error = exc
-            print(f"/ask/stream retrieval failed: {type(exc).__name__}: {exc}")
+            retriever_result, retrieval_error = await self._retrieve(question, log_prefix="/ask/stream")
         finally:
             usage_sink.reset(sink_token)
         retrieval_ms = elapsed_ms(retrieval_start)
