@@ -13,28 +13,28 @@ There are two front ends:
 
 ```
               ┌──────────────────────────────────────────────┐
-              │       data/knowledge-graph.json (export)      │
-              └───────────────┬──────────────┬───────────────┘
-       fetch /data (static)   │              │  scripts/import-data.sh
-                              ▼              ▼
-                  ┌───────────────┐   ┌───────────────┐
-                  │  Frontend     │   │    Neo4j      │
-                  │  Vue / TS     │   │  Bolt  :7687  │
-                  │  renderer     │   │  HTTP  :7474  │
-                  │  :5173        │   └───────▲───────┘
-                  └───────────────┘           │ Bolt (read-only Cypher)
-                                              │
-                  ┌───────────────┐   ┌───────┴───────┐
-                  │  Streamlit UI │   │   Backend     │
-                  │  chat  :8501  │──▶│  FastAPI:8080 │
-                  └───────────────┘   │  text2cypher  │
-                   POST /ask/stream   │   GraphRAG    │
-                       (NDJSON)       └───────┬───────┘
-                                             │ cypher-gen + answer-gen
-                                             ▼
-                                     ┌───────────────┐
-                                     │ Azure OpenAI  │
-                                     └───────────────┘
+              │       data/knowledge-graph.json (export)     │
+              └───────────────┬───────────────┬──────────────┘
+       fetch /data (static)   │               │  scripts/import-data.sh
+                              ▼               ▼
+                  ┌───────────────┐    ┌───────────────┐
+                  │  Frontend     │    │    Neo4j      │
+                  │  Vue / TS     │    │  Bolt  :7687  │
+                  │  renderer     │    │  HTTP  :7474  │
+                  │  :5173        │    └───────▲───────┘
+                  └───────────────┘            │ Bolt (read-only Cypher)
+                                               │
+                  ┌───────────────┐    ┌───────┴───────┐
+                  │  Streamlit UI │    │   Backend     │
+                  │  chat  :8501  │──▶ │  FastAPI:8080 │
+                  └───────────────┘    │  text2cypher  │
+                   POST /ask/stream    │   GraphRAG    │
+                       (NDJSON)        └───────┬───────┘
+                                              │ cypher-gen + answer-gen
+                                              ▼
+                                       ┌───────────────┐
+                                       │ Azure OpenAI  │
+                                       └───────────────┘
 ```
 
 Both front ends are driven by the **same** `data/knowledge-graph.json`: the Vue app
