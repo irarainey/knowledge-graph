@@ -7,40 +7,13 @@ small ``run_query`` helper that returns plain, JSON-serialisable records.
 
 from __future__ import annotations
 
-import datetime as dt
 import os
-from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, LiteralString, cast
 
-from dotenv import load_dotenv
 from neo4j import AsyncGraphDatabase
-from neo4j.graph import Node, Relationship
-from neo4j.graph import Path as GraphPath
 
-# JSON-native scalar types that need no conversion.
-_JSON_SCALARS = (str, bool, int, float)
-
-# Schema-introspection queries (read-only, APOC-free). Cheap on a small PoC graph.
-SCHEMA_NODE_SAMPLES = "MATCH (n) RETURN labels(n) AS labels, properties(n) AS props"
-SCHEMA_RELATIONSHIPS = "MATCH (a)-[r]->(b) RETURN DISTINCT labels(a) AS startLabels, type(r) AS type, labels(b) AS endLabels ORDER BY type"
-SCHEMA_RELATIONSHIP_PROPERTIES = (
-    "MATCH ()-[r]->() WITH type(r) AS type, keys(r) AS ks UNWIND ks AS k RETURN type, collect(DISTINCT k) AS properties ORDER BY type"
-)
-
-
-def load_env(env_file: Path | None = None) -> None:
-    """Load Neo4j settings from a ``.env`` file.
-
-    With no argument, loads ``backend/.env`` (next to ``pyproject.toml``) and then
-    any ``.env`` found in the current working directory.
-    """
-    if env_file is not None:
-        load_dotenv(env_file)
-        return
-    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
-    load_dotenv()
+from common.serialization import to_jsonable
 
 
 @dataclass(frozen=True)
@@ -61,30 +34,6 @@ class Neo4jSettings:
             password=os.environ["NEO4J_PASSWORD"],
             database=os.environ.get("NEO4J_DATABASE", "neo4j"),
         )
-
-
-def to_jsonable(value: Any) -> Any:
-    """Recursively convert a Neo4j record value into JSON-serialisable data.
-
-    Scalars and nested lists/dicts pass through; nodes and relationships become
-    their property maps (with ``_labels``/``_type`` markers); temporal, spatial
-    and other driver-specific objects fall back to their string representation.
-    """
-    if value is None or isinstance(value, _JSON_SCALARS):
-        return value
-    if isinstance(value, (dt.date, dt.time, dt.datetime)):
-        return value.isoformat()
-    if isinstance(value, Node):
-        return {"_labels": sorted(value.labels), **{str(key): to_jsonable(item) for key, item in value.items()}}
-    if isinstance(value, Relationship):
-        return {"_type": value.type, **{str(key): to_jsonable(item) for key, item in value.items()}}
-    if isinstance(value, GraphPath):
-        return str(value)
-    if isinstance(value, Mapping):
-        return {str(key): to_jsonable(item) for key, item in value.items()}
-    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
-        return [to_jsonable(item) for item in value]
-    return str(value)
 
 
 class Neo4jClient:

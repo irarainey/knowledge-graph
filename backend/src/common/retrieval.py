@@ -12,7 +12,7 @@ from typing import Any
 
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
-from neo4j_client import to_jsonable
+from common.serialization import to_jsonable
 
 
 def record_to_item(record: Any) -> RetrieverResultItem:

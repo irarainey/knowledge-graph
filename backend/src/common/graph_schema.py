@@ -12,11 +12,13 @@ from typing import Any, LiteralString, cast
 
 from neo4j import Driver, RoutingControl
 
-from neo4j_client import (
-    SCHEMA_NODE_SAMPLES,
-    SCHEMA_RELATIONSHIP_PROPERTIES,
-    SCHEMA_RELATIONSHIPS,
-    to_jsonable,
+from common.serialization import to_jsonable
+
+# Schema-introspection queries (read-only, APOC-free). Cheap on a small PoC graph.
+SCHEMA_NODE_SAMPLES = "MATCH (n) RETURN labels(n) AS labels, properties(n) AS props"
+SCHEMA_RELATIONSHIPS = "MATCH (a)-[r]->(b) RETURN DISTINCT labels(a) AS startLabels, type(r) AS type, labels(b) AS endLabels ORDER BY type"
+SCHEMA_RELATIONSHIP_PROPERTIES = (
+    "MATCH ()-[r]->() WITH type(r) AS type, keys(r) AS ks UNWIND ks AS k RETURN type, collect(DISTINCT k) AS properties ORDER BY type"
 )
 
 # A label shared by at least this many distinct sibling labels is treated as a

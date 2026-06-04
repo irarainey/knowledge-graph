@@ -16,7 +16,8 @@ from httpx import ASGITransport, AsyncClient
 from neo4j.exceptions import Neo4jError
 
 import app
-from neo4j_client import Neo4jSettings, to_jsonable
+from common.serialization import to_jsonable
+from neo4j_client import Neo4jSettings
 
 
 # ── to_jsonable ──────────────────────────────────────────────────────────────

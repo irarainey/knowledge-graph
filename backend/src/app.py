@@ -22,8 +22,9 @@ from fastapi.responses import StreamingResponse
 from neo4j.exceptions import Neo4jError
 
 from agents import AzureOpenAISettings, KnowledgeGraphAgent
+from common.env import load_env
 from models import AskRequest, AskResponse, QueryRequest, QueryResponse
-from neo4j_client import Neo4jClient, Neo4jSettings, load_env
+from neo4j_client import Neo4jClient, Neo4jSettings
 
 
 @asynccontextmanager

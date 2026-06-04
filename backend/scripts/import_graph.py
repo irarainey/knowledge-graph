@@ -25,11 +25,11 @@ from typing import Any, LiteralString, cast
 from neo4j import Driver, GraphDatabase, Session
 
 # This script lives in backend/scripts, outside the ``src`` package. Add ``src`` to
-# the path so the shared ``neo4j_client`` helpers (env loading) import when the
-# script is run directly (the poe task and tests put it on the path too).
+# the path so the shared ``common`` helpers (env loading) import when the script is
+# run directly (the poe task and tests put it on the path too).
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from neo4j_client import load_env
+from common.env import load_env
 
 # Repo layout: <repo>/backend/scripts/import_graph.py -> <repo>/data/knowledge-graph.json
 DEFAULT_JSON_PATH = Path(__file__).resolve().parents[2] / "data" / "knowledge-graph.json"
