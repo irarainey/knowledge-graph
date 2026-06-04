@@ -15,7 +15,11 @@ from agent_framework.openai import OpenAIChatCompletionClient
 from neo4j_graphrag.llm import AzureOpenAILLM, OpenAILLM
 from neo4j_graphrag.llm.base import LLMInterface
 
+from common.logging_config import get_logger
+
 DEFAULT_API_VERSION = "2024-10-21"
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -48,7 +52,9 @@ def build_llm(settings: AzureOpenAISettings) -> LLMInterface:
     """
     endpoint = settings.endpoint.rstrip("/")
     if "/openai/v1" in endpoint:
+        logger.debug("Building OpenAI-compatible (v1) LLM for deployment '%s'", settings.deployment)
         return OpenAILLM(model_name=settings.deployment, base_url=endpoint, api_key=settings.api_key)
+    logger.debug("Building classic Azure OpenAI LLM for deployment '%s' (api_version=%s)", settings.deployment, settings.api_version)
     return AzureOpenAILLM(
         model_name=settings.deployment,
         azure_endpoint=endpoint,
@@ -68,7 +74,11 @@ def build_chat_client(settings: AzureOpenAISettings) -> OpenAIChatCompletionClie
     """
     endpoint = settings.endpoint.rstrip("/")
     if "/openai/v1" in endpoint:
+        logger.debug("Building OpenAI-compatible (v1) chat client for deployment '%s'", settings.deployment)
         return OpenAIChatCompletionClient(model=settings.deployment, base_url=endpoint, api_key=settings.api_key)
+    logger.debug(
+        "Building classic Azure OpenAI chat client for deployment '%s' (api_version=%s)", settings.deployment, settings.api_version
+    )
     return OpenAIChatCompletionClient(
         model=settings.deployment,
         azure_endpoint=endpoint,

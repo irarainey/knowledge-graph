@@ -34,6 +34,7 @@ from neo4j_graphrag.types import RetrieverResult
 
 from common.azure_openai import AzureOpenAISettings, build_chat_client, build_llm
 from common.graph_schema import fetch_schema_text
+from common.logging_config import get_logger
 from common.retrieval import extract_cypher_and_records, record_to_item
 from common.telemetry import (
     build_llm_messages,
@@ -47,6 +48,8 @@ from neo4j_client import Neo4jSettings
 from prompts import CYPHER_GENERATION_PROMPT, DEFAULT_EXAMPLES, RAG_TEMPLATE
 
 __all__ = ["AzureOpenAISettings", "KnowledgeGraphAgent"]
+
+logger = get_logger(__name__)
 
 # Shown to the user when retrieval or generation fails, so the API degrades
 # gracefully instead of returning a 500.
@@ -119,9 +122,12 @@ class KnowledgeGraphAgent:
         examples: list[str] | None = None,
     ) -> None:
         self._driver = driver
+        logger.info("Building knowledge-graph agent (database=%s)", database)
         # Build the schema from the correct database with APOC-free introspection so
         # the cypher-generation prompt matches the database the queries run against.
+        logger.debug("Fetching graph schema for cypher-generation prompt (database=%s)", database)
         schema = fetch_schema_text(driver, database)
+        logger.debug("Graph schema fetched (%d characters)", len(schema))
         retriever = Text2CypherRetriever(
             driver=driver,
             llm=llm,
@@ -141,6 +147,7 @@ class KnowledgeGraphAgent:
         self._instructions = prompt_template.system_instructions
         self._agent = Agent(client=chat_client, instructions=self._instructions, name="knowledge-graph")
         self._install_usage_recorder()
+        logger.debug("Knowledge-graph agent ready (retriever + MAF answer agent constructed)")
 
     def _install_usage_recorder(self) -> None:
         """Wrap ``self._llm.invoke`` so cypher-generation token usage is captured.
@@ -167,6 +174,7 @@ class KnowledgeGraphAgent:
             start = time.perf_counter()
             response = original_invoke(*args, **kwargs)
             duration_ms = elapsed_ms(start)
+            logger.debug("Cypher-generation LLM call completed in %.1fms", duration_ms)
             sink = usage_sink.get()
             if sink is not None:
                 sink.append(
@@ -182,11 +190,12 @@ class KnowledgeGraphAgent:
             self._llm.invoke = recording_invoke  # type: ignore[method-assign]
             self._llm._kg_usage_wrapped = True  # type: ignore[attr-defined]
         except Exception as exc:  # pragma: no cover - defensive: some LLMs forbid attr assignment
-            print(f"/ask usage recorder not installed: {type(exc).__name__}: {exc}")
+            logger.warning("/ask usage recorder not installed: %s: %s", type(exc).__name__, exc)
 
     @classmethod
     def from_settings(cls, azure: AzureOpenAISettings, neo4j_settings: Neo4jSettings) -> KnowledgeGraphAgent:
         """Build the agent and its dedicated synchronous Neo4j driver from settings."""
+        logger.debug("Creating synchronous Neo4j driver for agent at %s (database=%s)", neo4j_settings.uri, neo4j_settings.database)
         driver = GraphDatabase.driver(neo4j_settings.uri, auth=(neo4j_settings.username, neo4j_settings.password))
         return cls(build_llm(azure), build_chat_client(azure), driver, database=neo4j_settings.database)
 
@@ -203,14 +212,16 @@ class KnowledgeGraphAgent:
         the caller can fall back to ``FALLBACK_ANSWER`` rather than surfacing a 500.
         """
         try:
+            logger.debug("Starting text-to-cypher retrieval (running generated Cypher against the graph)")
             result = await asyncio.to_thread(self._retriever.search, query_text=question)
+            logger.debug("Text-to-cypher retrieval returned %d item(s)", len(result.items) if result else 0)
             return result, None
         except Text2CypherRetrievalError as exc:
-            print(f"/ask cypher retrieval failed: {exc}")
+            logger.warning("/ask cypher retrieval failed: %s", exc)
             return None, exc
         except Exception as exc:
             # Degrade gracefully on any retrieval/connectivity error rather than 500.
-            print(f"/ask retrieval failed: {type(exc).__name__}: {exc}")
+            logger.exception("/ask retrieval failed: %s", type(exc).__name__)
             return None, exc
 
     async def ask(self, question: str) -> AsyncIterator[dict[str, Any]]:
@@ -231,6 +242,7 @@ class KnowledgeGraphAgent:
         """
         model = getattr(self._llm, "model_name", None)
         total_start = time.perf_counter()
+        logger.info("Answering question: %s", question)
 
         # Bind a fresh sink so the wrapped invoke records this request's cypher-gen
         # usage; reset immediately after retrieval (generation makes no invoke call).
@@ -244,6 +256,7 @@ class KnowledgeGraphAgent:
         retrieval_ms = elapsed_ms(retrieval_start)
 
         if retrieval_error is not None:
+            logger.warning("Retrieval failed after %.1fms; returning fallback answer", retrieval_ms)
             yield {"type": "metadata", "cypher_used": [], "records": []}
             yield {"type": "token", "text": FALLBACK_ANSWER}
             yield _build_stats(
@@ -262,14 +275,18 @@ class KnowledgeGraphAgent:
             return
 
         cypher_used, records = extract_cypher_and_records(retriever_result)
+        logger.info("Retrieval succeeded in %.1fms: %d cypher query(ies), %d record(s)", retrieval_ms, len(cypher_used), len(records))
+        logger.debug("Generated cypher: %s", cypher_used)
         yield {"type": "metadata", "cypher_used": cypher_used, "records": records}
 
         # Hand the retrieved rows to the MAF agent and stream its answer tokens.
         prompt = self._format_prompt(question, retriever_result)
+        logger.debug("Built answer prompt (%d characters) from %d retrieved record(s)", len(prompt), len(records))
         answer_request = build_llm_messages(self._instructions, prompt)
         answer_usage: dict[str, Any] | None = None
         answer_call_made = False
         generation_start = time.perf_counter()
+        logger.debug("Starting answer generation (streaming tokens from the MAF agent)")
         try:
             stream = self._agent.run(prompt, stream=True)
             answer_call_made = True
@@ -284,11 +301,13 @@ class KnowledgeGraphAgent:
         except asyncio.CancelledError:
             # Client disconnected — let cancellation propagate so the upstream
             # model stream is torn down promptly.
+            logger.info("Answer generation cancelled (client disconnected)")
             raise
         except Exception as exc:
-            print(f"/ask generation failed: {type(exc).__name__}: {exc}")
+            logger.exception("/ask generation failed: %s", type(exc).__name__)
             yield {"type": "error", "message": "Answer generation failed."}
         generation_ms = elapsed_ms(generation_start)
+        logger.info("Answer generated in %.1fms (total %.1fms)", generation_ms, elapsed_ms(total_start))
 
         yield _build_stats(
             model=model,

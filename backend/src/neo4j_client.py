@@ -13,7 +13,10 @@ from typing import Any, LiteralString, cast
 
 from neo4j import AsyncGraphDatabase
 
+from common.logging_config import get_logger
 from common.serialization import to_jsonable
+
+logger = get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -42,9 +45,11 @@ class Neo4jClient:
     def __init__(self, settings: Neo4jSettings) -> None:
         self._settings = settings
         self._driver = AsyncGraphDatabase.driver(settings.uri, auth=(settings.username, settings.password))
+        logger.debug("Neo4j driver created for %s (database='%s')", settings.uri, settings.database)
 
     async def verify_connectivity(self) -> None:
         await self._driver.verify_connectivity()
+        logger.debug("Neo4j connectivity verified for %s", self._settings.uri)
 
     async def close(self) -> None:
         await self._driver.close()
@@ -60,9 +65,11 @@ class Neo4jClient:
         ``records`` are JSON-serialisable dicts keyed by the query's return names.
         """
         db = database or self._settings.database
+        logger.debug("Running query against database '%s': %s", db, query)
         async with self._driver.session(database=db) as session:
             result = await session.run(cast(LiteralString, query), parameters or {})
             rows = [record async for record in result]
             columns = list(result.keys())
         records = [{key: to_jsonable(value) for key, value in row.items()} for row in rows]
+        logger.debug("Query against '%s' returned %d row(s)", db, len(records))
         return columns, records

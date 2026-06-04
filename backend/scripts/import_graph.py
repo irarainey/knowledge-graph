@@ -29,7 +29,11 @@ from neo4j import Driver, GraphDatabase, Session
 # run directly (the poe task and tests put it on the path too).
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from common.config import ENV_LOG_LEVEL, LOG_LEVEL_DEFAULT
 from common.env import load_env
+from common.logging_config import get_logger, setup_logging
+
+logger = get_logger(__name__)
 
 # Repo layout: <repo>/backend/scripts/import_graph.py -> <repo>/data/knowledge-graph.json
 DEFAULT_JSON_PATH = Path(__file__).resolve().parents[2] / "data" / "knowledge-graph.json"
@@ -115,7 +119,7 @@ class GraphImporter:
         relationships = graph.get("relationships", [])
         with self._driver.session(database=self._database) as session:
             if clear:
-                print("Clearing existing graph...")
+                logger.info("Clearing existing graph...")
                 session.run("MATCH (n) DETACH DELETE n").consume()
             for node in nodes:
                 self._write_node(session, node)
@@ -146,11 +150,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     load_env(args.env_file)
+    setup_logging(level=os.getenv(ENV_LOG_LEVEL, LOG_LEVEL_DEFAULT))
 
     config = Neo4jConfig.from_env()
     graph = load_graph(args.file)
 
-    print(f"Connecting to Neo4j at {config.uri} (database: {config.database})...")
+    logger.info("Connecting to Neo4j at %s (database: %s)...", config.uri, config.database)
     driver = GraphDatabase.driver(config.uri, auth=(config.user, config.password))
     try:
         driver.verify_connectivity()
@@ -158,7 +163,7 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         driver.close()
 
-    print(f"Imported {node_count} nodes and {rel_count} relationships from {args.file}.")
+    logger.info("Imported %d nodes and %d relationships from %s.", node_count, rel_count, args.file)
     return 0
 
 

@@ -12,7 +12,10 @@ from typing import Any, LiteralString, cast
 
 from neo4j import Driver, RoutingControl
 
+from common.logging_config import get_logger
 from common.serialization import to_jsonable
+
+logger = get_logger(__name__)
 
 # Schema-introspection queries (read-only, APOC-free). Cheap on a small PoC graph.
 SCHEMA_NODE_SAMPLES = "MATCH (n) RETURN labels(n) AS labels, properties(n) AS props"
@@ -96,11 +99,16 @@ def fetch_schema_text(driver: Driver, database: str) -> str:
         records, _, _ = driver.execute_query(cast(LiteralString, query), database_=database, routing_=RoutingControl.READ)
         return [dict(record) for record in records]
 
-    lines = _build_node_section(rows(SCHEMA_NODE_SAMPLES))
+    logger.debug("Introspecting graph schema for database '%s'", database)
+    node_rows = rows(SCHEMA_NODE_SAMPLES)
+    logger.debug("Schema introspection sampled %d node row(s)", len(node_rows))
+    lines = _build_node_section(node_rows)
 
     lines.append("")
     lines.append("Relationships (startLabels)-[TYPE]->(endLabels):")
-    for row in rows(SCHEMA_RELATIONSHIPS):
+    relationship_rows = rows(SCHEMA_RELATIONSHIPS)
+    logger.debug("Schema introspection found %d distinct relationship pattern(s)", len(relationship_rows))
+    for row in relationship_rows:
         start = ":".join(row.get("startLabels", []))
         end = ":".join(row.get("endLabels", []))
         lines.append(f"- ({start})-[{row['type']}]->({end})")
@@ -113,4 +121,6 @@ def fetch_schema_text(driver: Driver, database: str) -> str:
             props = ", ".join(row.get("properties", []))
             lines.append(f"- {row['type']}: {props}")
 
-    return "\n".join(lines)
+    schema_text = "\n".join(lines)
+    logger.debug("Graph schema introspection produced %d line(s)", len(lines))
+    return schema_text
