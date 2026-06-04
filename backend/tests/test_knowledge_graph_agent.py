@@ -1,4 +1,4 @@
-"""Unit tests for the neo4j-graphrag text-to-Cypher agent and the /ask/stream endpoint."""
+"""Unit tests for the neo4j-graphrag text-to-Cypher agent and the /ask endpoint."""
 
 from __future__ import annotations
 
@@ -186,7 +186,7 @@ def test_close_closes_driver() -> None:
     assert driver.closed is True
 
 
-# ── KnowledgeGraphAgent.ask_stream (token streaming) ─────────────────────────
+# ── KnowledgeGraphAgent.ask (token streaming) ─────────────────────────
 class FakeStreamRetriever:
     """Stands in for Text2CypherRetriever.search (sync)."""
 
@@ -214,7 +214,7 @@ def _make_stream_agent(retriever: FakeStreamRetriever, maf_agent: FakeMafAgent) 
     return agent
 
 
-async def test_ask_stream_emits_metadata_tokens_and_done() -> None:
+async def test_ask_emits_metadata_tokens_and_done() -> None:
     result = RetrieverResult(
         items=[RetrieverResultItem(content='{"flights": 6}', metadata={"record": {"flights": 6}})],
         metadata={"cypher": "MATCH (f:Flight) RETURN count(f) AS flights"},
@@ -226,7 +226,7 @@ async def test_ask_stream_emits_metadata_tokens_and_done() -> None:
     )
     agent = _make_stream_agent(retriever, maf)
 
-    events = [event async for event in agent.ask_stream("How many flights?")]
+    events = [event async for event in agent.ask("How many flights?")]
 
     assert events[0] == {
         "type": "metadata",
@@ -260,7 +260,7 @@ async def test_ask_stream_emits_metadata_tokens_and_done() -> None:
     assert set(stats["durations_ms"]) == {"retrieval", "graph_query", "generation", "total"}
 
 
-async def test_ask_stream_handles_missing_usage() -> None:
+async def test_ask_handles_missing_usage() -> None:
     result = RetrieverResult(
         items=[RetrieverResultItem(content="{}", metadata={"record": {"n": 1}})],
         metadata={"cypher": "MATCH (n) RETURN count(n)"},
@@ -270,7 +270,7 @@ async def test_ask_stream_handles_missing_usage() -> None:
     maf = FakeMafAgent(stream_texts=["ok"], usage_details=None)
     agent = _make_stream_agent(retriever, maf)
 
-    events = [event async for event in agent.ask_stream("anything")]
+    events = [event async for event in agent.ask("anything")]
 
     stats = next(event for event in events if event["type"] == "stats")
     # The answer call still counts even though tokens are unknown (None, not 0).
@@ -280,12 +280,12 @@ async def test_ask_stream_handles_missing_usage() -> None:
     assert events[-1] == {"type": "done"}
 
 
-async def test_ask_stream_degrades_on_retrieval_error() -> None:
+async def test_ask_degrades_on_retrieval_error() -> None:
     retriever = FakeStreamRetriever(error=Text2CypherRetrievalError("bad cypher"))
     maf = FakeMafAgent()
     agent = _make_stream_agent(retriever, maf)
 
-    events = [event async for event in agent.ask_stream("nonsense")]
+    events = [event async for event in agent.ask("nonsense")]
 
     assert events[0] == {"type": "metadata", "cypher_used": [], "records": []}
     assert any(event["type"] == "token" and "couldn't" in event["text"].lower() for event in events)
@@ -297,7 +297,7 @@ async def test_ask_stream_degrades_on_retrieval_error() -> None:
     assert maf.prompts == []  # generation never attempted when retrieval fails
 
 
-async def test_ask_stream_emits_error_event_on_generation_failure() -> None:
+async def test_ask_emits_error_event_on_generation_failure() -> None:
     result = RetrieverResult(
         items=[RetrieverResultItem(content="{}", metadata={"record": {"n": 1}})],
         metadata={"cypher": "MATCH (n) RETURN count(n)"},
@@ -306,7 +306,7 @@ async def test_ask_stream_emits_error_event_on_generation_failure() -> None:
     maf = FakeMafAgent(stream_texts=["partial"], stream_error=RuntimeError("stream blew up"))
     agent = _make_stream_agent(retriever, maf)
 
-    events = [event async for event in agent.ask_stream("anything")]
+    events = [event async for event in agent.ask("anything")]
 
     # Metadata still precedes the failure; an error event is emitted, then stats + done.
     assert events[0]["type"] == "metadata"
@@ -343,9 +343,9 @@ def test_install_usage_recorder_captures_invoke_usage() -> None:
     assert getattr(agent._llm, "_kg_usage_wrapped", False) is True
 
 
-# ── /ask/stream endpoint ─────────────────────────────────────────────────────
+# ── /ask endpoint ─────────────────────────────────────────────────────
 class FakeKGAgent:
-    async def ask_stream(self, question: str) -> Any:
+    async def ask(self, question: str) -> Any:
         yield {"type": "metadata", "cypher_used": ["MATCH (n) RETURN count(n)"], "records": [{"count": 1}]}
         yield {"type": "token", "text": "42"}
         yield {
@@ -361,23 +361,23 @@ class FakeKGAgent:
         yield {"type": "done"}
 
 
-async def test_ask_stream_endpoint_rejects_empty_question() -> None:
+async def test_ask_endpoint_rejects_empty_question() -> None:
     app.app.dependency_overrides[app._get_agent] = lambda: FakeKGAgent()
     transport = ASGITransport(app=app.app)
     try:
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.post("/ask/stream", json={"question": ""})
+            response = await client.post("/ask", json={"question": ""})
     finally:
         app.app.dependency_overrides.clear()
     assert response.status_code == 422
 
 
-async def test_ask_stream_endpoint_streams_ndjson() -> None:
+async def test_ask_endpoint_streams_ndjson() -> None:
     app.app.dependency_overrides[app._get_agent] = lambda: FakeKGAgent()
     transport = ASGITransport(app=app.app)
     try:
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.post("/ask/stream", json={"question": "How many nodes?"})
+            response = await client.post("/ask", json={"question": "How many nodes?"})
     finally:
         app.app.dependency_overrides.clear()
     assert response.status_code == 200
@@ -388,9 +388,9 @@ async def test_ask_stream_endpoint_streams_ndjson() -> None:
     assert events[-1] == {"type": "done"}
 
 
-async def test_ask_stream_endpoint_503_when_agent_unconfigured() -> None:
+async def test_ask_endpoint_503_when_agent_unconfigured() -> None:
     app.app.state.agent = None
     transport = ASGITransport(app=app.app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post("/ask/stream", json={"question": "anything"})
+        response = await client.post("/ask", json={"question": "anything"})
     assert response.status_code == 503

@@ -28,7 +28,7 @@ There are two front ends, both under [`frontend/`](frontend):
                   │  Streamlit UI │    │   Backend     │
                   │  chat  :8501  │──▶ │  FastAPI:8080 │
                   └───────────────┘    │  text2cypher  │
-                   POST /ask/stream    │  + MAF Agent  │
+                   POST /ask    │  + MAF Agent  │
                        (NDJSON)        └───────┬───────┘
                                               │ cypher-gen + answer-gen
                                               ▼
@@ -47,7 +47,7 @@ links out to the Vue renderer and the Neo4j browser, opening each in a new tab.)
   the knowledge graph from the static `data/knowledge-graph.json` export (no backend
   dependency). Uses pnpm. Runs on <http://localhost:5173>.
 - **Chat UI** (`frontend/chat-ui/`) — Python chat front end for the backend's
-  `/ask/stream` endpoint with live token streaming and a per-answer debug panel. Uses uv.
+  `/ask` endpoint with live token streaming and a per-answer debug panel. Uses uv.
   Runs on <http://localhost:8501>. Sidebar buttons open the Vue graph renderer and the
   Neo4j browser in a new tab.
 - **Backend** — Python FastAPI service that retrieves from Neo4j with **text-to-Cypher**
@@ -64,7 +64,7 @@ pipeline. The same four steps are surfaced, in order, in the UI's per-answer **D
 details** panel.
 
 ```
-User ─ question ─▶ Streamlit UI ─ POST /ask/stream ─▶ Backend
+User ─ question ─▶ Streamlit UI ─ POST /ask ─▶ Backend
                                                         │
    ┌────────────────────────────────────────────────────┘
    ▼
@@ -201,12 +201,12 @@ Set the `AZURE_OPENAI_*` variables in `backend/.env` (see `backend/.env.example`
 enable it.
 
 ```bash
-curl -N -X POST http://localhost:8080/ask/stream \
+curl -N -X POST http://localhost:8080/ask \
   -H 'Content-Type: application/json' \
   -d '{"question": "How many flying hours has the engine had since 2026-05-25?"}'
 ```
 
-`POST /ask/stream` returns the answer as a stream of newline-delimited JSON (NDJSON)
+`POST /ask` returns the answer as a stream of newline-delimited JSON (NDJSON)
 events so it can be rendered token-by-token: one `metadata` event (the Cypher and rows),
 many `token` events, a `stats` event (debug telemetry — tokens and per-step durations),
 then a final `done` event.
@@ -222,12 +222,12 @@ then a final `done` event.
 
 The generated queries run in a read transaction, so they can never modify the graph.
 The Streamlit UI consumes this endpoint to stream answers live. See
-[backend/README.md](backend/README.md#post-askstream) for configuration and the full
+[backend/README.md](backend/README.md#post-ask) for configuration and the full
 event table.
 
 ## Streamlit chat UI
 
-The [`frontend/chat-ui`](frontend/chat-ui) project is a chat front end for `/ask/stream` with
+The [`frontend/chat-ui`](frontend/chat-ui) project is a chat front end for `/ask` with
 live token streaming. While a question is in flight, a status indicator reflects the
 current step (asking the LLM for the graph data → asking the LLM to generate the
 answer). Each answer carries a single **Debug details** panel that lays the request out

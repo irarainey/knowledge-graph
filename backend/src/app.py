@@ -4,7 +4,7 @@ Endpoints:
 
 * ``POST /query`` runs an arbitrary Cypher query (with optional parameters) and
   returns the resulting records.
-* ``POST /ask/stream`` answers a natural-language question by letting an LLM agent
+* ``POST /ask`` answers a natural-language question by letting an LLM agent
   write read-only Cypher against the graph (text-to-Cypher GraphRAG), streaming the
   answer back as newline-delimited JSON events.
 
@@ -43,7 +43,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.agent = KnowledgeGraphAgent.from_settings(AzureOpenAISettings.from_env(), neo4j_settings)
     except RuntimeError as exc:
         app.state.agent = None
-        print(f"Azure OpenAI not configured ({exc}); /ask/stream endpoint disabled.")
+        print(f"Azure OpenAI not configured ({exc}); /ask endpoint disabled.")
 
     try:
         yield
@@ -75,9 +75,7 @@ def _get_agent(request: Request) -> KnowledgeGraphAgent:
     """Return the shared knowledge-graph agent, or 503 if Azure OpenAI is unconfigured."""
     agent = request.app.state.agent
     if agent is None:
-        raise HTTPException(
-            status_code=503, detail="The /ask/stream endpoint requires Azure OpenAI settings (AZURE_OPENAI_*) in the environment."
-        )
+        raise HTTPException(status_code=503, detail="The /ask endpoint requires Azure OpenAI settings (AZURE_OPENAI_*) in the environment.")
     return agent  # type: ignore[no-any-return]
 
 
@@ -91,8 +89,8 @@ async def run_query(payload: QueryRequest, client: Annotated[Neo4jClient, Depend
     return QueryResponse(columns=columns, records=records, count=len(records))
 
 
-@app.post("/ask/stream")
-async def ask_stream(payload: AskRequest, agent: Annotated[KnowledgeGraphAgent, Depends(_get_agent)]) -> StreamingResponse:
+@app.post("/ask")
+async def ask(payload: AskRequest, agent: Annotated[KnowledgeGraphAgent, Depends(_get_agent)]) -> StreamingResponse:
     """Stream the answer as newline-delimited JSON events (metadata, tokens, done).
 
     The 503-when-unconfigured check happens in ``get_agent`` before the response
@@ -101,7 +99,7 @@ async def ask_stream(payload: AskRequest, agent: Annotated[KnowledgeGraphAgent, 
     """
 
     async def event_generator() -> AsyncIterator[bytes]:
-        async for event in agent.ask_stream(payload.question):
+        async for event in agent.ask(payload.question):
             yield (json.dumps(event) + "\n").encode("utf-8")
 
     return StreamingResponse(event_generator(), media_type="application/x-ndjson")

@@ -1,4 +1,4 @@
-"""Request model for the ``/ask/stream`` endpoint."""
+"""Request model for the ``/ask`` endpoint."""
 
 from __future__ import annotations
 

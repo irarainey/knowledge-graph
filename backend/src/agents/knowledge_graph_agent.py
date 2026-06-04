@@ -1,6 +1,6 @@
 """Natural-language querying of the knowledge graph.
 
-The ``/ask/stream`` endpoint answers questions with a deterministic
+The ``/ask`` endpoint answers questions with a deterministic
 retrieve-then-generate pipeline:
 
 1. :class:`~neo4j_graphrag.retrievers.Text2CypherRetriever` asks an LLM to write a
@@ -182,7 +182,7 @@ class KnowledgeGraphAgent:
             self._llm.invoke = recording_invoke  # type: ignore[method-assign]
             self._llm._kg_usage_wrapped = True  # type: ignore[attr-defined]
         except Exception as exc:  # pragma: no cover - defensive: some LLMs forbid attr assignment
-            print(f"/ask/stream usage recorder not installed: {type(exc).__name__}: {exc}")
+            print(f"/ask usage recorder not installed: {type(exc).__name__}: {exc}")
 
     @classmethod
     def from_settings(cls, azure: AzureOpenAISettings, neo4j_settings: Neo4jSettings) -> KnowledgeGraphAgent:
@@ -206,14 +206,14 @@ class KnowledgeGraphAgent:
             result = await asyncio.to_thread(self._retriever.search, query_text=question)
             return result, None
         except Text2CypherRetrievalError as exc:
-            print(f"/ask/stream cypher retrieval failed: {exc}")
+            print(f"/ask cypher retrieval failed: {exc}")
             return None, exc
         except Exception as exc:
             # Degrade gracefully on any retrieval/connectivity error rather than 500.
-            print(f"/ask/stream retrieval failed: {type(exc).__name__}: {exc}")
+            print(f"/ask retrieval failed: {type(exc).__name__}: {exc}")
             return None, exc
 
-    async def ask_stream(self, question: str) -> AsyncIterator[dict[str, Any]]:
+    async def ask(self, question: str) -> AsyncIterator[dict[str, Any]]:
         """Answer a question while streaming the LLM's tokens.
 
         Yields newline-delimited-JSON-friendly event dicts in order:
@@ -286,7 +286,7 @@ class KnowledgeGraphAgent:
             # model stream is torn down promptly.
             raise
         except Exception as exc:
-            print(f"/ask/stream generation failed: {type(exc).__name__}: {exc}")
+            print(f"/ask generation failed: {type(exc).__name__}: {exc}")
             yield {"type": "error", "message": "Answer generation failed."}
         generation_ms = elapsed_ms(generation_start)
 

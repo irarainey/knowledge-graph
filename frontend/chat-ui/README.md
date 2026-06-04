@@ -1,13 +1,13 @@
 # Chat UI (Streamlit)
 
-A chat-style Streamlit front end for the Knowledge Graph **`/ask/stream`** endpoint, titled
+A chat-style Streamlit front end for the Knowledge Graph **`/ask`** endpoint, titled
 for the modelled aircraft (**Cessna 172S Skyhawk — G-ECHO**). Type a natural-language
 question and the backend retrieves from the graph (text-to-Cypher) and generates the
 answer with a Microsoft Agent Framework agent, **streamed token-by-token**. Each answer
 also shows the Cypher it ran and the graph rows it retrieved.
 
 This is a thin HTTP client — all retrieval and reasoning live in the
-[`backend`](../../backend). It consumes the streaming endpoint `POST /ask/stream`
+[`backend`](../../backend). It consumes the streaming endpoint `POST /ask`
 (newline-delimited JSON), falling back to a clear message if the backend is
 unreachable or unconfigured.
 
@@ -20,7 +20,7 @@ cd backend
 uv run poe serve          # starts FastAPI on http://localhost:8080
 ```
 
-`/ask/stream` also requires Azure OpenAI credentials in `backend/.env` (see
+`/ask` also requires Azure OpenAI credentials in `backend/.env` (see
 `backend/.env.example`). Without them the endpoint returns 503 and the UI shows a
 clear message.
 
@@ -49,7 +49,7 @@ cp .env.example .env
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `BACKEND_URL` | `http://localhost:8080` | Base URL of the FastAPI service exposing `/ask/stream`. |
+| `BACKEND_URL` | `http://localhost:8080` | Base URL of the FastAPI service exposing `/ask`. |
 | `FRONTEND_URL` | `http://localhost:5173` | URL of the Vue graph renderer, opened from the sidebar. |
 | `NEO4J_URI` | `bolt://localhost:7687` | Neo4j connection — its **host** is used to build the Neo4j Browser link (HTTP port `7474`). |
 | `NEO4J_BROWSER_URL` | _(derived)_ | Override for the full Neo4j Browser URL (e.g. for remote/Aura instances). |

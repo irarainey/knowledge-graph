@@ -138,7 +138,7 @@ against a stock Neo4j Community container. The schema is read once at startup �
 
 ### How it works
 
-A request to `/ask/stream` flows through a two-stage **retrieve → generate** pipeline:
+A request to `/ask` flows through a two-stage **retrieve → generate** pipeline:
 
 ```
 question
@@ -206,14 +206,14 @@ Step by step, in `src/agents/knowledge_graph_agent.py`:
    **only** from the retrieved rows, to say so when the data has no answer, and to
    report numbers **exactly** (no rounding/reformatting).
 
-7. **Response assembly (`ask_stream`).** The synchronous retrieval step (`_retrieve`)
+7. **Response assembly (`ask`).** The synchronous retrieval step (`_retrieve`)
    runs in a worker thread (`asyncio.to_thread`) so the FastAPI event loop stays
    responsive; the shared sync driver is thread-safe for concurrent queries. The
    retrieved Cypher and rows are emitted up front as a `metadata` event, then the MAF
    agent is streamed natively (`self._agent.run(..., stream=True)`) so answer tokens are
    forwarded as they arrive, followed by a `stats` and a `done` event. If cypher
    generation/execution fails (e.g. `Text2CypherRetrievalError`) or any LLM/network
-   error occurs, `/ask/stream` **degrades gracefully** — retrieval failures fall back to
+   error occurs, `/ask` **degrades gracefully** — retrieval failures fall back to
    a plain "couldn't find an answer" message, and generation failures emit an in-band
    `error` event instead of returning a 500.
 
@@ -225,7 +225,7 @@ backoff) is provided by `neo4j-graphrag` for the retrieval call.
 ### Configuration
 
 Set the Azure OpenAI variables in `backend/.env` (see `.env.example`). They are
-optional — `/query` works without them, but `/ask/stream` returns HTTP `503` until they
+optional — `/query` works without them, but `/ask` returns HTTP `503` until they
 are present.
 
 | Variable | Example | Description |
@@ -235,7 +235,7 @@ are present.
 | `AZURE_OPENAI_DEPLOYMENT` | `gpt-5.4` | Deployment (model) name. |
 | `AZURE_OPENAI_API_VERSION` | `2024-10-21` | API version (used only for classic, non-`/openai/v1` endpoints). |
 
-### `POST /ask/stream`
+### `POST /ask`
 
 The question pipeline streams the answer as the LLM generates it. The request body is:
 
@@ -272,7 +272,7 @@ disconnect) closes the upstream stream cleanly. The same 503 applies if Azure Op
 is not configured (raised before streaming begins).
 
 ```bash
-curl -N -X POST http://localhost:8080/ask/stream \
+curl -N -X POST http://localhost:8080/ask \
   -H 'Content-Type: application/json' \
   -d '{"question": "How many flying hours has the engine had since 2026-05-25?"}'
 ```

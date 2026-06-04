@@ -35,7 +35,7 @@ BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8080").rstrip("/")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip("/")
 NEO4J_BROWSER_URL = _neo4j_browser_url()
 
-# The /ask/stream call drives an LLM (text-to-Cypher + answer generation). Use a short
+# The /ask call drives an LLM (text-to-Cypher + answer generation). Use a short
 # connect timeout so an unreachable backend fails fast, and a long read timeout so
 # slow reasoning models have time to stream tokens.
 CONNECT_TIMEOUT_SECONDS = 10
