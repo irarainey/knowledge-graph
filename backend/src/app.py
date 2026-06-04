@@ -15,42 +15,20 @@ from __future__ import annotations
 import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from neo4j.exceptions import Neo4jError
-from pydantic import BaseModel, Field
 
-from agent import AzureOpenAISettings, KnowledgeGraphAgent
+from agents import AzureOpenAISettings, KnowledgeGraphAgent
+from models import AskRequest, AskResponse, QueryRequest, QueryResponse
 from neo4j_client import Neo4jClient, Neo4jSettings, load_env
 
 
-class QueryRequest(BaseModel):
-    query: str = Field(..., min_length=1, description="The Cypher query to execute.")
-    parameters: dict[str, Any] = Field(default_factory=dict, description="Named query parameters ($name) referenced by the query.")
-    database: str | None = Field(default=None, description="Override the target database (defaults to NEO4J_DATABASE).")
-
-
-class QueryResponse(BaseModel):
-    columns: list[str] = Field(description="Return column names, in order.")
-    records: list[dict[str, Any]] = Field(description="Result rows keyed by column name.")
-    count: int = Field(description="Number of rows returned.")
-
-
-class AskRequest(BaseModel):
-    question: str = Field(..., min_length=1, description="A natural-language question about the knowledge graph.")
-
-
-class AskResponse(BaseModel):
-    answer: str = Field(description="The agent's natural-language answer.")
-    cypher_used: list[str] = Field(description="The Cypher queries the agent ran to find the answer.")
-    records: list[dict[str, Any]] = Field(description="The graph rows the agent retrieved as context.")
-
-
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Open the shared Neo4j driver (and GraphRAG agent, if configured) on startup."""
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Open the shared Neo4j driver (and knowledge-graph agent, if configured) on startup."""
     load_env()
     neo4j_settings = Neo4jSettings.from_env()
     client = Neo4jClient(neo4j_settings)
@@ -77,7 +55,7 @@ app = FastAPI(
     title="Knowledge Graph API",
     description="Query the Neo4j knowledge graph with Cypher, or ask natural-language questions.",
     version="1.0.0",
-    lifespan=lifespan,
+    lifespan=_lifespan,
 )
 
 
@@ -86,12 +64,12 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-def get_client(request: Request) -> Neo4jClient:
+def _get_client(request: Request) -> Neo4jClient:
     """Return the shared Neo4j client created during app startup."""
     return request.app.state.neo4j  # type: ignore[no-any-return]
 
 
-def get_agent(request: Request) -> KnowledgeGraphAgent:
+def _get_agent(request: Request) -> KnowledgeGraphAgent:
     """Return the shared knowledge-graph agent, or 503 if Azure OpenAI is unconfigured."""
     agent = request.app.state.agent
     if agent is None:
@@ -100,7 +78,7 @@ def get_agent(request: Request) -> KnowledgeGraphAgent:
 
 
 @app.post("/query", response_model=QueryResponse)
-async def run_query(payload: QueryRequest, client: Annotated[Neo4jClient, Depends(get_client)]) -> QueryResponse:
+async def run_query(payload: QueryRequest, client: Annotated[Neo4jClient, Depends(_get_client)]) -> QueryResponse:
     try:
         columns, records = await client.run_query(payload.query, payload.parameters, payload.database)
     except Neo4jError as exc:
@@ -110,13 +88,13 @@ async def run_query(payload: QueryRequest, client: Annotated[Neo4jClient, Depend
 
 
 @app.post("/ask", response_model=AskResponse)
-async def ask(payload: AskRequest, agent: Annotated[KnowledgeGraphAgent, Depends(get_agent)]) -> AskResponse:
+async def ask(payload: AskRequest, agent: Annotated[KnowledgeGraphAgent, Depends(_get_agent)]) -> AskResponse:
     result = await agent.ask(payload.question)
     return AskResponse(answer=result.answer, cypher_used=result.cypher_used, records=result.records)
 
 
 @app.post("/ask/stream")
-async def ask_stream(payload: AskRequest, agent: Annotated[KnowledgeGraphAgent, Depends(get_agent)]) -> StreamingResponse:
+async def ask_stream(payload: AskRequest, agent: Annotated[KnowledgeGraphAgent, Depends(_get_agent)]) -> StreamingResponse:
     """Stream the answer as newline-delimited JSON events (metadata, tokens, done).
 
     The 503-when-unconfigured check happens in ``get_agent`` before the response

@@ -2,9 +2,9 @@
 
 A chat-style Streamlit front end for the Knowledge Graph **`/ask`** endpoint, titled
 for the modelled aircraft (**Cessna 172S Skyhawk — G-ECHO**). Type a natural-language
-question and the backend's text-to-Cypher GraphRAG agent answers it, **streamed
-token-by-token**. Each answer also shows the Cypher it ran and the graph rows it
-retrieved.
+question and the backend retrieves from the graph (text-to-Cypher) and generates the
+answer with a Microsoft Agent Framework agent, **streamed token-by-token**. Each answer
+also shows the Cypher it ran and the graph rows it retrieved.
 
 This is a thin HTTP client — all retrieval and reasoning live in the
 [`backend`](../backend). It consumes the streaming endpoint `POST /ask/stream`

@@ -3,7 +3,7 @@
 This is a thin client: it sends a question to the FastAPI backend's ``POST /ask``
 endpoint and renders the answer along with the Cypher the agent ran and the graph
 rows it retrieved. It holds no business logic — all retrieval and reasoning happen
-in the backend (see ``backend/src/agent.py``).
+in the backend (see ``backend/src/agents/knowledge_graph_agent.py``).
 
 Run with:
 

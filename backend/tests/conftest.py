@@ -1,8 +1,10 @@
-"""Pytest configuration: make modules under ``src/`` importable in tests."""
+"""Pytest configuration: make modules under ``src/`` and ``scripts/`` importable in tests."""
 
 import sys
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parents[1] / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+ROOT = Path(__file__).resolve().parents[1]
+for sub in ("src", "scripts"):
+    path = str(ROOT / sub)
+    if path not in sys.path:
+        sys.path.insert(0, path)

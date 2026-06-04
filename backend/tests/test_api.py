@@ -15,7 +15,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from neo4j.exceptions import Neo4jError
 
-import api
+import app
 from neo4j_client import Neo4jSettings, to_jsonable
 
 
@@ -93,13 +93,13 @@ class FakeClient:
 @asynccontextmanager
 async def _make_client(client: FakeClient) -> AsyncIterator[AsyncClient]:
     """Yield an HTTP client wired to the real app with the Neo4j client overridden."""
-    api.app.dependency_overrides[api.get_client] = lambda: client
-    transport = ASGITransport(app=api.app)
+    app.app.dependency_overrides[app._get_client] = lambda: client
+    transport = ASGITransport(app=app.app)
     try:
         async with AsyncClient(transport=transport, base_url="http://test") as http_client:
             yield http_client
     finally:
-        api.app.dependency_overrides.clear()
+        app.app.dependency_overrides.clear()
 
 
 @pytest.fixture

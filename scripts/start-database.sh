@@ -1,5 +1,10 @@
 #!/bin/bash
 
+set -euo pipefail
+
+# Run from the repo root regardless of where the script is invoked from.
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 docker run -d \
   --name neo4j \
   -p 7474:7474 \

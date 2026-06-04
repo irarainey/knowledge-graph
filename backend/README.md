@@ -27,7 +27,7 @@ uv run pytest tests/test_example.py::test_name -v
 
 ## Importing the knowledge graph into Neo4j
 
-`src/import_graph.py` loads `data/knowledge-graph.json` into a running Neo4j
+`scripts/import_graph.py` loads `data/knowledge-graph.json` into a running Neo4j
 instance. It reads connection settings from `backend/.env` (copy `.env.example`
 to get started):
 
@@ -64,7 +64,7 @@ directory and forwards these arguments.
 
 ## Querying the graph (REST API)
 
-`src/api.py` is a FastAPI service that runs arbitrary Cypher queries against the
+`src/app.py` is a FastAPI service that runs arbitrary Cypher queries against the
 Neo4j database. It reads the same `backend/.env` connection settings as the
 import script and opens a single shared driver for the lifetime of the process.
 
@@ -118,14 +118,16 @@ curl -X POST http://localhost:8080/query \
 > intended for trusted, local PoC use — do not expose it publicly without adding
 > authentication and query restrictions.
 
-## Natural-language questions (GraphRAG agent)
+## Natural-language questions (retrieve → generate agent)
 
-`src/agent.py` answers natural-language questions over the graph using Neo4j's
-[`neo4j-graphrag`](https://neo4j.com/docs/neo4j-graphrag-python/current/) package
-in a **text-to-Cypher** pattern. A `Text2CypherRetriever` asks the LLM to write a
-Cypher query from the question and the live graph schema, validates that it is
-**read-only** (via `EXPLAIN`), runs it, and feeds the rows to `GraphRAG`, which
-generates the final answer.
+`src/agents/knowledge_graph_agent.py` answers natural-language questions over the graph with a two-stage
+**retrieve → generate** pipeline. Retrieval uses Neo4j's
+[`neo4j-graphrag`](https://neo4j.com/docs/neo4j-graphrag-python/current/) package in a
+**text-to-Cypher** pattern: a `Text2CypherRetriever` asks the LLM to write a Cypher query
+from the question and the live graph schema, validates that it is **read-only** (via
+`EXPLAIN`), and runs it. The retrieved rows are then handed to a
+[**Microsoft Agent Framework**](https://github.com/microsoft/agent-framework)
+`Agent` (backed by an `OpenAIChatCompletionClient`), which generates the final answer.
 
 Read-only execution is enforced by the package itself, so the model can never
 modify the graph even if it generates a write.
@@ -151,21 +153,22 @@ question
 └──────────────────────────────────┬──────────────────────────────────────────┘
                                     │ rows (context) + the generated Cypher
                                     ▼
-┌──────────────────────────────────── GraphRAG ───────────────────────────────┐
+┌──────────────────────────────── MAF Agent ──────────────────────────────────┐
 │ 5. Build an answer prompt from the rows (context) + the question.            │
-│ 6. LLM writes the final natural-language answer.                            │
+│ 6. The Microsoft Agent Framework agent writes the final answer.              │
 └──────────────────────────────────┬──────────────────────────────────────────┘
                                     ▼
               AskResponse { answer, cypher_used, records }
 ```
 
-Step by step, in `src/agent.py`:
+Step by step, in `src/agents/knowledge_graph_agent.py`:
 
 1. **Startup (`KnowledgeGraphAgent.from_settings`).** The agent opens its own
    **synchronous** Neo4j driver (the `neo4j-graphrag` retrievers are sync-only,
-   separate from the async driver that backs `/query`), builds the LLM client
-   (`build_llm`), introspects the schema once (`fetch_schema_text`), and wires up a
-   `Text2CypherRetriever` and a `GraphRAG` pipeline.
+   separate from the async driver that backs `/query`), builds the retrieval LLM
+   client (`build_llm`) and the Microsoft Agent Framework chat client
+   (`build_chat_client`), introspects the schema once (`fetch_schema_text`), and wires
+   up a `Text2CypherRetriever` plus a MAF `Agent`.
 
 2. **Schema introspection (`fetch_schema_text`).** Read-only Cypher queries collect
    node labels with their properties, the relationship types that connect labels, and
@@ -191,27 +194,31 @@ Step by step, in `src/agent.py`:
    query then executes with READ routing. This is a database-level guarantee — the
    model cannot mutate the graph even if it emits `CREATE`/`DELETE`/`SET`.
 
-5. **Row formatting (`_record_to_item`).** Each returned record is converted to a
+5. **Row formatting (`record_to_item`).** Each returned record is converted to a
    JSON-serialisable dict (via `to_jsonable`, which unpacks nodes/relationships into
-   property maps). The JSON becomes the LLM's context; the structured dict is kept
-   so the API can return the raw `records`.
+   property maps) by the retriever's `result_formatter` (`record_to_item` in
+   `common/retrieval.py`). The JSON becomes the LLM's context; the structured dict is
+   kept so the API can return the raw `records`.
 
-6. **Answer generation.** `GraphRAG` fills the custom `RAG_TEMPLATE` with the rows
-   (context) and the question, and the LLM writes the answer. The template instructs
-   the model to answer **only** from the retrieved rows, to say so when the data has
-   no answer, and to report numbers **exactly** (no rounding/reformatting).
+6. **Answer generation.** The retrieved rows are formatted into the custom
+   `RAG_TEMPLATE` (context + question) and passed to the Microsoft Agent Framework
+   `Agent`, which writes the answer. The template instructs the model to answer
+   **only** from the retrieved rows, to say so when the data has no answer, and to
+   report numbers **exactly** (no rounding/reformatting).
 
-7. **Response assembly (`ask`).** Because the pipeline is synchronous, `ask` runs it
-   in a worker thread (`asyncio.to_thread`) so the FastAPI event loop stays
-   responsive; the shared sync driver is thread-safe for concurrent queries. The
-   result is packed into `AskResult(answer, cypher_used, records)`. If cypher
-   generation/execution fails (e.g. `Text2CypherRetrievalError`) or any LLM/network
-   error occurs, `/ask` **degrades gracefully** with a plain "couldn't find an
-   answer" message instead of returning a 500.
+7. **Response assembly (`ask`).** The synchronous retrieval step runs in a worker
+   thread (`asyncio.to_thread`) so the FastAPI event loop stays responsive; the shared
+   sync driver is thread-safe for concurrent queries. The MAF agent is then awaited
+   natively (`await self._agent.run(...)`). The result is packed into
+   `AskResult(answer, cypher_used, records)`. If cypher generation/execution fails
+   (e.g. `Text2CypherRetrievalError`) or any LLM/network error occurs, `/ask`
+   **degrades gracefully** with a plain "couldn't find an answer" message instead of
+   returning a 500.
 
-The two LLM calls (cypher generation and answer generation) share a single LLM
-client. Built-in rate-limit handling (retry with exponential backoff) is provided by
-`neo4j-graphrag`.
+The two LLM calls use separate clients: cypher generation uses the `neo4j-graphrag` LLM
+client, and answer generation uses the Microsoft Agent Framework chat client. Both target
+the same Azure OpenAI deployment. Built-in rate-limit handling (retry with exponential
+backoff) is provided by `neo4j-graphrag` for the retrieval call.
 
 ### Configuration
 
@@ -278,10 +285,10 @@ per-call breakdown, and timings. Each entry in `calls` carries its own `duration
 and `durations_ms` reports `retrieval`, `graph_query` (the Neo4j execution, i.e.
 retrieval minus the cypher-generation LLM call), `generation` and `total`. Token and
 duration fields per call let the UI show how long each LLM call and the graph query
-took. Answer-generation tokens come from the OpenAI stream's
-`stream_options={"include_usage": True}`; cypher-generation tokens and timing are
-captured from the retriever's internal `llm.invoke` call. Token fields are `null` when
-the endpoint does not report usage.
+took. Answer-generation tokens come from the Microsoft Agent Framework response's
+`usage_details` (read from the streamed agent's final response); cypher-generation
+tokens and timing are captured by wrapping the retriever's internal `llm.invoke` call.
+Token fields are `null` when usage is not reported.
 
 Because retrieval runs first, the client receives the Cypher and rows up front and can
 render the answer progressively. The retrieval step runs in a worker thread while
@@ -318,6 +325,7 @@ Vue frontend). In VS Code, press **F5** and choose **“Launch All (Backend + St
 
 - **Python 3.13+** with **FastAPI** and **uvicorn**
 - **Neo4j** for graph storage and Cypher queries
-- **neo4j-graphrag** (text-to-Cypher GraphRAG) with **Azure OpenAI** for LLM calls
+- **neo4j-graphrag** (text-to-Cypher retrieval) + **Microsoft Agent Framework**
+  (answer generation), both backed by **Azure OpenAI**
 - **uv** for dependency management, **poethepoet** for task running
 - **ruff** for linting/formatting, **mypy** for type checking, **pytest** for tests

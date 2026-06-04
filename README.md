@@ -28,7 +28,7 @@ There are two front ends:
                   │  Streamlit UI │    │   Backend     │
                   │  chat  :8501  │──▶ │  FastAPI:8080 │
                   └───────────────┘    │  text2cypher  │
-                   POST /ask/stream    │   GraphRAG    │
+                   POST /ask/stream    │  + MAF Agent  │
                        (NDJSON)        └───────┬───────┘
                                               │ cypher-gen + answer-gen
                                               ▼
@@ -39,7 +39,7 @@ There are two front ends:
 
 Both front ends are driven by the **same** `data/knowledge-graph.json`: the Vue app
 fetches it directly to render the graph, while `scripts/import-data.sh` loads it into
-Neo4j so the backend can run GraphRAG over it. The Vue renderer is a **static client**
+Neo4j so the backend can retrieve from the graph. The Vue renderer is a **static client**
 — it does not call the backend; only the Streamlit UI does. (The Streamlit sidebar also
 links out to the Vue renderer and the Neo4j browser, opening each in a new tab.)
 
@@ -50,8 +50,9 @@ links out to the Vue renderer and the Neo4j browser, opening each in a new tab.)
   live token streaming and a per-answer debug panel. Uses uv. Runs on
   <http://localhost:8501>. Sidebar buttons open the Vue graph renderer and the Neo4j
   browser in a new tab.
-- **Backend** — Python FastAPI service that runs **text-to-Cypher GraphRAG** (Neo4j's
-  `neo4j-graphrag` package) against Neo4j, then calls Azure OpenAI to generate answers.
+- **Backend** — Python FastAPI service that retrieves from Neo4j with **text-to-Cypher**
+  (Neo4j's `neo4j-graphrag` package), then uses a **Microsoft Agent Framework** agent
+  (backed by Azure OpenAI) to generate the answer from the retrieved rows.
   Uses uv. Runs on <http://localhost:8080>.
 - **Neo4j** — Graph database running as a Docker container, storing the aircraft's nodes
   and relationships.
@@ -190,10 +191,12 @@ interactive docs.
 
 ## Asking questions in natural language
 
-The backend answers natural-language questions using Neo4j's
-[`neo4j-graphrag`](https://neo4j.com/docs/neo4j-graphrag-python/current/) package in
-a **text-to-Cypher** GraphRAG pattern: it reads the live graph schema, has the LLM
-write a read-only Cypher query, runs it as context, and answers from the results.
+The backend answers natural-language questions with a two-stage **retrieve → generate**
+pipeline: Neo4j's
+[`neo4j-graphrag`](https://neo4j.com/docs/neo4j-graphrag-python/current/) package handles
+**text-to-Cypher** retrieval — it reads the live graph schema, has the LLM write a
+read-only Cypher query, and runs it to fetch context — then a **Microsoft Agent Framework**
+agent generates the answer from those rows.
 Set the `AZURE_OPENAI_*` variables in `backend/.env` (see `backend/.env.example`) to
 enable it.
 

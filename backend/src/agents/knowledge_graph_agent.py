@@ -1,97 +1,57 @@
-"""Natural-language querying of the knowledge graph via Neo4j GraphRAG.
+"""Natural-language querying of the knowledge graph.
 
-The ``/ask`` endpoint answers questions using a **text-to-Cypher** GraphRAG
-pattern built on the ``neo4j-graphrag`` package:
+The ``/ask`` endpoint answers questions with a deterministic retrieve-then-generate
+pipeline:
 
 1. :class:`~neo4j_graphrag.retrievers.Text2CypherRetriever` asks an LLM to write a
    Cypher query from the user's question and the live graph schema, validates it
    is read-only (via ``EXPLAIN``), runs it, and returns the matching rows.
-2. :class:`~neo4j_graphrag.generation.GraphRAG` feeds those rows back to the LLM to
-   generate a concise natural-language answer.
+2. A **Microsoft Agent Framework** :class:`~agent_framework.Agent` (backed by an
+   :class:`~agent_framework.openai.OpenAIChatCompletionClient`) is given those rows
+   as context and generates a concise natural-language answer.
 
-The package enforces read-only execution itself, so the model can never mutate the
-graph even if it generates a write/delete.
+Retrieval always runs first, so the agent only ever answers from rows actually
+retrieved from the graph. ``neo4j-graphrag`` enforces read-only execution itself,
+so the model can never mutate the graph even if it generates a write/delete.
 """
 
 from __future__ import annotations
 
 import asyncio
 import inspect
-import json
-import os
 import time
 from collections.abc import AsyncIterator
-from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
-from neo4j import Driver, GraphDatabase, RoutingControl
+from agent_framework import Agent
+from agent_framework.openai import OpenAIChatCompletionClient
+from neo4j import Driver, GraphDatabase
 from neo4j_graphrag.exceptions import Text2CypherRetrievalError
-from neo4j_graphrag.generation import GraphRAG, RagTemplate
-from neo4j_graphrag.llm import AzureOpenAILLM, OpenAILLM
+from neo4j_graphrag.generation import RagTemplate
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.retrievers import Text2CypherRetriever
-from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
+from neo4j_graphrag.types import RetrieverResult
 
-from neo4j_client import (
-    SCHEMA_NODE_SAMPLES,
-    SCHEMA_RELATIONSHIP_PROPERTIES,
-    SCHEMA_RELATIONSHIPS,
-    Neo4jSettings,
-    to_jsonable,
+from common.azure_openai import AzureOpenAISettings, build_chat_client, build_llm
+from common.graph_schema import fetch_schema_text
+from common.retrieval import extract_cypher_and_records, record_to_item
+from common.telemetry import (
+    build_llm_messages,
+    elapsed_ms,
+    empty_usage,
+    normalize_llm_usage,
+    normalize_maf_usage,
+    usage_sink,
 )
+from neo4j_client import Neo4jSettings
+from prompts import CYPHER_GENERATION_PROMPT, DEFAULT_EXAMPLES, RAG_TEMPLATE
 
-DEFAULT_API_VERSION = "2024-10-21"
+__all__ = ["AskResult", "AzureOpenAISettings", "KnowledgeGraphAgent"]
 
 # Shown to the user when retrieval or generation fails, so the API degrades
 # gracefully instead of returning a 500.
 FALLBACK_ANSWER = "I couldn't find an answer to that question in the knowledge graph."
-
-_EMPTY_USAGE: dict[str, int | None] = {"prompt": None, "completion": None, "total": None}
-
-# Per-request sink for cypher-generation token usage. The Text2CypherRetriever
-# does not surface the usage of its internal ``llm.invoke`` call, so the agent
-# wraps ``invoke`` to append usage here. ``asyncio.to_thread`` copies the calling
-# context into the worker thread, and because the value is a shared mutable list,
-# appends made inside the thread are visible to the request task afterwards. Each
-# request binds its own list, so concurrent requests stay isolated.
-_usage_sink: ContextVar[list[dict[str, Any]] | None] = ContextVar("_kg_usage_sink", default=None)
-
-
-def _elapsed_ms(start: float) -> float:
-    return round((time.perf_counter() - start) * 1000, 1)
-
-
-def _normalize_llm_usage(usage: Any) -> dict[str, int | None]:
-    """Normalize a neo4j-graphrag ``LLMUsage`` into a plain token dict."""
-    if usage is None:
-        return dict(_EMPTY_USAGE)
-    return {
-        "prompt": getattr(usage, "request_tokens", None),
-        "completion": getattr(usage, "response_tokens", None),
-        "total": getattr(usage, "total_tokens", None),
-    }
-
-
-def _normalize_openai_usage(usage: Any) -> dict[str, int | None]:
-    """Normalize an OpenAI streaming ``usage`` object into a plain token dict."""
-    if usage is None:
-        return dict(_EMPTY_USAGE)
-    return {
-        "prompt": getattr(usage, "prompt_tokens", None),
-        "completion": getattr(usage, "completion_tokens", None),
-        "total": getattr(usage, "total_tokens", None),
-    }
-
-
-def _messages(system: str | None, user: Any) -> list[dict[str, str]]:
-    """Build a ``[{role, content}]`` request representation for the debug telemetry."""
-    request: list[dict[str, str]] = []
-    if system:
-        request.append({"role": "system", "content": str(system)})
-    if user is not None:
-        request.append({"role": "user", "content": str(user)})
-    return request
 
 
 def _build_stats(
@@ -120,7 +80,7 @@ def _build_stats(
     if answer_call_made:
         answer_call = {
             "stage": "answer_generation",
-            **(answer_usage or dict(_EMPTY_USAGE)),
+            **(answer_usage or empty_usage()),
             "duration_ms": round(generation_ms, 1),
             "request": answer_request or [],
         }
@@ -147,105 +107,6 @@ def _build_stats(
     }
 
 
-# Few-shot question/Cypher pairs that anchor the cypher-generation LLM to this
-# graph's exact labels, relationship types and conventions: ISO-string dates cast
-# with date(), inlined literals (no $parameters), full hierarchy traversal for
-# component/part questions, and aggregation for totals.
-DEFAULT_EXAMPLES = [
-    "USER INPUT: 'How many flights are recorded?' QUERY: MATCH (f:Flight) RETURN count(f) AS flights",
-    "USER INPUT: 'Which aerodromes has the aircraft flown to?' "
-    "QUERY: MATCH (:Flight)-[:ARRIVES_AT]->(a:Aerodrome) RETURN DISTINCT a.name AS aerodrome",
-    "USER INPUT: 'How many flying hours has the engine had since 2026-05-25?' "
-    "QUERY: MATCH (ac:Aircraft)-[:HAS_SYSTEM]->(:System)-[:HAS_COMPONENT]->(e:PistonEngine) "
-    "MATCH (f:Flight)-[:USES_AIRCRAFT]->(ac) WHERE date(f.date) >= date('2026-05-25') "
-    "RETURN e.name AS engine, count(f) AS flights, sum(coalesce(f.flightTime_hours, 0)) AS hours",
-    "USER INPUT: 'How much ground distance has the front tyre covered between 2026-05-01 and 2026-05-31?' "
-    "QUERY: MATCH (f:Flight)-[:USES_AIRCRAFT]->(:Aircraft)-[:HAS_SYSTEM]->(:LandingGearSystem)"
-    "-[:HAS_COMPONENT]->(:NoseWheel)-[:HAS_PART]->(tyre:Tyre) "
-    "WHERE date(f.date) >= date('2026-05-01') AND date(f.date) <= date('2026-05-31') "
-    "MATCH (f)-[:HAS_PHASE]->(phase:FlightPhase) WHERE phase.groundRoll_m IS NOT NULL "
-    "RETURN tyre.name AS tyre, sum(phase.groundRoll_m) AS totalGroundDistance_m",
-]
-
-# Cypher-generation prompt. Replaces the package default so we can inject
-# domain rules. Text2CypherRetriever substitutes {schema}, {examples} and
-# {query_text}; any other literal braces would need doubling.
-CYPHER_GENERATION_PROMPT = """\
-Task: write a single read-only Cypher query that answers the user's question using the \
-Neo4j graph described below.
-
-Graph schema:
-{schema}
-
-Rules:
-- Use ONLY the node labels, relationship types and properties that appear in the schema. \
-Never invent or guess names. For example, an engine has no "total hours" property — derive \
-engine flying hours from the flightTime_hours of the Flights that use the aircraft.
-- Inline literal values directly in the query. NEVER use query parameters such as $since or \
-$start — the query is executed exactly as written with no parameters supplied.
-- Dates are stored as ISO-8601 STRINGS (e.g. "2026-05-20"). For ANY date comparison you MUST \
-cast both sides with date(), and use explicit AND for ranges, e.g. \
-`WHERE date(f.date) >= date('2026-05-01') AND date(f.date) <= date('2026-05-31')`. \
-Never compare Flight.date directly against a date value.
-- Systems, components and parts form a hierarchy: \
-(:Aircraft)-[:HAS_SYSTEM]->(:System)-[:HAS_COMPONENT]->(component)-[:HAS_PART]->(part). \
-To reach a specific component or part, traverse the full path; do not read a property off a \
-shortcut node. Only traverse this hierarchy when the question is about a system, component, \
-part, engine, tyre or maintenance item. For questions purely about flights, hours or dates, \
-query :Flight directly.
-- Flights connect to the aircraft via (:Flight)-[:USES_AIRCRAFT]->(:Aircraft) and to their \
-phases via (:Flight)-[:HAS_PHASE]->(:FlightPhase). Specific phases also carry labels such as \
-:Taxi, :Takeoff and :Landing.
-- Wrap nullable numeric properties in coalesce(...) when summing, and add `IS NOT NULL` filters \
-for properties that may be absent.
-- If the question asks for a count, sum, total, average, maximum or minimum, return that \
-aggregate with a clear alias; otherwise return the relevant rows with clear column aliases.
-
-Examples:
-{examples}
-
-Question:
-{query_text}
-
-Return only the Cypher query, with no backticks, comments or any other text.
-"""
-
-# A label shared by at least this many distinct sibling labels is treated as a
-# generic super-label (e.g. System, Component); its property union is noisy, so we
-# render only property names for it rather than typed examples.
-GENERIC_LABEL_SIBLING_THRESHOLD = 4
-
-# Answer-generation prompt. Keeps the numeric-fidelity and concise/factual
-# guidance from the previous agent. Only {context}, {examples} and {query_text}
-# are substituted — any literal braces would need doubling.
-RAG_TEMPLATE = """\
-You are a knowledge-graph assistant. You answer questions about a small piston-engine \
-light aircraft — its systems, components, flights, aerodromes and maintenance — that is \
-modelled as a Neo4j graph.
-
-Use only the rows in the context below; they were retrieved from the graph for this \
-question. Base your answer solely on those rows. Never invent or assume values. If the \
-context is empty or does not contain the answer, say so plainly.
-
-Report every numeric value EXACTLY as it appears in the context. Do NOT round, truncate \
-or reformat numbers — if a value is 2.23, write 2.23, not 2.2 or 2. When you state a \
-number, make clear what it counts or measures (e.g. "2.23 flying hours across 4 flights").
-
-Keep answers concise and factual.
-
-Context:
-{context}
-
-Examples:
-{examples}
-
-Question:
-{query_text}
-
-Answer:
-"""
-
-
 @dataclass
 class AskResult:
     """Outcome of an agent run: the answer plus the Cypher/context it relied on."""
@@ -255,159 +116,13 @@ class AskResult:
     records: list[dict[str, Any]] = field(default_factory=list)
 
 
-@dataclass
-class AzureOpenAISettings:
-    endpoint: str
-    api_key: str
-    deployment: str
-    api_version: str
-
-    @classmethod
-    def from_env(cls) -> AzureOpenAISettings:
-        missing = [v for v in ("AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_DEPLOYMENT") if not os.environ.get(v)]
-        if missing:
-            raise RuntimeError(f"Missing required environment variable(s): {', '.join(missing)}")
-        return cls(
-            endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
-            api_key=os.environ["AZURE_OPENAI_API_KEY"],
-            deployment=os.environ["AZURE_OPENAI_DEPLOYMENT"],
-            api_version=os.environ.get("AZURE_OPENAI_API_VERSION", DEFAULT_API_VERSION),
-        )
-
-
-def build_llm(settings: AzureOpenAISettings) -> LLMInterface:
-    """Create a neo4j-graphrag LLM for the configured Azure OpenAI endpoint.
-
-    Azure AI Foundry / "v1" deployments expose an OpenAI-compatible surface at
-    ``<resource>/openai/v1`` and are reached with the plain OpenAI client via
-    ``base_url``. Classic Azure OpenAI resources use deployment routing via
-    ``azure_endpoint`` + ``api_version``.
-    """
-    endpoint = settings.endpoint.rstrip("/")
-    if "/openai/v1" in endpoint:
-        return OpenAILLM(model_name=settings.deployment, base_url=endpoint, api_key=settings.api_key)
-    return AzureOpenAILLM(
-        model_name=settings.deployment,
-        azure_endpoint=endpoint,
-        api_version=settings.api_version,
-        api_key=settings.api_key,
-    )
-
-
-def _record_to_item(record: Any) -> RetrieverResultItem:
-    """Format a Neo4j record into a retriever item, keeping the row JSON-serialisable.
-
-    The JSON ``content`` becomes the LLM context; the structured dict is stashed in
-    ``metadata`` so the API can return the raw rows it answered from.
-    """
-    data = to_jsonable(dict(record))
-    return RetrieverResultItem(content=json.dumps(data), metadata={"record": data})
-
-
-def _extract_cypher_and_records(retriever_result: RetrieverResult | None) -> tuple[list[str], list[dict[str, Any]]]:
-    """Pull the generated Cypher and the JSON-serialisable rows out of a retriever result."""
-    metadata = (retriever_result.metadata or {}) if retriever_result else {}
-    cypher = metadata.get("cypher")
-    items = retriever_result.items if retriever_result else []
-    records = [item.metadata["record"] for item in items if item.metadata and "record" in item.metadata]
-    return ([cypher] if cypher else [], records)
-
-
-def _scalar_type(value: Any) -> str:
-    if isinstance(value, bool):
-        return "bool"
-    if isinstance(value, int):
-        return "int"
-    if isinstance(value, float):
-        return "float"
-    if isinstance(value, str):
-        return "str"
-    if isinstance(value, list):
-        return "list"
-    return type(value).__name__
-
-
-def _example_literal(value: Any) -> str:
-    try:
-        text = json.dumps(to_jsonable(value), default=str)
-    except (TypeError, ValueError):
-        text = str(value)
-    if len(text) > 40:
-        text = text[:39] + "…"
-    return text
-
-
-def _build_node_section(node_rows: list[dict[str, Any]]) -> list[str]:
-    """Render per-label properties with types/examples, trimming generic super-labels.
-
-    For each label we keep the first non-null example value seen for each property.
-    Labels shared across many sibling labels (super-labels like ``System``) get a
-    names-only listing so their large property unions don't swamp the prompt.
-    """
-    siblings: dict[str, set[str]] = {}
-    examples: dict[str, dict[str, Any]] = {}
-    for row in node_rows:
-        labels: list[str] = row.get("labels") or []
-        props: dict[str, Any] = row.get("props") or {}
-        label_set = set(labels)
-        for label in labels:
-            siblings.setdefault(label, set()).update(label_set - {label})
-            store = examples.setdefault(label, {})
-            for key, value in props.items():
-                if value is not None and key not in store:
-                    store[key] = value
-
-    lines = ["Node labels and their properties:"]
-    for label in sorted(examples):
-        props = examples[label]
-        if not props:
-            lines.append(f"- {label}: (no properties)")
-        elif len(siblings.get(label, set())) >= GENERIC_LABEL_SIBLING_THRESHOLD:
-            lines.append(f"- {label}: {', '.join(sorted(props))}")
-        else:
-            rendered = ", ".join(f"{key} ({_scalar_type(props[key])}, e.g. {_example_literal(props[key])})" for key in sorted(props))
-            lines.append(f"- {label}: {rendered}")
-    return lines
-
-
-def fetch_schema_text(driver: Driver, database: str) -> str:
-    """Introspect the graph over a synchronous driver and render it as prompt text.
-
-    Uses plain Cypher (no APOC) so it works on a stock Neo4j Community container.
-    Node properties are shown with inferred types and example values so the LLM can
-    see, for instance, that ``Flight.date`` is an ISO string that needs casting.
-    """
-
-    def rows(query: str) -> list[dict[str, Any]]:
-        records, _, _ = driver.execute_query(query, database_=database, routing_=RoutingControl.READ)
-        return [dict(record) for record in records]
-
-    lines = _build_node_section(rows(SCHEMA_NODE_SAMPLES))
-
-    lines.append("")
-    lines.append("Relationships (startLabels)-[TYPE]->(endLabels):")
-    for row in rows(SCHEMA_RELATIONSHIPS):
-        start = ":".join(row.get("startLabels", []))
-        end = ":".join(row.get("endLabels", []))
-        lines.append(f"- ({start})-[{row['type']}]->({end})")
-
-    rel_props = rows(SCHEMA_RELATIONSHIP_PROPERTIES)
-    if rel_props:
-        lines.append("")
-        lines.append("Relationship properties:")
-        for row in rel_props:
-            props = ", ".join(row.get("properties", []))
-            lines.append(f"- {row['type']}: {props}")
-
-    return "\n".join(lines)
-
-
 class KnowledgeGraphAgent:
-    """Text-to-Cypher GraphRAG over the Neo4j knowledge graph (neo4j-graphrag)."""
+    """Deterministic text-to-Cypher retrieval (neo4j-graphrag) + MAF answer generation."""
 
     def __init__(
         self,
         llm: LLMInterface,
+        chat_client: OpenAIChatCompletionClient,
         driver: Driver,
         *,
         database: str,
@@ -423,25 +138,33 @@ class KnowledgeGraphAgent:
             neo4j_schema=schema,
             examples=examples if examples is not None else DEFAULT_EXAMPLES,
             custom_prompt=CYPHER_GENERATION_PROMPT,
-            result_formatter=_record_to_item,
+            result_formatter=record_to_item,
             neo4j_database=database,
         )
         prompt_template = RagTemplate(template=RAG_TEMPLATE, expected_inputs=["context", "query_text", "examples"])
-        # Keep direct references so the streaming path can drive retrieval and answer
-        # generation itself (neo4j-graphrag's GraphRAG/LLM offer no token streaming).
+        # neo4j-graphrag drives Cypher generation (self._llm) and retrieval; the
+        # Microsoft Agent Framework agent generates the natural-language answer from
+        # the retrieved rows and supports native token streaming.
         self._llm = llm
         self._retriever = retriever
         self._prompt_template = prompt_template
-        self._rag = GraphRAG(retriever=retriever, llm=llm, prompt_template=prompt_template)
+        self._instructions = prompt_template.system_instructions
+        self._agent = Agent(client=chat_client, instructions=self._instructions, name="knowledge-graph")
         self._install_usage_recorder()
 
     def _install_usage_recorder(self) -> None:
         """Wrap ``self._llm.invoke`` so cypher-generation token usage is captured.
 
-        The Text2CypherRetriever calls ``llm.invoke`` to generate Cypher but does
-        not expose its usage. The wrapper appends each call's normalized usage to
-        the request-scoped :data:`_usage_sink` (when one is active). The original
-        bound method is preserved and double-wrapping is guarded against.
+        KNOWN ANTI-PATTERN (deliberate trade-off): this monkey-patches a method on a
+        third-party ``neo4j-graphrag`` LLM object and tags it with a private
+        ``_kg_usage_wrapped`` flag. It is fragile — it reaches into library internals
+        and could break if ``invoke``'s signature changes. We accept it because
+        ``Text2CypherRetriever`` calls ``llm.invoke`` to generate Cypher but exposes
+        no hook to observe that call's token usage, which the debug telemetry needs.
+        The wrapper appends each call's normalized usage to the request-scoped
+        :data:`usage_sink` (when one is active). The original bound method is
+        preserved and double-wrapping is guarded against. Revisit if neo4j-graphrag
+        ever surfaces retriever-level usage.
         """
         if getattr(self._llm, "_kg_usage_wrapped", False):
             return
@@ -453,14 +176,14 @@ class KnowledgeGraphAgent:
             request_system = args[2] if len(args) >= 3 else kwargs.get("system_instruction")
             start = time.perf_counter()
             response = original_invoke(*args, **kwargs)
-            duration_ms = _elapsed_ms(start)
-            sink = _usage_sink.get()
+            duration_ms = elapsed_ms(start)
+            sink = usage_sink.get()
             if sink is not None:
                 sink.append(
                     {
-                        **_normalize_llm_usage(getattr(response, "usage", None)),
+                        **normalize_llm_usage(getattr(response, "usage", None)),
                         "duration_ms": duration_ms,
-                        "request": _messages(request_system, request_input),
+                        "request": build_llm_messages(request_system, request_input),
                     }
                 )
             return response
@@ -475,30 +198,38 @@ class KnowledgeGraphAgent:
     def from_settings(cls, azure: AzureOpenAISettings, neo4j_settings: Neo4jSettings) -> KnowledgeGraphAgent:
         """Build the agent and its dedicated synchronous Neo4j driver from settings."""
         driver = GraphDatabase.driver(neo4j_settings.uri, auth=(neo4j_settings.username, neo4j_settings.password))
-        return cls(build_llm(azure), driver, database=neo4j_settings.database)
+        return cls(build_llm(azure), build_chat_client(azure), driver, database=neo4j_settings.database)
+
+    def _format_prompt(self, question: str, retriever_result: RetrieverResult | None) -> str:
+        """Build the answer prompt (rows as context) exactly as the RAG template expects."""
+        context = "\n".join(item.content for item in retriever_result.items) if retriever_result else ""
+        return self._prompt_template.format(query_text=question, context=context, examples="")
 
     async def ask(self, question: str) -> AskResult:
         """Answer a natural-language question over the knowledge graph.
 
-        GraphRAG is synchronous, so it runs in a worker thread to avoid blocking the
-        event loop. The shared Neo4j driver is thread-safe for concurrent queries.
+        Retrieval (text-to-Cypher) is synchronous, so it runs in a worker thread; the
+        retrieved rows are then handed to the MAF agent to generate the answer.
         """
-        return await asyncio.to_thread(self._ask_sync, question)
-
-    def _ask_sync(self, question: str) -> AskResult:
         try:
-            response = self._rag.search(query_text=question, return_context=True)
+            retriever_result = await asyncio.to_thread(self._retriever.search, query_text=question)
         except Text2CypherRetrievalError as exc:
             print(f"/ask cypher retrieval failed: {exc}")
             return AskResult(answer=FALLBACK_ANSWER)
         except Exception as exc:
-            # Degrade gracefully on any LLM/connectivity error rather than 500.
-            print(f"/ask failed: {type(exc).__name__}: {exc}")
+            # Degrade gracefully on any retrieval/connectivity error rather than 500.
+            print(f"/ask retrieval failed: {type(exc).__name__}: {exc}")
             return AskResult(answer=FALLBACK_ANSWER)
 
-        retriever_result = response.retriever_result
-        cypher_used, records = _extract_cypher_and_records(retriever_result)
-        return AskResult(answer=response.answer, cypher_used=cypher_used, records=records)
+        cypher_used, records = extract_cypher_and_records(retriever_result)
+        prompt = self._format_prompt(question, retriever_result)
+        try:
+            response = await self._agent.run(prompt)
+            answer = response.text
+        except Exception as exc:
+            print(f"/ask generation failed: {type(exc).__name__}: {exc}")
+            answer = FALLBACK_ANSWER
+        return AskResult(answer=answer, cypher_used=cypher_used, records=records)
 
     async def ask_stream(self, question: str) -> AsyncIterator[dict[str, Any]]:
         """Answer a question while streaming the LLM's tokens.
@@ -522,7 +253,7 @@ class KnowledgeGraphAgent:
         # Bind a fresh sink so the wrapped invoke records this request's cypher-gen
         # usage; reset immediately after retrieval (generation makes no invoke call).
         cypher_usages: list[dict[str, Any]] = []
-        sink_token = _usage_sink.set(cypher_usages)
+        sink_token = usage_sink.set(cypher_usages)
         retrieval_start = time.perf_counter()
         retriever_result: RetrieverResult | None = None
         retrieval_error: Exception | None = None
@@ -535,8 +266,8 @@ class KnowledgeGraphAgent:
             retrieval_error = exc
             print(f"/ask/stream retrieval failed: {type(exc).__name__}: {exc}")
         finally:
-            _usage_sink.reset(sink_token)
-        retrieval_ms = _elapsed_ms(retrieval_start)
+            usage_sink.reset(sink_token)
+        retrieval_ms = elapsed_ms(retrieval_start)
 
         if retrieval_error is not None:
             yield {"type": "metadata", "cypher_used": [], "records": []}
@@ -549,112 +280,55 @@ class KnowledgeGraphAgent:
                 answer_call_made=False,
                 retrieval_ms=retrieval_ms,
                 generation_ms=0.0,
-                total_ms=_elapsed_ms(total_start),
+                total_ms=elapsed_ms(total_start),
                 cypher_count=0,
                 record_count=0,
             )
             yield {"type": "done"}
             return
 
-        cypher_used, records = _extract_cypher_and_records(retriever_result)
+        cypher_used, records = extract_cypher_and_records(retriever_result)
         yield {"type": "metadata", "cypher_used": cypher_used, "records": records}
 
-        # Build the answer prompt exactly as GraphRAG.search would, so streamed and
-        # non-streamed answers stay consistent.
-        context = "\n".join(item.content for item in retriever_result.items) if retriever_result else ""
-        prompt = self._prompt_template.format(query_text=question, context=context, examples="")
-        system_instruction = self._prompt_template.system_instructions
-
-        metrics: dict[str, Any] = {}
+        # Hand the retrieved rows to the MAF agent and stream its answer tokens.
+        prompt = self._format_prompt(question, retriever_result)
+        answer_request = build_llm_messages(self._instructions, prompt)
+        answer_usage: dict[str, Any] | None = None
+        answer_call_made = False
         generation_start = time.perf_counter()
         try:
-            async for text in self._stream_answer(prompt, system_instruction, metrics):
-                yield {"type": "token", "text": text}
+            stream = self._agent.run(prompt, stream=True)
+            answer_call_made = True
+            async for update in stream:
+                text = getattr(update, "text", None)
+                if text:
+                    yield {"type": "token", "text": text}
+            final: Any = stream.get_final_response()
+            if inspect.isawaitable(final):
+                final = await final
+            answer_usage = normalize_maf_usage(getattr(final, "usage_details", None))
         except asyncio.CancelledError:
             # Client disconnected — let cancellation propagate so the upstream
-            # OpenAI stream is torn down promptly.
+            # model stream is torn down promptly.
             raise
         except Exception as exc:
             print(f"/ask/stream generation failed: {type(exc).__name__}: {exc}")
             yield {"type": "error", "message": "Answer generation failed."}
-        generation_ms = _elapsed_ms(generation_start)
+        generation_ms = elapsed_ms(generation_start)
 
         yield _build_stats(
             model=model,
             cypher_usages=cypher_usages,
-            answer_usage=metrics.get("answer_usage"),
-            answer_request=metrics.get("answer_request"),
-            answer_call_made=bool(metrics.get("answer_call_made")),
+            answer_usage=answer_usage,
+            answer_request=answer_request,
+            answer_call_made=answer_call_made,
             retrieval_ms=retrieval_ms,
             generation_ms=generation_ms,
-            total_ms=_elapsed_ms(total_start),
+            total_ms=elapsed_ms(total_start),
             cypher_count=len(cypher_used),
             record_count=len(records),
         )
         yield {"type": "done"}
-
-    async def _stream_answer(
-        self, prompt: str, system_instruction: str | None, metrics: dict[str, Any] | None = None
-    ) -> AsyncIterator[str]:
-        """Stream answer tokens from the LLM's async OpenAI client.
-
-        Falls back to a single non-streaming ``invoke`` if the underlying client is
-        not the expected OpenAI client (keeps the agent usable with custom LLMs).
-        When ``metrics`` is given, records ``answer_call_made`` and the answer-gen
-        token ``answer_usage`` (when the endpoint reports it).
-        """
-        client = getattr(self._llm, "async_client", None)
-        model = getattr(self._llm, "model_name", None)
-        if client is None or model is None:
-            result = await asyncio.to_thread(self._llm.invoke, prompt, None, system_instruction)
-            if metrics is not None:
-                metrics["answer_call_made"] = True
-                metrics["answer_usage"] = _normalize_llm_usage(getattr(result, "usage", None))
-                metrics["answer_request"] = _messages(system_instruction, prompt)
-            yield result.content
-            return
-
-        # Reuse the package's message construction so streaming matches invoke().
-        get_messages = getattr(self._llm, "get_messages", None)
-        if callable(get_messages):
-            messages = get_messages(prompt, None, system_instruction)
-        else:
-            messages = []
-            if system_instruction:
-                messages.append({"role": "system", "content": system_instruction})
-            messages.append({"role": "user", "content": prompt})
-
-        model_params = getattr(self._llm, "model_params", None) or {}
-        # Request token usage on the final chunk; retry without it if the endpoint
-        # rejects stream_options, so unsupported usage never breaks generation.
-        try:
-            stream = await client.chat.completions.create(
-                model=model, messages=messages, stream=True, stream_options={"include_usage": True}, **model_params
-            )
-        except Exception as exc:
-            print(f"/ask/stream stream_options unsupported, retrying without usage: {type(exc).__name__}: {exc}")
-            stream = await client.chat.completions.create(model=model, messages=messages, stream=True, **model_params)
-        if metrics is not None:
-            metrics["answer_call_made"] = True
-            metrics["answer_request"] = [{"role": str(m.get("role", "")), "content": str(m.get("content", ""))} for m in messages]
-        try:
-            async for chunk in stream:
-                usage = getattr(chunk, "usage", None)
-                if usage is not None and metrics is not None:
-                    metrics["answer_usage"] = _normalize_openai_usage(usage)
-                choices = getattr(chunk, "choices", None)
-                if not choices:
-                    continue
-                delta = getattr(choices[0], "delta", None)
-                text = getattr(delta, "content", None) if delta is not None else None
-                if text:
-                    yield text
-        finally:
-            close = getattr(stream, "aclose", None) or getattr(stream, "close", None)
-            if close is not None:
-                result = close()
-                if inspect.isawaitable(result):
-                    await result
 
     def close(self) -> None:
         """Close the agent's synchronous Neo4j driver."""

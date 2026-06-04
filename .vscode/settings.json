@@ -1,0 +1,9 @@
+{
+  // The backend places `src/` and `scripts/` on sys.path at runtime (via the uv
+  // `--app-dir src` flag, the import-script bootstrap, and tests/conftest.py), so
+  // first-party modules are imported by their top-level names (e.g. `neo4j_client`,
+  // `agents`, `common`, `import_graph`). Mirror that here so Pylance resolves them
+  // when the workspace root is the repository root.
+  "python.analysis.extraPaths": ["backend/src", "backend/scripts"],
+  "python.defaultInterpreterPath": "backend/.venv/bin/python"
+}

@@ -9,34 +9,15 @@ from typing import Any
 import pytest
 from httpx import ASGITransport, AsyncClient
 from neo4j_graphrag.exceptions import Text2CypherRetrievalError
-from neo4j_graphrag.generation.types import RagResultModel
 from neo4j_graphrag.llm import AzureOpenAILLM, OpenAILLM
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
-import api
-from agent import (
-    AskResult,
-    AzureOpenAISettings,
-    KnowledgeGraphAgent,
-    _record_to_item,
-    _usage_sink,
-    build_llm,
-    fetch_schema_text,
-)
-from neo4j_client import format_schema
-
-
-# ── format_schema ────────────────────────────────────────────────────────────
-def test_format_schema_renders_sections() -> None:
-    schema = {
-        "nodes": [{"label": "Aircraft", "properties": ["id", "registration"]}],
-        "relationships": [{"startLabels": ["Aircraft"], "type": "HAS_SYSTEM", "endLabels": ["System", "PowerplantSystem"]}],
-        "relationshipProperties": [{"type": "FEEDS", "properties": ["fluid"]}],
-    }
-    text = format_schema(schema)
-    assert "Aircraft: id, registration" in text
-    assert "(Aircraft)-[HAS_SYSTEM]->(System:PowerplantSystem)" in text
-    assert "FEEDS: fluid" in text
+import app
+from agents.knowledge_graph_agent import AskResult, KnowledgeGraphAgent
+from common.azure_openai import AzureOpenAISettings, build_llm
+from common.graph_schema import fetch_schema_text
+from common.retrieval import record_to_item
+from common.telemetry import usage_sink
 
 
 # ── fetch_schema_text ────────────────────────────────────────────────────────
@@ -81,9 +62,9 @@ def test_fetch_schema_text_uses_database_and_formats() -> None:
     assert all(db == "graph" for _, db in driver.calls)
 
 
-# ── _record_to_item ──────────────────────────────────────────────────────────
+# ── record_to_item ──────────────────────────────────────────────────────────
 def test_record_to_item_serialises_and_keeps_record() -> None:
-    item = _record_to_item(FakeRecord(flights=6, hours=3.0))
+    item = record_to_item(FakeRecord(flights=6, hours=3.0))
     assert item.metadata == {"record": {"flights": 6, "hours": 3.0}}
     assert '"flights": 6' in item.content
 
@@ -128,67 +109,155 @@ class FakeDriver:
         self.closed = True
 
 
-class FakeRag:
-    """Stands in for GraphRAG: returns a canned result or raises."""
+async def _value_coro(value: Any) -> Any:
+    return value
 
-    def __init__(self, *, result: RagResultModel | None = None, error: Exception | None = None) -> None:
-        self._result = result
+
+async def _raise_coro(exc: Exception) -> Any:
+    raise exc
+
+
+class FakeUpdate:
+    """Stands in for AgentResponseUpdate (streaming chunk)."""
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+
+class FakeAgentResponse:
+    """Stands in for AgentResponse: exposes .text and .usage_details."""
+
+    def __init__(self, text: str, usage_details: dict[str, Any] | None = None) -> None:
+        self.text = text
+        self.usage_details = usage_details
+
+
+class FakeResponseStream:
+    """Async-iterable stand-in for MAF ResponseStream with get_final_response()."""
+
+    def __init__(self, texts: list[str], final: FakeAgentResponse, *, error: Exception | None = None) -> None:
+        self._texts = texts
+        self._final = final
         self._error = error
-        self.calls: list[str] = []
 
-    def search(self, query_text: str, return_context: bool | None = None) -> RagResultModel:
-        self.calls.append(query_text)
+    def __aiter__(self) -> FakeResponseStream:
+        self._iter = iter(self._texts)
+        return self
+
+    async def __anext__(self) -> FakeUpdate:
         if self._error is not None:
             raise self._error
-        assert self._result is not None
-        return self._result
+        try:
+            return FakeUpdate(next(self._iter))
+        except StopIteration as exc:
+            raise StopAsyncIteration from exc
+
+    async def get_final_response(self) -> FakeAgentResponse:
+        return self._final
 
 
-def _make_agent(rag: FakeRag) -> tuple[KnowledgeGraphAgent, FakeDriver]:
+class FakeMafAgent:
+    """Stands in for agent_framework.Agent: records prompts, returns canned output."""
+
+    def __init__(
+        self,
+        *,
+        text: str = "answer",
+        usage_details: dict[str, Any] | None = None,
+        stream_texts: list[str] | None = None,
+        error: Exception | None = None,
+        stream_error: Exception | None = None,
+    ) -> None:
+        self._text = text
+        self._usage = usage_details
+        self._stream_texts = stream_texts or []
+        self._error = error
+        self._stream_error = stream_error
+        self.prompts: list[str] = []
+
+    def run(self, messages: str, *, stream: bool = False) -> Any:
+        self.prompts.append(messages)
+        final = FakeAgentResponse(self._text, self._usage)
+        if stream:
+            return FakeResponseStream(self._stream_texts, final, error=self._stream_error)
+        if self._error is not None:
+            return _raise_coro(self._error)
+        return _value_coro(final)
+
+
+class FakePromptTemplate:
+    system_instructions = "Answer the user question using the provided context."
+
+    def format(self, query_text: str, context: str, examples: str) -> str:
+        return f"Q: {query_text}\nCTX: {context}"
+
+
+def _make_ask_agent(retriever: Any, maf_agent: FakeMafAgent) -> tuple[KnowledgeGraphAgent, FakeDriver]:
     agent = object.__new__(KnowledgeGraphAgent)
     driver = FakeDriver()
     agent._driver = driver  # type: ignore[assignment]
-    agent._rag = rag  # type: ignore[assignment]
+    agent._retriever = retriever  # type: ignore[assignment]
+    agent._agent = maf_agent  # type: ignore[assignment]
+    agent._prompt_template = FakePromptTemplate()  # type: ignore[assignment]
+    agent._instructions = FakePromptTemplate.system_instructions  # type: ignore[assignment]
     return agent, driver
 
 
 async def test_ask_extracts_answer_cypher_and_records() -> None:
-    result = RagResultModel(
-        answer="There are 6 flights.",
-        retriever_result=RetrieverResult(
-            items=[RetrieverResultItem(content="{}", metadata={"record": {"flights": 6}})],
-            metadata={"cypher": "MATCH (f:Flight) RETURN count(f) AS flights"},
-        ),
+    result = RetrieverResult(
+        items=[RetrieverResultItem(content="{}", metadata={"record": {"flights": 6}})],
+        metadata={"cypher": "MATCH (f:Flight) RETURN count(f) AS flights"},
     )
-    rag = FakeRag(result=result)
-    agent, _ = _make_agent(rag)
+    retriever = FakeStreamRetriever(result=result)
+    maf = FakeMafAgent(text="There are 6 flights.")
+    agent, _ = _make_ask_agent(retriever, maf)
     ask_result = await agent.ask("How many flights?")
     assert isinstance(ask_result, AskResult)
     assert ask_result.answer == "There are 6 flights."
     assert ask_result.cypher_used == ["MATCH (f:Flight) RETURN count(f) AS flights"]
     assert ask_result.records == [{"flights": 6}]
-    assert rag.calls == ["How many flights?"]
+    assert retriever.calls == ["How many flights?"]
+    # The MAF agent is handed the formatted prompt built from the retrieved rows.
+    assert maf.prompts == ["Q: How many flights?\nCTX: {}"]
 
 
 async def test_ask_degrades_gracefully_on_retrieval_error() -> None:
-    rag = FakeRag(error=Text2CypherRetrievalError("bad cypher"))
-    agent, _ = _make_agent(rag)
+    retriever = FakeStreamRetriever(error=Text2CypherRetrievalError("bad cypher"))
+    maf = FakeMafAgent()
+    agent, _ = _make_ask_agent(retriever, maf)
     ask_result = await agent.ask("nonsense")
     assert ask_result.cypher_used == []
     assert ask_result.records == []
     assert "couldn't" in ask_result.answer.lower()
+    assert maf.prompts == []  # generation never attempted when retrieval fails
 
 
 async def test_ask_degrades_gracefully_on_unexpected_error() -> None:
-    rag = FakeRag(error=RuntimeError("LLM down"))
-    agent, _ = _make_agent(rag)
+    retriever = FakeStreamRetriever(error=RuntimeError("driver down"))
+    maf = FakeMafAgent()
+    agent, _ = _make_ask_agent(retriever, maf)
     ask_result = await agent.ask("anything")
     assert ask_result.cypher_used == []
     assert "couldn't" in ask_result.answer.lower()
 
 
+async def test_ask_degrades_gracefully_on_generation_error() -> None:
+    result = RetrieverResult(
+        items=[RetrieverResultItem(content="{}", metadata={"record": {"flights": 6}})],
+        metadata={"cypher": "MATCH (f:Flight) RETURN count(f) AS flights"},
+    )
+    retriever = FakeStreamRetriever(result=result)
+    maf = FakeMafAgent(error=RuntimeError("LLM down"))
+    agent, _ = _make_ask_agent(retriever, maf)
+    ask_result = await agent.ask("How many flights?")
+    # The Cypher/records the retriever found are still returned even if the answer fails.
+    assert ask_result.cypher_used == ["MATCH (f:Flight) RETURN count(f) AS flights"]
+    assert ask_result.records == [{"flights": 6}]
+    assert "couldn't" in ask_result.answer.lower()
+
+
 def test_close_closes_driver() -> None:
-    agent, driver = _make_agent(FakeRag(error=RuntimeError()))
+    agent, driver = _make_ask_agent(FakeStreamRetriever(error=RuntimeError()), FakeMafAgent())
     agent.close()
     assert driver.closed is True
 
@@ -210,76 +279,14 @@ class FakeStreamRetriever:
         return self._result
 
 
-class FakeChunkStream:
-    """Async iterator of OpenAI-style streaming chunks built from plain strings."""
-
-    def __init__(self, texts: list[str], usage: Any = None) -> None:
-        self._texts = texts
-        self._usage = usage
-        self.closed = False
-
-    def __aiter__(self) -> FakeChunkStream:
-        self._iter = iter(self._texts)
-        self._usage_sent = False
-        return self
-
-    async def __anext__(self) -> Any:
-        try:
-            text = next(self._iter)
-        except StopIteration as exc:
-            # After the text chunks, emit a final usage-only chunk (empty choices),
-            # mirroring OpenAI's stream_options={"include_usage": True} behaviour.
-            if self._usage is not None and not self._usage_sent:
-                self._usage_sent = True
-                return SimpleNamespace(choices=[], usage=self._usage)
-            raise StopAsyncIteration from exc
-        return SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=text))])
-
-    async def aclose(self) -> None:
-        self.closed = True
-
-
-class FakeCompletions:
-    def __init__(self, texts: list[str], usage: Any = None) -> None:
-        self._texts = texts
-        self._usage = usage
-        self.last_kwargs: dict[str, Any] | None = None
-
-    async def create(self, **kwargs: Any) -> FakeChunkStream:
-        self.last_kwargs = kwargs
-        return FakeChunkStream(self._texts, self._usage)
-
-
-class FakeStreamLLM:
-    """Minimal stand-in for OpenAILLM exposing the bits _stream_answer uses."""
-
-    def __init__(self, texts: list[str], usage: Any = None) -> None:
-        self.model_name = "fake-model"
-        self.model_params: dict[str, Any] = {}
-        self.completions = FakeCompletions(texts, usage)
-        self.async_client = SimpleNamespace(chat=SimpleNamespace(completions=self.completions))
-
-    def get_messages(self, input: str, message_history: Any = None, system_instruction: str | None = None) -> list[dict[str, str]]:
-        messages: list[dict[str, str]] = []
-        if system_instruction:
-            messages.append({"role": "system", "content": system_instruction})
-        messages.append({"role": "user", "content": input})
-        return messages
-
-
-class FakePromptTemplate:
-    system_instructions = "Answer the user question using the provided context."
-
-    def format(self, query_text: str, context: str, examples: str) -> str:
-        return f"Q: {query_text}\nCTX: {context}"
-
-
-def _make_stream_agent(retriever: FakeStreamRetriever, llm: FakeStreamLLM) -> KnowledgeGraphAgent:
+def _make_stream_agent(retriever: FakeStreamRetriever, maf_agent: FakeMafAgent) -> KnowledgeGraphAgent:
     agent = object.__new__(KnowledgeGraphAgent)
     agent._driver = FakeDriver()  # type: ignore[assignment]
     agent._retriever = retriever  # type: ignore[assignment]
-    agent._llm = llm  # type: ignore[assignment]
+    agent._agent = maf_agent  # type: ignore[assignment]
+    agent._llm = SimpleNamespace(model_name="fake-model")  # type: ignore[assignment]
     agent._prompt_template = FakePromptTemplate()  # type: ignore[assignment]
+    agent._instructions = FakePromptTemplate.system_instructions  # type: ignore[assignment]
     return agent
 
 
@@ -289,11 +296,11 @@ async def test_ask_stream_emits_metadata_tokens_and_done() -> None:
         metadata={"cypher": "MATCH (f:Flight) RETURN count(f) AS flights"},
     )
     retriever = FakeStreamRetriever(result=result)
-    llm = FakeStreamLLM(
-        ["There ", "are 6 ", "flights."],
-        usage=SimpleNamespace(prompt_tokens=120, completion_tokens=8, total_tokens=128),
+    maf = FakeMafAgent(
+        stream_texts=["There ", "are 6 ", "flights."],
+        usage_details={"input_token_count": 120, "output_token_count": 8, "total_token_count": 128},
     )
-    agent = _make_stream_agent(retriever, llm)
+    agent = _make_stream_agent(retriever, maf)
 
     events = [event async for event in agent.ask_stream("How many flights?")]
 
@@ -306,12 +313,8 @@ async def test_ask_stream_emits_metadata_tokens_and_done() -> None:
     assert "".join(tokens) == "There are 6 flights."
     assert events[-1] == {"type": "done"}
     assert retriever.calls == ["How many flights?"]
-    # The native streaming call must request streaming, pass the model through, and
-    # request token usage on the final chunk.
-    assert llm.completions.last_kwargs is not None
-    assert llm.completions.last_kwargs["stream"] is True
-    assert llm.completions.last_kwargs["model"] == "fake-model"
-    assert llm.completions.last_kwargs["stream_options"] == {"include_usage": True}
+    # The MAF agent is handed the formatted prompt built from the retrieved rows.
+    assert maf.prompts == ['Q: How many flights?\nCTX: {"flights": 6}']
     # A stats event with the answer-generation token usage precedes done.
     stats = next(event for event in events if event["type"] == "stats")
     assert events.index(stats) == len(events) - 2
@@ -323,7 +326,7 @@ async def test_ask_stream_emits_metadata_tokens_and_done() -> None:
     assert answer_call["stage"] == "answer_generation"
     assert {answer_call["prompt"], answer_call["completion"], answer_call["total"]} == {120, 8, 128}
     assert isinstance(answer_call["duration_ms"], float)
-    # The answer-generation request (the messages sent to the LLM) is surfaced.
+    # The answer-generation request (the messages sent to the agent) is surfaced.
     assert answer_call["request"] == [
         {"role": "system", "content": "Answer the user question using the provided context."},
         {"role": "user", "content": 'Q: How many flights?\nCTX: {"flights": 6}'},
@@ -333,10 +336,30 @@ async def test_ask_stream_emits_metadata_tokens_and_done() -> None:
     assert set(stats["durations_ms"]) == {"retrieval", "graph_query", "generation", "total"}
 
 
+async def test_ask_stream_handles_missing_usage() -> None:
+    result = RetrieverResult(
+        items=[RetrieverResultItem(content="{}", metadata={"record": {"n": 1}})],
+        metadata={"cypher": "MATCH (n) RETURN count(n)"},
+    )
+    retriever = FakeStreamRetriever(result=result)
+    # No usage_details — the endpoint reported no token usage for the stream.
+    maf = FakeMafAgent(stream_texts=["ok"], usage_details=None)
+    agent = _make_stream_agent(retriever, maf)
+
+    events = [event async for event in agent.ask_stream("anything")]
+
+    stats = next(event for event in events if event["type"] == "stats")
+    # The answer call still counts even though tokens are unknown (None, not 0).
+    assert stats["llm_calls"] == 1
+    assert stats["tokens"] == {"prompt": None, "completion": None, "total": None}
+    assert stats["calls"][0]["stage"] == "answer_generation"
+    assert events[-1] == {"type": "done"}
+
+
 async def test_ask_stream_degrades_on_retrieval_error() -> None:
     retriever = FakeStreamRetriever(error=Text2CypherRetrievalError("bad cypher"))
-    llm = FakeStreamLLM([])
-    agent = _make_stream_agent(retriever, llm)
+    maf = FakeMafAgent()
+    agent = _make_stream_agent(retriever, maf)
 
     events = [event async for event in agent.ask_stream("nonsense")]
 
@@ -346,6 +369,24 @@ async def test_ask_stream_degrades_on_retrieval_error() -> None:
     assert stats["llm_calls"] == 0
     assert stats["calls"] == []
     assert stats["tokens"] == {"prompt": None, "completion": None, "total": None}
+    assert events[-1] == {"type": "done"}
+    assert maf.prompts == []  # generation never attempted when retrieval fails
+
+
+async def test_ask_stream_emits_error_event_on_generation_failure() -> None:
+    result = RetrieverResult(
+        items=[RetrieverResultItem(content="{}", metadata={"record": {"n": 1}})],
+        metadata={"cypher": "MATCH (n) RETURN count(n)"},
+    )
+    retriever = FakeStreamRetriever(result=result)
+    maf = FakeMafAgent(stream_texts=["partial"], stream_error=RuntimeError("stream blew up"))
+    agent = _make_stream_agent(retriever, maf)
+
+    events = [event async for event in agent.ask_stream("anything")]
+
+    # Metadata still precedes the failure; an error event is emitted, then stats + done.
+    assert events[0]["type"] == "metadata"
+    assert any(event["type"] == "error" for event in events)
     assert events[-1] == {"type": "done"}
 
 
@@ -361,11 +402,11 @@ def test_install_usage_recorder_captures_invoke_usage() -> None:
     agent._install_usage_recorder()
 
     sink: list[dict[str, Any]] = []
-    token = _usage_sink.set(sink)
+    token = usage_sink.set(sink)
     try:
         agent._llm.invoke("the cypher prompt")
     finally:
-        _usage_sink.reset(token)
+        usage_sink.reset(token)
 
     assert len(sink) == 1
     assert sink[0]["prompt"] == 40
@@ -400,45 +441,45 @@ class FakeKGAgent:
 
 
 async def test_ask_endpoint_returns_answer() -> None:
-    api.app.dependency_overrides[api.get_agent] = lambda: FakeKGAgent()
-    transport = ASGITransport(app=api.app)
+    app.app.dependency_overrides[app._get_agent] = lambda: FakeKGAgent()
+    transport = ASGITransport(app=app.app)
     try:
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post("/ask", json={"question": "How many nodes?"})
     finally:
-        api.app.dependency_overrides.clear()
+        app.app.dependency_overrides.clear()
     assert response.status_code == 200
     assert response.json() == {"answer": "42", "cypher_used": ["MATCH (n) RETURN count(n)"], "records": [{"count": 1}]}
 
 
 async def test_ask_endpoint_503_when_agent_unconfigured() -> None:
     # No dependency override and no app.state.agent -> get_agent raises 503.
-    api.app.state.agent = None
-    transport = ASGITransport(app=api.app)
+    app.app.state.agent = None
+    transport = ASGITransport(app=app.app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post("/ask", json={"question": "anything"})
     assert response.status_code == 503
 
 
 async def test_ask_endpoint_rejects_empty_question() -> None:
-    api.app.dependency_overrides[api.get_agent] = lambda: FakeKGAgent()
-    transport = ASGITransport(app=api.app)
+    app.app.dependency_overrides[app._get_agent] = lambda: FakeKGAgent()
+    transport = ASGITransport(app=app.app)
     try:
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post("/ask", json={"question": ""})
     finally:
-        api.app.dependency_overrides.clear()
+        app.app.dependency_overrides.clear()
     assert response.status_code == 422
 
 
 async def test_ask_stream_endpoint_streams_ndjson() -> None:
-    api.app.dependency_overrides[api.get_agent] = lambda: FakeKGAgent()
-    transport = ASGITransport(app=api.app)
+    app.app.dependency_overrides[app._get_agent] = lambda: FakeKGAgent()
+    transport = ASGITransport(app=app.app)
     try:
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post("/ask/stream", json={"question": "How many nodes?"})
     finally:
-        api.app.dependency_overrides.clear()
+        app.app.dependency_overrides.clear()
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/x-ndjson")
     events = [json.loads(line) for line in response.text.splitlines() if line]
@@ -448,8 +489,8 @@ async def test_ask_stream_endpoint_streams_ndjson() -> None:
 
 
 async def test_ask_stream_endpoint_503_when_agent_unconfigured() -> None:
-    api.app.state.agent = None
-    transport = ASGITransport(app=api.app)
+    app.app.state.agent = None
+    transport = ASGITransport(app=app.app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post("/ask/stream", json={"question": "anything"})
     assert response.status_code == 503

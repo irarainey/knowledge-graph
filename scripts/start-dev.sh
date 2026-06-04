@@ -26,7 +26,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 echo "🚀 Starting backend API on http://localhost:8080 ..."
-(cd "$ROOT_DIR/backend" && uv run uvicorn api:app --app-dir src --reload --host 0.0.0.0 --port 8080) &
+(cd "$ROOT_DIR/backend" && uv run uvicorn app:app --app-dir src --reload --host 0.0.0.0 --port 8080) &
 pids+=("$!")
 
 echo "🎈 Starting Streamlit UI on http://localhost:8501 ..."

@@ -7,8 +7,8 @@ idempotent: nodes are matched on their ``id`` property and relationships on the
 
 Usage:
     uv run poe import-graph                 # import data/knowledge-graph.json
-    uv run python src/import_graph.py --clear
-    uv run python src/import_graph.py --file path/to/graph.json
+    uv run python scripts/import_graph.py --clear
+    uv run python scripts/import_graph.py --file path/to/graph.json
 """
 
 from __future__ import annotations
@@ -17,14 +17,21 @@ import argparse
 import json
 import os
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, LiteralString, cast
 
-from dotenv import load_dotenv
 from neo4j import Driver, GraphDatabase, Session
 
-# Repo layout: <repo>/backend/src/import_graph.py -> <repo>/data/knowledge-graph.json
+# This script lives in backend/scripts, outside the ``src`` package. Add ``src`` to
+# the path so the shared ``neo4j_client`` helpers (env loading) import when the
+# script is run directly (the poe task and tests put it on the path too).
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from neo4j_client import load_env
+
+# Repo layout: <repo>/backend/scripts/import_graph.py -> <repo>/data/knowledge-graph.json
 DEFAULT_JSON_PATH = Path(__file__).resolve().parents[2] / "data" / "knowledge-graph.json"
 
 # Cypher cannot parametrise labels or relationship types, so they are interpolated
@@ -73,6 +80,11 @@ def load_graph(path: Path) -> dict[str, Any]:
 
 @dataclass
 class Neo4jConfig:
+    # Deliberate near-duplicate of neo4j_client.Neo4jSettings (same env vars/fields).
+    # Kept separate because this CLI raises SystemExit on missing config (clean exit
+    # with a message), whereas the API's Neo4jSettings raises RuntimeError so the
+    # FastAPI lifespan can catch it and run with the /ask endpoint disabled. Merging
+    # the two would conflate those two error-handling contracts.
     uri: str
     user: str
     password: str
@@ -114,22 +126,13 @@ class GraphImporter:
     @staticmethod
     def _write_node(session: Session, node: dict[str, Any]) -> None:
         query = build_node_query(node.get("labels", []))
-        session.run(query, id=node["id"], props=dict(node.get("properties", {}))).consume()
+        session.run(cast(LiteralString, query), id=node["id"], props=dict(node.get("properties", {}))).consume()
 
     @staticmethod
     def _write_relationship(session: Session, rel: dict[str, Any]) -> None:
         query = build_relationship_query(rel["type"])
         params = {"start": rel["startNode"], "end": rel["endNode"], "props": dict(rel.get("properties", {}))}
-        session.run(query, **params).consume()
-
-
-def _load_env(env_file: Path | None) -> None:
-    if env_file is not None:
-        load_dotenv(env_file)
-        return
-    # Default: backend/.env (next to pyproject.toml), then any .env in the cwd.
-    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
-    load_dotenv()
+        session.run(cast(LiteralString, query), **params).consume()
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -142,7 +145,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    _load_env(args.env_file)
+    load_env(args.env_file)
 
     config = Neo4jConfig.from_env()
     graph = load_graph(args.file)

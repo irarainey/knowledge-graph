@@ -5,6 +5,10 @@
 
 set -e
 
+# Run from the repo root regardless of where the script is invoked from, so the
+# relative backend/ and frontend/ paths below resolve correctly.
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 # Install GitHub Copilot CLI if not present
 if ! command -v github-copilot-cli &> /dev/null && ! command -v copilot &> /dev/null; then
     echo "🤖 Installing GitHub Copilot CLI..."
