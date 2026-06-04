@@ -39,7 +39,7 @@ uv run pytest tests/test_foo.py::test_bar -v
 ### Conventions
 
 - Python 3.13+, line length 140 characters.
-- `print()` is allowed — used in logging.
+- **Logging, not `print()`** — log through the application logger via `get_logger(__name__)` (root logger `kg`, configured by `setup_logging()` in `common/logging_config.py`). `LOG_LEVEL` (default `INFO`) controls verbosity. Optional Azure Application Insights telemetry is wired up by `common/observability.py` (`setup()`), enabled when `APPLICATIONINSIGHTS_CONNECTION_STRING` is set.
 - Ruff rules: isort (`I`), pyupgrade (`UP`), bugbear (`B`), simplify (`SIM`), pep8-naming (`N`). `N815` is ignored for Pydantic models matching JSON APIs.
 - Async-first: pytest uses `asyncio_mode = "auto"` — no markers needed on async tests.
 - Source code in `backend/src/`, tests in `backend/tests/`.

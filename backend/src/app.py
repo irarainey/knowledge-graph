@@ -27,6 +27,7 @@ from agents import AzureOpenAISettings, KnowledgeGraphAgent
 from common import config
 from common.env import load_env
 from common.logging_config import get_logger, setup_logging
+from common.observability import setup as setup_observability
 from models import AskRequest, QueryRequest, QueryResponse
 from neo4j_client import Neo4jClient, Neo4jSettings
 
@@ -35,6 +36,9 @@ from neo4j_client import Neo4jClient, Neo4jSettings
 load_env()
 setup_logging(level=os.getenv(config.ENV_LOG_LEVEL, config.LOG_LEVEL_DEFAULT))
 logger = get_logger(__name__)
+
+# Wire up Azure Application Insights telemetry (no-op when unconfigured).
+setup_observability()
 
 
 @asynccontextmanager

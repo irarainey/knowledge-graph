@@ -289,6 +289,28 @@ curl -N -X POST http://localhost:8080/ask \
 The [`frontend/chat-ui`](../frontend/chat-ui) project consumes this endpoint to stream answers
 into a chat interface.
 
+## Logging and observability
+
+The backend logs through a single application logger (root name `kg`) configured at
+startup in `app.py` via `setup_logging()`. Set `LOG_LEVEL` in `backend/.env` to control
+verbosity:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `LOG_LEVEL` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`). `DEBUG` adds per-step pipeline detail (schema fetch, cypher generation, retrieval, generation, query execution). |
+
+Noisy third-party libraries (`neo4j`, `openai`, `httpx`, `opentelemetry`, `azure.*`)
+are pinned to `WARNING` so the application's own logs stay readable, even at `DEBUG`.
+
+Distributed tracing, metrics and logs can additionally be exported to **Azure
+Application Insights**. This is opt-in and configured at startup via
+`observability.setup()`, which enables the Microsoft Agent Framework's OpenTelemetry
+instrumentation when a connection string is present:
+
+| Variable | Example | Description |
+| --- | --- | --- |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | `InstrumentationKey=...;IngestionEndpoint=...` | Azure Application Insights connection string. When unset, telemetry is silently skipped — no Azure resources are needed for local development. |
+
 ## Running with the UIs
 
 `uv run poe serve` starts only the API. To start the backend together with the
@@ -304,3 +326,4 @@ Vue frontend). In VS Code, press **F5** and choose **“Launch All (Backend + St
   (answer generation), both backed by **Azure OpenAI**
 - **uv** for dependency management, **poethepoet** for task running
 - **ruff** for linting/formatting, **mypy** for type checking, **pytest** for tests
+- **Azure Application Insights** (via **azure-monitor-opentelemetry**) for optional telemetry

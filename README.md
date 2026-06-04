@@ -200,6 +200,11 @@ agent generates the answer from those rows.
 Set the `AZURE_OPENAI_*` variables in `backend/.env` (see `backend/.env.example`) to
 enable it.
 
+> Optional: set `LOG_LEVEL` (default `INFO`; use `DEBUG` for per-step pipeline detail)
+> and `APPLICATIONINSIGHTS_CONNECTION_STRING` (to export OpenTelemetry traces, metrics
+> and logs to Azure Application Insights). See
+> [backend/README.md](backend/README.md#logging-and-observability) for details.
+
 ```bash
 curl -N -X POST http://localhost:8080/ask \
   -H 'Content-Type: application/json' \

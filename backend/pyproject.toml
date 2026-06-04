@@ -13,6 +13,7 @@ dependencies = [
     "neo4j>=6.2.0",
     "agent-framework-core>=1.7.0",
     "agent-framework-openai>=1.7.0",
+    "azure-monitor-opentelemetry>=1.8.8",
 ]
 
 [dependency-groups]
