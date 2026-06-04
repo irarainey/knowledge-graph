@@ -13,14 +13,36 @@ defineEmits<{
   close: []
 }>()
 
-const labelFor = (id: string): string => props.graph.nodes.find((n) => n.id === id)?.label ?? id
+const labelsById = computed(() => {
+  const map = new Map<string, string>()
+  for (const n of props.graph.nodes) map.set(n.id, n.label)
+  return map
+})
+const labelFor = (id: string): string => labelsById.value.get(id) ?? id
 
-const outgoing = computed(() =>
-  props.node ? props.graph.links.filter((l) => l.source === props.node!.id) : [],
-)
-const incoming = computed(() =>
-  props.node ? props.graph.links.filter((l) => l.target === props.node!.id) : [],
-)
+// Index links by endpoint once per graph so selecting a node is O(degree) rather
+// than scanning every link (O(edges)) for both the outgoing and incoming lists.
+const linksBySource = computed(() => {
+  const map = new Map<string, Graph['links']>()
+  for (const l of props.graph.links) {
+    const list = map.get(l.source)
+    if (list) list.push(l)
+    else map.set(l.source, [l])
+  }
+  return map
+})
+const linksByTarget = computed(() => {
+  const map = new Map<string, Graph['links']>()
+  for (const l of props.graph.links) {
+    const list = map.get(l.target)
+    if (list) list.push(l)
+    else map.set(l.target, [l])
+  }
+  return map
+})
+
+const outgoing = computed(() => (props.node ? (linksBySource.value.get(props.node.id) ?? []) : []))
+const incoming = computed(() => (props.node ? (linksByTarget.value.get(props.node.id) ?? []) : []))
 const propEntries = computed(() => (props.node ? Object.entries(props.node.props) : []))
 </script>
 

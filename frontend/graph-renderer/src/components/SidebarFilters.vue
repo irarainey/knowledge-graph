@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Graph } from '../types'
 import type { StyleResolver } from '../graph'
 
@@ -13,9 +14,13 @@ defineEmits<{
   toggle: [type: string]
 }>()
 
-function countFor(type: string): number {
-  return props.graph.nodes.filter((n) => n.type === type).length
-}
+// Count nodes per type once per graph change instead of scanning all nodes for
+// every button on every render (O(types × nodes) per render otherwise).
+const typeCounts = computed(() => {
+  const counts = new Map<string, number>()
+  for (const n of props.graph.nodes) counts.set(n.type, (counts.get(n.type) ?? 0) + 1)
+  return counts
+})
 </script>
 
 <template>
@@ -30,7 +35,7 @@ function countFor(type: string): number {
     >
       <span class="dot" :style="{ background: styleFor(type).color }"></span>
       {{ styleFor(type).label }}
-      <span class="count">{{ countFor(type) }}</span>
+      <span class="count">{{ typeCounts.get(type) ?? 0 }}</span>
     </button>
   </div>
 </template>

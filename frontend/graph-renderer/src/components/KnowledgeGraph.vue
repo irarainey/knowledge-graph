@@ -39,11 +39,21 @@ let nodeSel: d3.Selection<SVGGElement, SimNode, SVGGElement, unknown> | null = n
 const HIERARCHY = ['HAS_SYSTEM', 'HAS_COMPONENT', 'HAS_PART', 'HAS_PHASE', 'HAS_RUNWAY']
 const isHierarchy = (rel: string): boolean => HIERARCHY.includes(rel)
 
+// Above these sizes the renderer drops expensive per-element extras (the per-node
+// blur filter, the per-edge text labels) to stay responsive on large graphs.
+// Smaller graphs render exactly as before.
+const SHADOW_MAX_NODES = 600
+const LINK_LABEL_MAX_LINKS = 1200
+
 // Remembered node positions so layout switches aren't jarring.
 const posCache = new Map<string, { x: number; y: number }>()
 // The live zoom transform, preserved across rebuilds.
 let savedTransform: d3.ZoomTransform = d3.zoomIdentity
 let zoomK = 1
+// Whether link labels are currently shown by zoom level (the only zoom-dependent
+// visual). Tracked so panning/zooming only restyles labels when crossing the LOD
+// threshold instead of restyling the whole graph on every frame.
+let labelLOD = false
 
 // Per-build derived structure, recomputed on every build().
 let parentMap = new Map<string, string>()
@@ -107,6 +117,11 @@ function build(): void {
 
   teardown()
 
+  // Forget cached positions for nodes that are no longer present (e.g. after
+  // loading a different/larger export) so the cache can't grow unbounded.
+  const presentIds = new Set(props.graph.nodes.map((n) => n.id))
+  for (const key of posCache.keys()) if (!presentIds.has(key)) posCache.delete(key)
+
   const W = svgEl.clientWidth
   const H = svgEl.clientHeight
   const root = d3.select(svgEl)
@@ -132,7 +147,9 @@ function build(): void {
       savedTransform = e.transform
       zoomK = e.transform.k
       container.attr('transform', e.transform.toString())
-      applyVisualState()
+      // Only link-label visibility depends on zoom; nothing depends on panning.
+      // Restyle labels solely when crossing the LOD threshold to keep pan/zoom O(1).
+      if (zoomK > 1.4 !== labelLOD) applyLinkLabelLOD()
     })
   root.call(zoomBehavior)
   // Clicking empty canvas clears the current selection.
@@ -219,15 +236,20 @@ function build(): void {
     .attr('stroke', (d) => props.styleFor(typeOf(d.target)).color)
     .attr('marker-end', (d) => `url(#arrow-${typeOf(d.target)})`)
 
-  // Link labels for non-structural edges.
-  linkLabelSel = container
-    .append('g')
-    .selectAll<SVGTextElement, SimLink>('text')
-    .data(links.filter((d) => !isHierarchy(d.rel)))
-    .enter()
-    .append('text')
-    .attr('class', 'link-label')
-    .text((d) => d.rel)
+  // Link labels for non-structural edges. Skipped entirely on large graphs, where
+  // thousands of (mostly hidden) <text> nodes — each repositioned every tick —
+  // dominate render and tick time.
+  linkLabelSel =
+    links.length <= LINK_LABEL_MAX_LINKS
+      ? container
+          .append('g')
+          .selectAll<SVGTextElement, SimLink>('text')
+          .data(links.filter((d) => !isHierarchy(d.rel)))
+          .enter()
+          .append('text')
+          .attr('class', 'link-label')
+          .text((d) => d.rel)
+      : null
 
   // Track whether a gesture was a drag so the trailing click doesn't select.
   let dragMoved = false
@@ -267,12 +289,17 @@ function build(): void {
       emit('node-selected', d)
     })
 
-  nodeSel
+  const circleSel = nodeSel
     .append('circle')
     .attr('r', (d) => props.styleFor(d.type).size)
     .attr('fill', (d) => props.styleFor(d.type).dimColor)
     .attr('stroke', (d) => props.styleFor(d.type).color)
-    .style('filter', (d) => `drop-shadow(0 0 6px ${props.styleFor(d.type).color}66)`)
+
+  // The per-node drop-shadow blur is the most expensive SVG effect at scale, so
+  // it is only applied while the graph is small enough to stay smooth.
+  if (nodes.length <= SHADOW_MAX_NODES) {
+    circleSel.style('filter', (d) => `drop-shadow(0 0 6px ${props.styleFor(d.type).color}66)`)
+  }
 
   nodeSel
     .append('text')
@@ -287,12 +314,22 @@ function build(): void {
       .attr('x2', (d) => (d.target as SimNode).x ?? 0)
       .attr('y2', (d) => (d.target as SimNode).y ?? 0)
 
-    linkLabelSel!
-      .attr('x', (d) => (((d.source as SimNode).x ?? 0) + ((d.target as SimNode).x ?? 0)) / 2)
-      .attr('y', (d) => (((d.source as SimNode).y ?? 0) + ((d.target as SimNode).y ?? 0)) / 2)
+    if (linkLabelSel) {
+      linkLabelSel
+        .attr('x', (d) => (((d.source as SimNode).x ?? 0) + ((d.target as SimNode).x ?? 0)) / 2)
+        .attr('y', (d) => (((d.source as SimNode).y ?? 0) + ((d.target as SimNode).y ?? 0)) / 2)
+    }
 
     nodeSel!.attr('transform', (d) => {
-      posCache.set(d.id, { x: d.x ?? 0, y: d.y ?? 0 })
+      // Mutate the cached position in place to avoid allocating an object per node
+      // on every tick (heavy GC churn on large graphs).
+      const cached = posCache.get(d.id)
+      if (cached) {
+        cached.x = d.x ?? 0
+        cached.y = d.y ?? 0
+      } else {
+        posCache.set(d.id, { x: d.x ?? 0, y: d.y ?? 0 })
+      }
       return `translate(${d.x ?? 0},${d.y ?? 0})`
     })
   })
@@ -363,15 +400,25 @@ function applyVisualState(): void {
     return 0.45
   })
 
-  if (linkLabelSel) {
-    linkLabelSel.style('opacity', (d) => {
-      const sn = d.source as SimNode
-      const tn = d.target as SimNode
-      if (!active.has(sn.type) || !active.has(tn.type)) return 0
-      const inFocusEdge = !!focus && focus.has(sn.id) && focus.has(tn.id)
-      return zoomK > 1.4 || inFocusEdge ? 0.75 : 0
-    })
-  }
+  applyLinkLabelLOD()
+}
+
+// Link-label level-of-detail — the only visual that depends on zoom. Split out so
+// the zoom handler can update labels alone (and only when crossing the threshold)
+// instead of restyling every node and link on each pan/zoom frame. Always leaves
+// `labelLOD` in sync with the current zoom so the zoom handler stays consistent.
+function applyLinkLabelLOD(): void {
+  labelLOD = zoomK > 1.4
+  if (!linkLabelSel) return
+  const active = props.activeTypes
+  const focus = props.selectedId ? downstreamSet(props.selectedId) : null
+  linkLabelSel.style('opacity', (d) => {
+    const sn = d.source as SimNode
+    const tn = d.target as SimNode
+    if (!active.has(sn.type) || !active.has(tn.type)) return 0
+    const inFocusEdge = !!focus && focus.has(sn.id) && focus.has(tn.id)
+    return labelLOD || inFocusEdge ? 0.75 : 0
+  })
 }
 
 function resetView(): void {
