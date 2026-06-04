@@ -343,6 +343,38 @@ def test_install_usage_recorder_captures_invoke_usage() -> None:
     assert getattr(agent._llm, "_kg_usage_wrapped", False) is True
 
 
+def test_install_usage_recorder_emits_cypher_generation_span(monkeypatch: pytest.MonkeyPatch) -> None:
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    import agents.knowledge_graph_agent as kga
+
+    provider = TracerProvider()
+    exporter = InMemorySpanExporter()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    monkeypatch.setattr(kga, "tracer", provider.get_tracer("test"))
+
+    agent = object.__new__(KnowledgeGraphAgent)
+    agent._llm = SimpleNamespace(  # type: ignore[assignment]
+        model_name="fake-model",
+        invoke=lambda *a, **k: SimpleNamespace(
+            content="MATCH (n) RETURN n",
+            usage=SimpleNamespace(request_tokens=40, response_tokens=12, total_tokens=52),
+        ),
+    )
+    agent._install_usage_recorder()
+    agent._llm.invoke("the cypher prompt")
+
+    spans = [s for s in exporter.get_finished_spans() if s.name == "chat fake-model"]
+    assert len(spans) == 1
+    attrs = dict(spans[0].attributes or {})
+    assert attrs["gen_ai.operation.name"] == "chat"
+    assert attrs["gen_ai.request.model"] == "fake-model"
+    assert attrs["gen_ai.usage.input_tokens"] == 40
+    assert attrs["gen_ai.usage.output_tokens"] == 12
+
+
 # ── /ask endpoint ─────────────────────────────────────────────────────
 class FakeKGAgent:
     async def ask(self, question: str) -> Any:

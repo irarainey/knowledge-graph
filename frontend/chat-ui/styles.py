@@ -25,9 +25,24 @@ html, body, [class*="css"], button, input, textarea {
     padding-right: 1rem;
 }
 [data-testid="stMainBlockContainer"] { padding-top: 3rem; }
-/* Reserve the scrollbar gutter so the centred columns don't shift when the
-   main area scrolls but the fixed bottom bar does not. */
-[data-testid="stMain"] { scrollbar-gutter: stable; }
+/* Pin the main scroll container so messages scroll *inside* it and the sticky
+   chat-input bar stays put. When a chat_input is present Streamlit swaps the
+   main element's test id to stAppScrollToBottomContainer (an auto-scroll-to-
+   bottom wrapper), so both ids must be targeted. The 100vh fallback before
+   100dvh guards browsers/preview panes that mishandle dynamic viewport units —
+   without a constrained height the whole document scrolls instead, which makes
+   the page un-scrollable and the sticky input drift up and down.
+   scrollbar-gutter keeps the centred column from shifting when the bar appears. */
+[data-testid="stMain"],
+[data-testid="stAppScrollToBottomContainer"] {
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+}
 h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.01em; }
 
 /* Consistent rounded controls, matching the Vue app's 8px radius. */

@@ -31,6 +31,8 @@ from neo4j_graphrag.generation import RagTemplate
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.retrievers import Text2CypherRetriever
 from neo4j_graphrag.types import RetrieverResult
+from opentelemetry import trace
+from opentelemetry.trace import StatusCode
 
 from common.azure_openai import AzureOpenAISettings, build_chat_client, build_llm
 from common.graph_schema import fetch_schema_text
@@ -50,6 +52,7 @@ from prompts import CYPHER_GENERATION_PROMPT, DEFAULT_EXAMPLES, RAG_TEMPLATE
 __all__ = ["AzureOpenAISettings", "KnowledgeGraphAgent"]
 
 logger = get_logger(__name__)
+tracer = trace.get_tracer(__name__)
 
 # Shown to the user when retrieval or generation fails, so the API degrades
 # gracefully instead of returning a 500.
@@ -150,36 +153,59 @@ class KnowledgeGraphAgent:
         logger.debug("Knowledge-graph agent ready (retriever + MAF answer agent constructed)")
 
     def _install_usage_recorder(self) -> None:
-        """Wrap ``self._llm.invoke`` so cypher-generation token usage is captured.
+        """Wrap ``self._llm.invoke`` to capture cypher-generation usage and tracing.
 
         KNOWN ANTI-PATTERN (deliberate trade-off): this monkey-patches a method on a
         third-party ``neo4j-graphrag`` LLM object and tags it with a private
         ``_kg_usage_wrapped`` flag. It is fragile — it reaches into library internals
         and could break if ``invoke``'s signature changes. We accept it because
         ``Text2CypherRetriever`` calls ``llm.invoke`` to generate Cypher but exposes
-        no hook to observe that call's token usage, which the debug telemetry needs.
-        The wrapper appends each call's normalized usage to the request-scoped
-        :data:`usage_sink` (when one is active). The original bound method is
-        preserved and double-wrapping is guarded against. Revisit if neo4j-graphrag
-        ever surfaces retriever-level usage.
+        no hook to observe that call, which both the debug telemetry and observability
+        need. The wrapper appends each call's normalized usage to the request-scoped
+        :data:`usage_sink` (when one is active) and emits a ``gen_ai`` OpenTelemetry
+        span. The original bound method is preserved and double-wrapping is guarded
+        against. Revisit if neo4j-graphrag ever surfaces retriever-level hooks.
+
+        Why the span is needed: cypher generation runs through neo4j-graphrag's own
+        OpenAI client, which the Microsoft Agent Framework's instrumentation does not
+        see (only answer generation, via the MAF chat client, is auto-traced). Without
+        this span, only one of the two LLM calls per question would appear in telemetry.
         """
         if getattr(self._llm, "_kg_usage_wrapped", False):
             return
         original_invoke = self._llm.invoke
+        model = getattr(self._llm, "model_name", None)
 
         def recording_invoke(*args: Any, **kwargs: Any) -> Any:
             # LLMInterface.invoke(input, message_history=None, system_instruction=None).
             request_input = args[0] if args else kwargs.get("input")
             request_system = args[2] if len(args) >= 3 else kwargs.get("system_instruction")
-            start = time.perf_counter()
-            response = original_invoke(*args, **kwargs)
-            duration_ms = elapsed_ms(start)
+            # Emit a gen_ai span so the cypher-generation LLM call shows up in telemetry
+            # alongside the MAF-traced answer-generation call.
+            with tracer.start_as_current_span(f"chat {model}" if model else "chat") as span:
+                span.set_attribute("gen_ai.operation.name", "chat")
+                span.set_attribute("gen_ai.system", "openai")
+                if model:
+                    span.set_attribute("gen_ai.request.model", model)
+                start = time.perf_counter()
+                try:
+                    response = original_invoke(*args, **kwargs)
+                except Exception as exc:
+                    span.record_exception(exc)
+                    span.set_status(StatusCode.ERROR, type(exc).__name__)
+                    raise
+                duration_ms = elapsed_ms(start)
+                usage = normalize_llm_usage(getattr(response, "usage", None))
+                if usage["prompt"] is not None:
+                    span.set_attribute("gen_ai.usage.input_tokens", usage["prompt"])
+                if usage["completion"] is not None:
+                    span.set_attribute("gen_ai.usage.output_tokens", usage["completion"])
             logger.debug("Cypher-generation LLM call completed in %.1fms", duration_ms)
             sink = usage_sink.get()
             if sink is not None:
                 sink.append(
                     {
-                        **normalize_llm_usage(getattr(response, "usage", None)),
+                        **usage,
                         "duration_ms": duration_ms,
                         "request": build_llm_messages(request_system, request_input),
                     }

@@ -311,6 +311,17 @@ instrumentation when a connection string is present:
 | --- | --- | --- |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | `InstrumentationKey=...;IngestionEndpoint=...` | Azure Application Insights connection string. When unset, telemetry is silently skipped — no Azure resources are needed for local development. |
 
+Each `/ask` request appears as one App Insights *operation* (the FastAPI request span,
+auto-instrumented by `configure_azure_monitor`). Both LLM calls in the retrieve →
+generate pipeline are traced as `gen_ai` child spans under it:
+
+- **Answer generation** is traced automatically by the Microsoft Agent Framework's
+  instrumentation (it runs through the MAF chat client).
+- **Cypher generation** runs through `neo4j-graphrag`'s own OpenAI client, which the
+  MAF instrumentation does not see, so it is traced with an explicit `gen_ai` span
+  emitted from the agent's `invoke` wrapper (`_install_usage_recorder`). Without this,
+  only the answer-generation call would be visible.
+
 ## Running with the UIs
 
 `uv run poe serve` starts only the API. To start the backend together with the
