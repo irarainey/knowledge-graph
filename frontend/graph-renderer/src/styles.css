@@ -53,7 +53,7 @@ body {
 
 .link-label {
   font-family: var(--font);
-  font-size: 7px;
+  font-size: 6px;
   font-weight: 400;
   fill: var(--text-dim);
   pointer-events: none;

@@ -245,7 +245,8 @@ function build(): void {
   }
 
   // Cluster headings: one label per type, drawn above each type's cluster in the
-  // default layout. Created here (before nodes) so positions update each tick.
+  // default (clustered) layout only. Created here (before nodes) so positions
+  // update each tick.
   if (!radial && nodes.length <= CLUSTER_LABEL_MAX_NODES) {
     const hullLabelGroup = container.append('g').attr('class', 'hull-labels')
     hullLabelSel = hullLabelGroup
@@ -472,7 +473,7 @@ function applyVisualState(): void {
       const sn = d.source as SimNode
       const tn = d.target as SimNode
       if (!active.has(sn.type) || !active.has(tn.type)) return 0
-      return edgeInFocus(d) ? 0.85 : 0
+      return edgeInFocus(d) ? 0.95 : 0
     })
   }
 
