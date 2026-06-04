@@ -11,7 +11,7 @@
         "registration": "G-ECHO",
         "manufacturer": "Cessna",
         "model": "172S Skyhawk",
-        "mtow_kg": 1111,
+        "mtow_kg": 1157,
         "engineCount": 1
       }
     },
@@ -148,8 +148,9 @@
       ],
       "properties": {
         "name": "Left Tank",
-        "fuelCapacity_litres": 95,
-        "usable_gal": 28
+        "fuelCapacity_litres": 106,
+        "usable_gal": 26.5,
+        "capacity_gal": 28
       }
     },
     {
@@ -160,8 +161,9 @@
       ],
       "properties": {
         "name": "Right Tank",
-        "fuelCapacity_litres": 95,
-        "usable_gal": 28
+        "fuelCapacity_litres": 106,
+        "usable_gal": 26.5,
+        "capacity_gal": 28
       }
     },
     {
@@ -318,7 +320,7 @@
         "Flap"
       ],
       "properties": {
-        "name": "Flaps (0\u201330\u00b0)",
+        "name": "Flaps (0–30°)",
         "type": "single-slotted, electric",
         "settings_deg": "0/10/20/30"
       }
@@ -502,23 +504,13 @@
       }
     },
     {
-      "id": "atc",
-      "labels": [
-        "Person",
-        "ATC"
-      ],
-      "properties": {
-        "name": "Air Traffic Control"
-      }
-    },
-    {
       "id": "poh",
       "labels": [
         "Document",
         "POH"
       ],
       "properties": {
-        "name": "POH \u2014 C172S"
+        "name": "POH — C172S"
       }
     },
     {
@@ -560,13 +552,19 @@
         "name": "Flight 001",
         "departureAerodrome": "EGGD",
         "destinationAerodrome": "EGBP",
-        "blockTime_minutes": 45,
+        "blockTime_minutes": 42,
         "date": "2026-05-20",
         "callsign": "GECHO",
         "flightRules": "VFR",
         "distance_nm": 28,
         "cruiseAltitude_ft": 2500,
-        "flightTime_hours": 0.5
+        "flightTime_hours": 0.6,
+        "squawk": "5061",
+        "timezone": "UTC",
+        "offBlockTime": "2026-05-20T09:15Z",
+        "departureTime": "2026-05-20T09:21Z",
+        "arrivalTime": "2026-05-20T09:56Z",
+        "onBlockTime": "2026-05-20T09:57Z"
       }
     },
     {
@@ -583,7 +581,9 @@
         "groundspeed_kt": 0,
         "distance_nm": 0,
         "activity": "walkaround & cockpit checks",
-        "fuelState": "full tanks"
+        "fuelState": "full tanks",
+        "startTime": "2026-05-20T09:00Z",
+        "endTime": "2026-05-20T09:15Z"
       }
     },
     {
@@ -599,7 +599,9 @@
         "fieldElevation_ft": 622,
         "distance_nm": 0.8,
         "groundRoll_m": 1482,
-        "route": "apron to holding point"
+        "route": "apron to holding point",
+        "startTime": "2026-05-20T09:15Z",
+        "endTime": "2026-05-20T09:20Z"
       }
     },
     {
@@ -617,7 +619,9 @@
         "departureRunway": "09/27",
         "liftoffSpeed_kt": 56,
         "groundRoll_m": 290,
-        "distance_nm": 0.2
+        "distance_nm": 0.2,
+        "startTime": "2026-05-20T09:20Z",
+        "endTime": "2026-05-20T09:21Z"
       }
     },
     {
@@ -635,7 +639,9 @@
         "startAltitude_ft": 622,
         "groundspeed_kt": 75,
         "distance_nm": 5.0,
-        "powerSetting": "full throttle"
+        "powerSetting": "full throttle",
+        "startTime": "2026-05-20T09:21Z",
+        "endTime": "2026-05-20T09:25Z"
       }
     },
     {
@@ -653,7 +659,10 @@
         "trueAirspeed_kt": 115,
         "groundspeed_kt": 110,
         "fuelBurn_gph": 8.5,
-        "distance_nm": 36.7
+        "distance_nm": 36.7,
+        "startTime": "2026-05-20T09:25Z",
+        "endTime": "2026-05-20T09:45Z",
+        "squawk": "7000"
       }
     },
     {
@@ -670,7 +679,9 @@
         "startAltitude_ft": 2500,
         "targetAltitude_ft": 1433,
         "groundspeed_kt": 120,
-        "distance_nm": 12.0
+        "distance_nm": 12.0,
+        "startTime": "2026-05-20T09:45Z",
+        "endTime": "2026-05-20T09:51Z"
       }
     },
     {
@@ -688,7 +699,9 @@
         "glidepath_deg": 3,
         "groundspeed_kt": 70,
         "distance_nm": 5.8,
-        "arrivalRunway": "08/26"
+        "arrivalRunway": "08/26",
+        "startTime": "2026-05-20T09:51Z",
+        "endTime": "2026-05-20T09:56Z"
       }
     },
     {
@@ -705,7 +718,9 @@
         "fieldElevation_ft": 433,
         "arrivalRunway": "08/26",
         "groundRoll_m": 175,
-        "distance_nm": 0.3
+        "distance_nm": 0.3,
+        "startTime": "2026-05-20T09:56Z",
+        "endTime": "2026-05-20T09:57Z"
       }
     },
     {
@@ -885,7 +900,9 @@
         "name": "Bristol",
         "icao": "EGGD",
         "iata": "BRS",
-        "elevation_ft": 622
+        "elevation_ft": 622,
+        "latitude": 51.3827,
+        "longitude": -2.7191
       }
     },
     {
@@ -897,7 +914,9 @@
       "properties": {
         "name": "Cotswold Airport",
         "icao": "EGBP",
-        "elevation_ft": 433
+        "elevation_ft": 433,
+        "latitude": 51.6681,
+        "longitude": -2.057
       }
     },
     {
@@ -1606,8 +1625,14 @@
         "flightRules": "VFR",
         "distance_nm": 14,
         "flightTime_hours": 0.3,
-        "blockTime_minutes": 33,
-        "cruiseAltitude_ft": 2200
+        "blockTime_minutes": 25,
+        "cruiseAltitude_ft": 2200,
+        "squawk": "5062",
+        "timezone": "UTC",
+        "offBlockTime": "2026-05-22T10:45Z",
+        "departureTime": "2026-05-22T10:51Z",
+        "arrivalTime": "2026-05-22T11:09Z",
+        "onBlockTime": "2026-05-22T11:10Z"
       }
     },
     {
@@ -1624,8 +1649,14 @@
         "flightRules": "VFR",
         "distance_nm": 23,
         "flightTime_hours": 0.4,
-        "blockTime_minutes": 39,
-        "cruiseAltitude_ft": 2000
+        "blockTime_minutes": 29,
+        "cruiseAltitude_ft": 2000,
+        "squawk": "5063",
+        "timezone": "UTC",
+        "offBlockTime": "2026-05-25T08:30Z",
+        "departureTime": "2026-05-25T08:36Z",
+        "arrivalTime": "2026-05-25T08:58Z",
+        "onBlockTime": "2026-05-25T08:59Z"
       }
     },
     {
@@ -1642,8 +1673,14 @@
         "flightRules": "VFR",
         "distance_nm": 47,
         "flightTime_hours": 0.6,
-        "blockTime_minutes": 51,
-        "cruiseAltitude_ft": 3500
+        "blockTime_minutes": 41,
+        "cruiseAltitude_ft": 3500,
+        "squawk": "5064",
+        "timezone": "UTC",
+        "offBlockTime": "2026-05-28T13:15Z",
+        "departureTime": "2026-05-28T13:21Z",
+        "arrivalTime": "2026-05-28T13:55Z",
+        "onBlockTime": "2026-05-28T13:56Z"
       }
     },
     {
@@ -1660,8 +1697,14 @@
         "flightRules": "VFR",
         "distance_nm": 29,
         "flightTime_hours": 0.5,
-        "blockTime_minutes": 45,
-        "cruiseAltitude_ft": 2500
+        "blockTime_minutes": 35,
+        "cruiseAltitude_ft": 2500,
+        "squawk": "5065",
+        "timezone": "UTC",
+        "offBlockTime": "2026-06-01T11:15Z",
+        "departureTime": "2026-06-01T11:21Z",
+        "arrivalTime": "2026-06-01T11:49Z",
+        "onBlockTime": "2026-06-01T11:50Z"
       }
     },
     {
@@ -1678,8 +1721,14 @@
         "flightRules": "VFR",
         "distance_nm": 49,
         "flightTime_hours": 0.7,
-        "blockTime_minutes": 57,
-        "cruiseAltitude_ft": 3000
+        "blockTime_minutes": 47,
+        "cruiseAltitude_ft": 3000,
+        "squawk": "5066",
+        "timezone": "UTC",
+        "offBlockTime": "2026-06-04T14:15Z",
+        "departureTime": "2026-06-04T14:21Z",
+        "arrivalTime": "2026-06-04T15:01Z",
+        "onBlockTime": "2026-06-04T15:02Z"
       }
     },
     {
@@ -1696,7 +1745,9 @@
         "groundspeed_kt": 0,
         "distance_nm": 0,
         "activity": "walkaround & cockpit checks",
-        "fuelState": "full tanks"
+        "fuelState": "full tanks",
+        "startTime": "2026-05-22T10:30Z",
+        "endTime": "2026-05-22T10:45Z"
       }
     },
     {
@@ -1712,7 +1763,9 @@
         "fieldElevation_ft": 433,
         "distance_nm": 0.8,
         "groundRoll_m": 1482,
-        "route": "apron to holding point"
+        "route": "apron to holding point",
+        "startTime": "2026-05-22T10:45Z",
+        "endTime": "2026-05-22T10:50Z"
       }
     },
     {
@@ -1730,7 +1783,9 @@
         "departureRunway": "08/26",
         "liftoffSpeed_kt": 56,
         "groundRoll_m": 290,
-        "distance_nm": 0.2
+        "distance_nm": 0.2,
+        "startTime": "2026-05-22T10:50Z",
+        "endTime": "2026-05-22T10:51Z"
       }
     },
     {
@@ -1748,7 +1803,9 @@
         "startAltitude_ft": 433,
         "groundspeed_kt": 75,
         "distance_nm": 5.0,
-        "powerSetting": "full throttle"
+        "powerSetting": "full throttle",
+        "startTime": "2026-05-22T10:51Z",
+        "endTime": "2026-05-22T10:55Z"
       }
     },
     {
@@ -1766,7 +1823,10 @@
         "trueAirspeed_kt": 115,
         "groundspeed_kt": 110,
         "fuelBurn_gph": 8.5,
-        "distance_nm": 5.5
+        "distance_nm": 5.5,
+        "startTime": "2026-05-22T10:55Z",
+        "endTime": "2026-05-22T10:58Z",
+        "squawk": "7000"
       }
     },
     {
@@ -1783,7 +1843,9 @@
         "startAltitude_ft": 2200,
         "targetAltitude_ft": 1101,
         "groundspeed_kt": 120,
-        "distance_nm": 12.0
+        "distance_nm": 12.0,
+        "startTime": "2026-05-22T10:58Z",
+        "endTime": "2026-05-22T11:04Z"
       }
     },
     {
@@ -1801,7 +1863,9 @@
         "glidepath_deg": 3,
         "groundspeed_kt": 70,
         "distance_nm": 5.8,
-        "arrivalRunway": "09/27"
+        "arrivalRunway": "09/27",
+        "startTime": "2026-05-22T11:04Z",
+        "endTime": "2026-05-22T11:09Z"
       }
     },
     {
@@ -1818,7 +1882,9 @@
         "fieldElevation_ft": 101,
         "arrivalRunway": "09/27",
         "groundRoll_m": 175,
-        "distance_nm": 0.3
+        "distance_nm": 0.3,
+        "startTime": "2026-05-22T11:09Z",
+        "endTime": "2026-05-22T11:10Z"
       }
     },
     {
@@ -1835,7 +1901,9 @@
         "groundspeed_kt": 0,
         "distance_nm": 0,
         "activity": "walkaround & cockpit checks",
-        "fuelState": "full tanks"
+        "fuelState": "full tanks",
+        "startTime": "2026-05-25T08:15Z",
+        "endTime": "2026-05-25T08:30Z"
       }
     },
     {
@@ -1851,7 +1919,9 @@
         "fieldElevation_ft": 622,
         "distance_nm": 0.8,
         "groundRoll_m": 1482,
-        "route": "apron to holding point"
+        "route": "apron to holding point",
+        "startTime": "2026-05-25T08:30Z",
+        "endTime": "2026-05-25T08:35Z"
       }
     },
     {
@@ -1869,7 +1939,9 @@
         "departureRunway": "09/27",
         "liftoffSpeed_kt": 56,
         "groundRoll_m": 290,
-        "distance_nm": 0.2
+        "distance_nm": 0.2,
+        "startTime": "2026-05-25T08:35Z",
+        "endTime": "2026-05-25T08:36Z"
       }
     },
     {
@@ -1887,7 +1959,9 @@
         "startAltitude_ft": 622,
         "groundspeed_kt": 75,
         "distance_nm": 5.0,
-        "powerSetting": "full throttle"
+        "powerSetting": "full throttle",
+        "startTime": "2026-05-25T08:36Z",
+        "endTime": "2026-05-25T08:40Z"
       }
     },
     {
@@ -1905,7 +1979,10 @@
         "trueAirspeed_kt": 115,
         "groundspeed_kt": 110,
         "fuelBurn_gph": 8.5,
-        "distance_nm": 12.8
+        "distance_nm": 12.8,
+        "startTime": "2026-05-25T08:40Z",
+        "endTime": "2026-05-25T08:47Z",
+        "squawk": "7000"
       }
     },
     {
@@ -1922,7 +1999,9 @@
         "startAltitude_ft": 2000,
         "targetAltitude_ft": 1220,
         "groundspeed_kt": 120,
-        "distance_nm": 12.0
+        "distance_nm": 12.0,
+        "startTime": "2026-05-25T08:47Z",
+        "endTime": "2026-05-25T08:53Z"
       }
     },
     {
@@ -1940,7 +2019,9 @@
         "glidepath_deg": 3,
         "groundspeed_kt": 70,
         "distance_nm": 5.8,
-        "arrivalRunway": "12/30"
+        "arrivalRunway": "12/30",
+        "startTime": "2026-05-25T08:53Z",
+        "endTime": "2026-05-25T08:58Z"
       }
     },
     {
@@ -1957,7 +2038,9 @@
         "fieldElevation_ft": 220,
         "arrivalRunway": "12/30",
         "groundRoll_m": 175,
-        "distance_nm": 0.3
+        "distance_nm": 0.3,
+        "startTime": "2026-05-25T08:58Z",
+        "endTime": "2026-05-25T08:59Z"
       }
     },
     {
@@ -1974,7 +2057,9 @@
         "groundspeed_kt": 0,
         "distance_nm": 0,
         "activity": "walkaround & cockpit checks",
-        "fuelState": "full tanks"
+        "fuelState": "full tanks",
+        "startTime": "2026-05-28T13:00Z",
+        "endTime": "2026-05-28T13:15Z"
       }
     },
     {
@@ -1990,7 +2075,9 @@
         "fieldElevation_ft": 622,
         "distance_nm": 0.8,
         "groundRoll_m": 1482,
-        "route": "apron to holding point"
+        "route": "apron to holding point",
+        "startTime": "2026-05-28T13:15Z",
+        "endTime": "2026-05-28T13:20Z"
       }
     },
     {
@@ -2008,7 +2095,9 @@
         "departureRunway": "09/27",
         "liftoffSpeed_kt": 56,
         "groundRoll_m": 290,
-        "distance_nm": 0.2
+        "distance_nm": 0.2,
+        "startTime": "2026-05-28T13:20Z",
+        "endTime": "2026-05-28T13:21Z"
       }
     },
     {
@@ -2026,7 +2115,9 @@
         "startAltitude_ft": 622,
         "groundspeed_kt": 75,
         "distance_nm": 5.0,
-        "powerSetting": "full throttle"
+        "powerSetting": "full throttle",
+        "startTime": "2026-05-28T13:21Z",
+        "endTime": "2026-05-28T13:25Z"
       }
     },
     {
@@ -2044,7 +2135,10 @@
         "trueAirspeed_kt": 115,
         "groundspeed_kt": 110,
         "fuelBurn_gph": 8.5,
-        "distance_nm": 34.8
+        "distance_nm": 34.8,
+        "startTime": "2026-05-28T13:25Z",
+        "endTime": "2026-05-28T13:44Z",
+        "squawk": "7000"
       }
     },
     {
@@ -2061,7 +2155,9 @@
         "startAltitude_ft": 3500,
         "targetAltitude_ft": 1102,
         "groundspeed_kt": 120,
-        "distance_nm": 12.0
+        "distance_nm": 12.0,
+        "startTime": "2026-05-28T13:44Z",
+        "endTime": "2026-05-28T13:50Z"
       }
     },
     {
@@ -2079,7 +2175,9 @@
         "glidepath_deg": 3,
         "groundspeed_kt": 70,
         "distance_nm": 5.8,
-        "arrivalRunway": "08/26"
+        "arrivalRunway": "08/26",
+        "startTime": "2026-05-28T13:50Z",
+        "endTime": "2026-05-28T13:55Z"
       }
     },
     {
@@ -2096,7 +2194,9 @@
         "fieldElevation_ft": 102,
         "arrivalRunway": "08/26",
         "groundRoll_m": 175,
-        "distance_nm": 0.3
+        "distance_nm": 0.3,
+        "startTime": "2026-05-28T13:55Z",
+        "endTime": "2026-05-28T13:56Z"
       }
     },
     {
@@ -2113,7 +2213,9 @@
         "groundspeed_kt": 0,
         "distance_nm": 0,
         "activity": "walkaround & cockpit checks",
-        "fuelState": "full tanks"
+        "fuelState": "full tanks",
+        "startTime": "2026-06-01T11:00Z",
+        "endTime": "2026-06-01T11:15Z"
       }
     },
     {
@@ -2129,7 +2231,9 @@
         "fieldElevation_ft": 433,
         "distance_nm": 0.8,
         "groundRoll_m": 1482,
-        "route": "apron to holding point"
+        "route": "apron to holding point",
+        "startTime": "2026-06-01T11:15Z",
+        "endTime": "2026-06-01T11:20Z"
       }
     },
     {
@@ -2147,7 +2251,9 @@
         "departureRunway": "08/26",
         "liftoffSpeed_kt": 56,
         "groundRoll_m": 290,
-        "distance_nm": 0.2
+        "distance_nm": 0.2,
+        "startTime": "2026-06-01T11:20Z",
+        "endTime": "2026-06-01T11:21Z"
       }
     },
     {
@@ -2165,7 +2271,9 @@
         "startAltitude_ft": 433,
         "groundspeed_kt": 75,
         "distance_nm": 5.0,
-        "powerSetting": "full throttle"
+        "powerSetting": "full throttle",
+        "startTime": "2026-06-01T11:21Z",
+        "endTime": "2026-06-01T11:25Z"
       }
     },
     {
@@ -2183,7 +2291,10 @@
         "trueAirspeed_kt": 115,
         "groundspeed_kt": 110,
         "fuelBurn_gph": 8.5,
-        "distance_nm": 23.8
+        "distance_nm": 23.8,
+        "startTime": "2026-06-01T11:25Z",
+        "endTime": "2026-06-01T11:38Z",
+        "squawk": "7000"
       }
     },
     {
@@ -2200,7 +2311,9 @@
         "startAltitude_ft": 2500,
         "targetAltitude_ft": 1270,
         "groundspeed_kt": 120,
-        "distance_nm": 12.0
+        "distance_nm": 12.0,
+        "startTime": "2026-06-01T11:38Z",
+        "endTime": "2026-06-01T11:44Z"
       }
     },
     {
@@ -2218,7 +2331,9 @@
         "glidepath_deg": 3,
         "groundspeed_kt": 70,
         "distance_nm": 5.8,
-        "arrivalRunway": "01/19"
+        "arrivalRunway": "01/19",
+        "startTime": "2026-06-01T11:44Z",
+        "endTime": "2026-06-01T11:49Z"
       }
     },
     {
@@ -2235,7 +2350,9 @@
         "fieldElevation_ft": 270,
         "arrivalRunway": "01/19",
         "groundRoll_m": 175,
-        "distance_nm": 0.3
+        "distance_nm": 0.3,
+        "startTime": "2026-06-01T11:49Z",
+        "endTime": "2026-06-01T11:50Z"
       }
     },
     {
@@ -2252,7 +2369,9 @@
         "groundspeed_kt": 0,
         "distance_nm": 0,
         "activity": "walkaround & cockpit checks",
-        "fuelState": "full tanks"
+        "fuelState": "full tanks",
+        "startTime": "2026-06-04T14:00Z",
+        "endTime": "2026-06-04T14:15Z"
       }
     },
     {
@@ -2268,7 +2387,9 @@
         "fieldElevation_ft": 622,
         "distance_nm": 0.8,
         "groundRoll_m": 1482,
-        "route": "apron to holding point"
+        "route": "apron to holding point",
+        "startTime": "2026-06-04T14:15Z",
+        "endTime": "2026-06-04T14:20Z"
       }
     },
     {
@@ -2286,7 +2407,9 @@
         "departureRunway": "09/27",
         "liftoffSpeed_kt": 56,
         "groundRoll_m": 290,
-        "distance_nm": 0.2
+        "distance_nm": 0.2,
+        "startTime": "2026-06-04T14:20Z",
+        "endTime": "2026-06-04T14:21Z"
       }
     },
     {
@@ -2304,7 +2427,9 @@
         "startAltitude_ft": 622,
         "groundspeed_kt": 75,
         "distance_nm": 5.0,
-        "powerSetting": "full throttle"
+        "powerSetting": "full throttle",
+        "startTime": "2026-06-04T14:21Z",
+        "endTime": "2026-06-04T14:25Z"
       }
     },
     {
@@ -2322,7 +2447,10 @@
         "trueAirspeed_kt": 115,
         "groundspeed_kt": 110,
         "fuelBurn_gph": 8.5,
-        "distance_nm": 45.8
+        "distance_nm": 45.8,
+        "startTime": "2026-06-04T14:25Z",
+        "endTime": "2026-06-04T14:50Z",
+        "squawk": "7000"
       }
     },
     {
@@ -2339,7 +2467,9 @@
         "startAltitude_ft": 3000,
         "targetAltitude_ft": 1038,
         "groundspeed_kt": 120,
-        "distance_nm": 12.0
+        "distance_nm": 12.0,
+        "startTime": "2026-06-04T14:50Z",
+        "endTime": "2026-06-04T14:56Z"
       }
     },
     {
@@ -2357,7 +2487,9 @@
         "glidepath_deg": 3,
         "groundspeed_kt": 70,
         "distance_nm": 5.8,
-        "arrivalRunway": "08/26"
+        "arrivalRunway": "08/26",
+        "startTime": "2026-06-04T14:56Z",
+        "endTime": "2026-06-04T15:01Z"
       }
     },
     {
@@ -2374,7 +2506,1737 @@
         "fieldElevation_ft": 38,
         "arrivalRunway": "08/26",
         "groundRoll_m": 175,
-        "distance_nm": 0.3
+        "distance_nm": 0.3,
+        "startTime": "2026-06-04T15:01Z",
+        "endTime": "2026-06-04T15:02Z"
+      }
+    },
+    {
+      "id": "atcEGGD_atis",
+      "labels": [
+        "ATC",
+        "AtisService"
+      ],
+      "properties": {
+        "name": "Bristol ATIS",
+        "callsign": "Bristol Information",
+        "frequency_mhz": 128.025,
+        "serviceType": "ATIS",
+        "locationName": "Bristol (EGGD)",
+        "latitude": 51.3827,
+        "longitude": -2.7191,
+        "elevation_ft": 622
+      }
+    },
+    {
+      "id": "atcEGGD_gnd",
+      "labels": [
+        "ATC",
+        "GroundControl"
+      ],
+      "properties": {
+        "name": "Bristol Ground",
+        "callsign": "Bristol Ground",
+        "frequency_mhz": 121.825,
+        "serviceType": "Ground",
+        "locationName": "Bristol (EGGD)",
+        "latitude": 51.3827,
+        "longitude": -2.7191,
+        "elevation_ft": 622
+      }
+    },
+    {
+      "id": "atcEGGD_twr",
+      "labels": [
+        "ATC",
+        "ControlTower"
+      ],
+      "properties": {
+        "name": "Bristol Tower",
+        "callsign": "Bristol Tower",
+        "frequency_mhz": 133.85,
+        "serviceType": "Tower",
+        "locationName": "Bristol (EGGD)",
+        "latitude": 51.3827,
+        "longitude": -2.7191,
+        "elevation_ft": 622
+      }
+    },
+    {
+      "id": "atcEGGD_app",
+      "labels": [
+        "ATC",
+        "ApproachControl"
+      ],
+      "properties": {
+        "name": "Bristol Approach",
+        "callsign": "Bristol Radar",
+        "frequency_mhz": 125.65,
+        "serviceType": "Approach",
+        "locationName": "Bristol (EGGD)",
+        "latitude": 51.3827,
+        "longitude": -2.7191,
+        "elevation_ft": 622
+      }
+    },
+    {
+      "id": "atcEGFF_atis",
+      "labels": [
+        "ATC",
+        "AtisService"
+      ],
+      "properties": {
+        "name": "Cardiff ATIS",
+        "callsign": "Cardiff Information",
+        "frequency_mhz": 128.08,
+        "serviceType": "ATIS",
+        "locationName": "Cardiff (EGFF)",
+        "latitude": 51.3967,
+        "longitude": -3.3433,
+        "elevation_ft": 220
+      }
+    },
+    {
+      "id": "atcEGFF_twr",
+      "labels": [
+        "ATC",
+        "ControlTower"
+      ],
+      "properties": {
+        "name": "Cardiff Tower",
+        "callsign": "Cardiff Tower",
+        "frequency_mhz": 133.1,
+        "serviceType": "Tower",
+        "locationName": "Cardiff (EGFF)",
+        "latitude": 51.3967,
+        "longitude": -3.3433,
+        "elevation_ft": 220
+      }
+    },
+    {
+      "id": "atcEGFF_app",
+      "labels": [
+        "ATC",
+        "ApproachControl"
+      ],
+      "properties": {
+        "name": "Cardiff Approach",
+        "callsign": "Cardiff Radar",
+        "frequency_mhz": 126.625,
+        "serviceType": "Approach",
+        "locationName": "Cardiff (EGFF)",
+        "latitude": 51.3967,
+        "longitude": -3.3433,
+        "elevation_ft": 220
+      }
+    },
+    {
+      "id": "atcEGTE_twr",
+      "labels": [
+        "ATC",
+        "ControlTower"
+      ],
+      "properties": {
+        "name": "Exeter Tower",
+        "callsign": "Exeter Tower",
+        "frequency_mhz": 119.8,
+        "serviceType": "Tower",
+        "locationName": "Exeter (EGTE)",
+        "latitude": 50.7344,
+        "longitude": -3.4139,
+        "elevation_ft": 102
+      }
+    },
+    {
+      "id": "atcEGTE_app",
+      "labels": [
+        "ATC",
+        "ApproachControl"
+      ],
+      "properties": {
+        "name": "Exeter Approach",
+        "callsign": "Exeter Approach",
+        "frequency_mhz": 128.975,
+        "serviceType": "Approach",
+        "locationName": "Exeter (EGTE)",
+        "latitude": 50.7344,
+        "longitude": -3.4139,
+        "elevation_ft": 102
+      }
+    },
+    {
+      "id": "atcEGHH_twr",
+      "labels": [
+        "ATC",
+        "ControlTower"
+      ],
+      "properties": {
+        "name": "Bournemouth Tower",
+        "callsign": "Bournemouth Tower",
+        "frequency_mhz": 125.605,
+        "serviceType": "Tower",
+        "locationName": "Bournemouth (EGHH)",
+        "latitude": 50.7794,
+        "longitude": -1.8425,
+        "elevation_ft": 38
+      }
+    },
+    {
+      "id": "atcEGHH_app",
+      "labels": [
+        "ATC",
+        "ApproachControl"
+      ],
+      "properties": {
+        "name": "Bournemouth Approach",
+        "callsign": "Bournemouth Radar",
+        "frequency_mhz": 119.48,
+        "serviceType": "Approach",
+        "locationName": "Bournemouth (EGHH)",
+        "latitude": 50.7794,
+        "longitude": -1.8425,
+        "elevation_ft": 38
+      }
+    },
+    {
+      "id": "atcEGBJ_twr",
+      "labels": [
+        "ATC",
+        "ControlTower"
+      ],
+      "properties": {
+        "name": "Gloucestershire Tower",
+        "callsign": "Gloster Tower",
+        "frequency_mhz": 122.905,
+        "serviceType": "Tower",
+        "locationName": "Gloucestershire (EGBJ)",
+        "latitude": 51.8942,
+        "longitude": -2.1672,
+        "elevation_ft": 101
+      }
+    },
+    {
+      "id": "atcEGBJ_app",
+      "labels": [
+        "ATC",
+        "ApproachControl"
+      ],
+      "properties": {
+        "name": "Gloucestershire Approach",
+        "callsign": "Gloster Approach",
+        "frequency_mhz": 128.555,
+        "serviceType": "Approach",
+        "locationName": "Gloucestershire (EGBJ)",
+        "latitude": 51.8942,
+        "longitude": -2.1672,
+        "elevation_ft": 101
+      }
+    },
+    {
+      "id": "atcEGTK_twr",
+      "labels": [
+        "ATC",
+        "ControlTower"
+      ],
+      "properties": {
+        "name": "Oxford Tower",
+        "callsign": "Oxford Tower",
+        "frequency_mhz": 133.43,
+        "serviceType": "Tower",
+        "locationName": "Oxford (Kidlington) (EGTK)",
+        "latitude": 51.8369,
+        "longitude": -1.32,
+        "elevation_ft": 270
+      }
+    },
+    {
+      "id": "atcEGTK_app",
+      "labels": [
+        "ATC",
+        "ApproachControl"
+      ],
+      "properties": {
+        "name": "Oxford Approach",
+        "callsign": "Oxford Approach",
+        "frequency_mhz": 125.09,
+        "serviceType": "Approach",
+        "locationName": "Oxford (Kidlington) (EGTK)",
+        "latitude": 51.8369,
+        "longitude": -1.32,
+        "elevation_ft": 270
+      }
+    },
+    {
+      "id": "atcEGBP_info",
+      "labels": [
+        "ATC",
+        "AerodromeFlightInformationService"
+      ],
+      "properties": {
+        "name": "Kemble Information",
+        "callsign": "Kemble Information",
+        "frequency_mhz": 118.09,
+        "serviceType": "AFIS",
+        "locationName": "Cotswold Airport (EGBP)",
+        "latitude": 51.6681,
+        "longitude": -2.057,
+        "elevation_ft": 433
+      }
+    },
+    {
+      "id": "atcLondonInfo",
+      "labels": [
+        "ATC",
+        "FlightInformationService"
+      ],
+      "properties": {
+        "name": "London Information",
+        "callsign": "London Information",
+        "frequency_mhz": 124.75,
+        "serviceType": "FIS",
+        "locationName": "London Area Control Centre, Swanwick",
+        "region": "London FIR (south-west)",
+        "latitude": 50.9043,
+        "longitude": -1.2967,
+        "elevation_ft": 50
+      }
+    },
+    {
+      "id": "pic2",
+      "labels": [
+        "Person",
+        "PilotInCommand"
+      ],
+      "properties": {
+        "name": "Second Pilot-in-Command",
+        "licenceNumber": "PPL-67890"
+      }
+    },
+    {
+      "id": "dims",
+      "labels": [
+        "Specification",
+        "Dimensions"
+      ],
+      "properties": {
+        "name": "Dimensions",
+        "wingspan_ft": 36.1,
+        "length_ft": 27.2,
+        "height_ft": 8.9,
+        "wingArea_sqft": 174,
+        "cabinWidth_in": 39.5,
+        "seats": 4
+      }
+    },
+    {
+      "id": "weights",
+      "labels": [
+        "Specification",
+        "WeightBalance"
+      ],
+      "properties": {
+        "name": "Weight & Balance",
+        "maxTakeoffWeight_lb": 2550,
+        "maxRampWeight_lb": 2558,
+        "maxLandingWeight_lb": 2550,
+        "standardEmptyWeight_lb": 1680,
+        "maxUsefulLoad_lb": 878,
+        "maxBaggage_lb": 120,
+        "usableFuel_gal": 53
+      }
+    },
+    {
+      "id": "perf",
+      "labels": [
+        "Specification",
+        "Performance"
+      ],
+      "properties": {
+        "name": "Performance",
+        "maxCruiseSpeed_kt": 124,
+        "serviceCeiling_ft": 14000,
+        "maxRange_nm": 518,
+        "maxEndurance_hours": 5.0,
+        "maxClimbRateSL_fpm": 730,
+        "takeoffGroundRoll_ft": 960,
+        "landingGroundRoll_ft": 575,
+        "cruiseFuelBurn_gph": 8.5,
+        "conditions": "POH figures at gross weight, standard day, sea level, paved level dry runway"
+      }
+    },
+    {
+      "id": "vspeeds",
+      "labels": [
+        "Specification",
+        "VSpeeds"
+      ],
+      "properties": {
+        "name": "V-speeds",
+        "vne_kt": 163,
+        "vno_kt": 129,
+        "va_kt_at_2550lb": 105,
+        "vfe10_kt": 110,
+        "vfeFull_kt": 85,
+        "vx_kt": 62,
+        "vy_kt": 74,
+        "vr_kt": 55,
+        "vs_kt": 48,
+        "vs0_kt": 40,
+        "bestGlide_kt": 68,
+        "maxDemoCrosswind_kt": 15
+      }
+    },
+    {
+      "id": "limits",
+      "labels": [
+        "Specification",
+        "Limitations"
+      ],
+      "properties": {
+        "name": "Limitations",
+        "maxPositiveG": 3.8,
+        "maxNegativeG": -1.52,
+        "maxOperatingAltitude_ft": 14000,
+        "minFuelGrade": "100LL / 100 (avgas)",
+        "oilCapacity_qt": 8,
+        "maxOilConsumption_qtPerHr": 0.6
+      }
+    },
+    {
+      "id": "checklist",
+      "labels": [
+        "Document",
+        "Checklist"
+      ],
+      "properties": {
+        "name": "Normal Procedures Checklist",
+        "revision": "C172S POH Section 4"
+      }
+    },
+    {
+      "id": "wbSheet",
+      "labels": [
+        "Document",
+        "WeightBalanceRecord"
+      ],
+      "properties": {
+        "name": "Weight & Balance Record"
+      }
+    },
+    {
+      "id": "g1000Manual",
+      "labels": [
+        "Document",
+        "AvionicsManual"
+      ],
+      "properties": {
+        "name": "Garmin G1000 Pilot's Guide",
+        "system": "Garmin G1000 NXi"
+      }
+    },
+    {
+      "id": "afmSupp",
+      "labels": [
+        "Document",
+        "AFMSupplement"
+      ],
+      "properties": {
+        "name": "AFM Supplements"
+      }
+    },
+    {
+      "id": "oilPump",
+      "labels": [
+        "Component",
+        "OilPump"
+      ],
+      "properties": {
+        "name": "Oil Pump",
+        "type": "engine-driven gear pump"
+      }
+    },
+    {
+      "id": "fuelFlowXducer",
+      "labels": [
+        "Component",
+        "FuelFlowTransducer"
+      ],
+      "properties": {
+        "name": "Fuel Flow Transducer"
+      }
+    },
+    {
+      "id": "ignitionHarness",
+      "labels": [
+        "Component",
+        "IgnitionHarness"
+      ],
+      "properties": {
+        "name": "Ignition Harness",
+        "leads": 8
+      }
+    },
+    {
+      "id": "chtProbes",
+      "labels": [
+        "Component",
+        "EngineProbe"
+      ],
+      "properties": {
+        "name": "CHT Probes",
+        "quantity": 4,
+        "measures": "cylinder head temp"
+      }
+    },
+    {
+      "id": "egtProbes",
+      "labels": [
+        "Component",
+        "EngineProbe"
+      ],
+      "properties": {
+        "name": "EGT Probes",
+        "quantity": 4,
+        "measures": "exhaust gas temp"
+      }
+    },
+    {
+      "id": "oilPressSensor",
+      "labels": [
+        "Component",
+        "EngineSensor"
+      ],
+      "properties": {
+        "name": "Oil Pressure Sensor"
+      }
+    },
+    {
+      "id": "oilTempSensor",
+      "labels": [
+        "Component",
+        "EngineSensor"
+      ],
+      "properties": {
+        "name": "Oil Temperature Sensor"
+      }
+    },
+    {
+      "id": "pfd",
+      "labels": [
+        "Component",
+        "PrimaryFlightDisplay"
+      ],
+      "properties": {
+        "name": "G1000 PFD",
+        "model": "Garmin GDU 1040",
+        "size_in": 10.4
+      }
+    },
+    {
+      "id": "standbyAi",
+      "labels": [
+        "Component",
+        "StandbyInstrument"
+      ],
+      "properties": {
+        "name": "Standby Attitude Indicator"
+      }
+    },
+    {
+      "id": "standbyAlt",
+      "labels": [
+        "Component",
+        "StandbyInstrument"
+      ],
+      "properties": {
+        "name": "Standby Altimeter"
+      }
+    },
+    {
+      "id": "standbyAsi",
+      "labels": [
+        "Component",
+        "StandbyInstrument"
+      ],
+      "properties": {
+        "name": "Standby Airspeed Indicator"
+      }
+    },
+    {
+      "id": "beacon",
+      "labels": [
+        "Component",
+        "Light"
+      ],
+      "properties": {
+        "name": "Rotating Beacon",
+        "colour": "red",
+        "position": "vertical stabiliser"
+      }
+    },
+    {
+      "id": "strobes",
+      "labels": [
+        "Component",
+        "Light"
+      ],
+      "properties": {
+        "name": "Strobe Lights",
+        "colour": "white",
+        "position": "wingtips"
+      }
+    },
+    {
+      "id": "taxiLight",
+      "labels": [
+        "Component",
+        "Light"
+      ],
+      "properties": {
+        "name": "Taxi Light",
+        "position": "nose gear"
+      }
+    },
+    {
+      "id": "pitotTube",
+      "labels": [
+        "Component",
+        "PitotTube"
+      ],
+      "properties": {
+        "name": "Pitot Tube",
+        "heated": true,
+        "position": "left wing"
+      }
+    },
+    {
+      "id": "staticPorts",
+      "labels": [
+        "Component",
+        "StaticPort"
+      ],
+      "properties": {
+        "name": "Static Ports",
+        "quantity": 2,
+        "position": "rear fuselage"
+      }
+    },
+    {
+      "id": "altStatic",
+      "labels": [
+        "Component",
+        "AlternateStaticSource"
+      ],
+      "properties": {
+        "name": "Alternate Static Source",
+        "location": "cabin"
+      }
+    },
+    {
+      "id": "trimWheel",
+      "labels": [
+        "Component",
+        "TrimControl"
+      ],
+      "properties": {
+        "name": "Elevator Trim Wheel",
+        "position": "centre console"
+      }
+    },
+    {
+      "id": "cabinHeat",
+      "labels": [
+        "Component",
+        "CabinHeat"
+      ],
+      "properties": {
+        "name": "Cabin Heat & Defrost",
+        "source": "exhaust heat muff"
+      }
+    },
+    {
+      "id": "fuelQtySensors",
+      "labels": [
+        "Component",
+        "FuelQuantitySensor"
+      ],
+      "properties": {
+        "name": "Fuel Quantity Sensors",
+        "quantity": 4
+      }
+    },
+    {
+      "id": "flight007",
+      "labels": [
+        "Flight"
+      ],
+      "properties": {
+        "name": "Flight 007",
+        "departureAerodrome": "EGGD",
+        "destinationAerodrome": "EGFF",
+        "date": "2026-06-08",
+        "callsign": "GECHO",
+        "flightRules": "VFR",
+        "distance_nm": 23,
+        "cruiseAltitude_ft": 2500,
+        "squawk": "5071",
+        "blockTime_minutes": 34,
+        "flightTime_hours": 0.5,
+        "timezone": "UTC",
+        "offBlockTime": "2026-06-08T09:15Z",
+        "departureTime": "2026-06-08T09:21Z",
+        "arrivalTime": "2026-06-08T09:48Z",
+        "onBlockTime": "2026-06-08T09:49Z"
+      }
+    },
+    {
+      "id": "ph_007_preflight",
+      "labels": [
+        "FlightPhase",
+        "Preflight"
+      ],
+      "properties": {
+        "name": "Preflight",
+        "duration_minutes": 15,
+        "location": "apron",
+        "fieldElevation_ft": 622,
+        "groundspeed_kt": 0,
+        "distance_nm": 0,
+        "activity": "walkaround & cockpit checks",
+        "fuelState": "full tanks",
+        "startTime": "2026-06-08T09:00Z",
+        "endTime": "2026-06-08T09:15Z"
+      }
+    },
+    {
+      "id": "ph_007_taxi",
+      "labels": [
+        "FlightPhase",
+        "Taxi"
+      ],
+      "properties": {
+        "name": "Taxi",
+        "duration_minutes": 5,
+        "groundspeed_kt": 10,
+        "fieldElevation_ft": 622,
+        "distance_nm": 0.8,
+        "route": "apron to holding point",
+        "startTime": "2026-06-08T09:15Z",
+        "endTime": "2026-06-08T09:20Z"
+      }
+    },
+    {
+      "id": "ph_007_takeoff",
+      "labels": [
+        "FlightPhase",
+        "Takeoff"
+      ],
+      "properties": {
+        "name": "Takeoff",
+        "duration_minutes": 1,
+        "rotateSpeed_kt": 55,
+        "flapSetting_deg": 10,
+        "fieldElevation_ft": 622,
+        "departureRunway": "09/27",
+        "liftoffSpeed_kt": 56,
+        "groundRoll_m": 290,
+        "distance_nm": 0.2,
+        "startTime": "2026-06-08T09:20Z",
+        "endTime": "2026-06-08T09:21Z"
+      }
+    },
+    {
+      "id": "ph_007_climb",
+      "labels": [
+        "FlightPhase",
+        "Climb"
+      ],
+      "properties": {
+        "name": "Climb",
+        "duration_minutes": 4,
+        "airspeed_kt": 74,
+        "climbRate_fpm": 700,
+        "targetAltitude_ft": 2500,
+        "startAltitude_ft": 622,
+        "groundspeed_kt": 75,
+        "distance_nm": 5.0,
+        "powerSetting": "full throttle",
+        "startTime": "2026-06-08T09:21Z",
+        "endTime": "2026-06-08T09:25Z"
+      }
+    },
+    {
+      "id": "ph_007_cruise",
+      "labels": [
+        "FlightPhase",
+        "Cruise"
+      ],
+      "properties": {
+        "name": "Cruise",
+        "duration_minutes": 12,
+        "altitude_ft": 2500,
+        "airspeed_kt": 110,
+        "power_pct": 65,
+        "trueAirspeed_kt": 115,
+        "groundspeed_kt": 110,
+        "fuelBurn_gph": 8.5,
+        "distance_nm": 12,
+        "startTime": "2026-06-08T09:25Z",
+        "endTime": "2026-06-08T09:37Z",
+        "squawk": "7000"
+      }
+    },
+    {
+      "id": "ph_007_descent",
+      "labels": [
+        "FlightPhase",
+        "Descent"
+      ],
+      "properties": {
+        "name": "Descent",
+        "duration_minutes": 6,
+        "airspeed_kt": 110,
+        "descentRate_fpm": 500,
+        "startAltitude_ft": 2500,
+        "targetAltitude_ft": 1220,
+        "groundspeed_kt": 120,
+        "distance_nm": 12.0,
+        "startTime": "2026-06-08T09:37Z",
+        "endTime": "2026-06-08T09:43Z"
+      }
+    },
+    {
+      "id": "ph_007_approach",
+      "labels": [
+        "FlightPhase",
+        "Approach"
+      ],
+      "properties": {
+        "name": "Approach",
+        "duration_minutes": 5,
+        "airspeed_kt": 65,
+        "flapSetting_deg": 30,
+        "patternAltitude_ft": 1220,
+        "glidepath_deg": 3,
+        "groundspeed_kt": 70,
+        "distance_nm": 5.8,
+        "arrivalRunway": "12/30",
+        "startTime": "2026-06-08T09:43Z",
+        "endTime": "2026-06-08T09:48Z"
+      }
+    },
+    {
+      "id": "ph_007_landing",
+      "labels": [
+        "FlightPhase",
+        "Landing"
+      ],
+      "properties": {
+        "name": "Landing",
+        "duration_minutes": 1,
+        "touchdownSpeed_kt": 55,
+        "flapSetting_deg": 30,
+        "fieldElevation_ft": 220,
+        "arrivalRunway": "12/30",
+        "groundRoll_m": 175,
+        "distance_nm": 0.3,
+        "startTime": "2026-06-08T09:48Z",
+        "endTime": "2026-06-08T09:49Z"
+      }
+    },
+    {
+      "id": "flight008",
+      "labels": [
+        "Flight"
+      ],
+      "properties": {
+        "name": "Flight 008",
+        "departureAerodrome": "EGFF",
+        "destinationAerodrome": "EGGD",
+        "date": "2026-06-08",
+        "callsign": "GECHO",
+        "flightRules": "VFR",
+        "distance_nm": 23,
+        "cruiseAltitude_ft": 3000,
+        "squawk": "5072",
+        "blockTime_minutes": 34,
+        "flightTime_hours": 0.5,
+        "timezone": "UTC",
+        "offBlockTime": "2026-06-08T11:45Z",
+        "departureTime": "2026-06-08T11:51Z",
+        "arrivalTime": "2026-06-08T12:18Z",
+        "onBlockTime": "2026-06-08T12:19Z"
+      }
+    },
+    {
+      "id": "ph_008_preflight",
+      "labels": [
+        "FlightPhase",
+        "Preflight"
+      ],
+      "properties": {
+        "name": "Preflight",
+        "duration_minutes": 15,
+        "location": "apron",
+        "fieldElevation_ft": 220,
+        "groundspeed_kt": 0,
+        "distance_nm": 0,
+        "activity": "walkaround & cockpit checks",
+        "fuelState": "full tanks",
+        "startTime": "2026-06-08T11:30Z",
+        "endTime": "2026-06-08T11:45Z"
+      }
+    },
+    {
+      "id": "ph_008_taxi",
+      "labels": [
+        "FlightPhase",
+        "Taxi"
+      ],
+      "properties": {
+        "name": "Taxi",
+        "duration_minutes": 5,
+        "groundspeed_kt": 10,
+        "fieldElevation_ft": 220,
+        "distance_nm": 0.8,
+        "route": "apron to holding point",
+        "startTime": "2026-06-08T11:45Z",
+        "endTime": "2026-06-08T11:50Z"
+      }
+    },
+    {
+      "id": "ph_008_takeoff",
+      "labels": [
+        "FlightPhase",
+        "Takeoff"
+      ],
+      "properties": {
+        "name": "Takeoff",
+        "duration_minutes": 1,
+        "rotateSpeed_kt": 55,
+        "flapSetting_deg": 10,
+        "fieldElevation_ft": 220,
+        "departureRunway": "12/30",
+        "liftoffSpeed_kt": 56,
+        "groundRoll_m": 290,
+        "distance_nm": 0.2,
+        "startTime": "2026-06-08T11:50Z",
+        "endTime": "2026-06-08T11:51Z"
+      }
+    },
+    {
+      "id": "ph_008_climb",
+      "labels": [
+        "FlightPhase",
+        "Climb"
+      ],
+      "properties": {
+        "name": "Climb",
+        "duration_minutes": 4,
+        "airspeed_kt": 74,
+        "climbRate_fpm": 700,
+        "targetAltitude_ft": 3000,
+        "startAltitude_ft": 220,
+        "groundspeed_kt": 75,
+        "distance_nm": 5.0,
+        "powerSetting": "full throttle",
+        "startTime": "2026-06-08T11:51Z",
+        "endTime": "2026-06-08T11:55Z"
+      }
+    },
+    {
+      "id": "ph_008_cruise",
+      "labels": [
+        "FlightPhase",
+        "Cruise"
+      ],
+      "properties": {
+        "name": "Cruise",
+        "duration_minutes": 12,
+        "altitude_ft": 3000,
+        "airspeed_kt": 110,
+        "power_pct": 65,
+        "trueAirspeed_kt": 115,
+        "groundspeed_kt": 110,
+        "fuelBurn_gph": 8.5,
+        "distance_nm": 12,
+        "startTime": "2026-06-08T11:55Z",
+        "endTime": "2026-06-08T12:07Z",
+        "squawk": "7000"
+      }
+    },
+    {
+      "id": "ph_008_descent",
+      "labels": [
+        "FlightPhase",
+        "Descent"
+      ],
+      "properties": {
+        "name": "Descent",
+        "duration_minutes": 6,
+        "airspeed_kt": 110,
+        "descentRate_fpm": 500,
+        "startAltitude_ft": 3000,
+        "targetAltitude_ft": 1622,
+        "groundspeed_kt": 120,
+        "distance_nm": 12.0,
+        "startTime": "2026-06-08T12:07Z",
+        "endTime": "2026-06-08T12:13Z"
+      }
+    },
+    {
+      "id": "ph_008_approach",
+      "labels": [
+        "FlightPhase",
+        "Approach"
+      ],
+      "properties": {
+        "name": "Approach",
+        "duration_minutes": 5,
+        "airspeed_kt": 65,
+        "flapSetting_deg": 30,
+        "patternAltitude_ft": 1622,
+        "glidepath_deg": 3,
+        "groundspeed_kt": 70,
+        "distance_nm": 5.8,
+        "arrivalRunway": "09/27",
+        "startTime": "2026-06-08T12:13Z",
+        "endTime": "2026-06-08T12:18Z"
+      }
+    },
+    {
+      "id": "ph_008_landing",
+      "labels": [
+        "FlightPhase",
+        "Landing"
+      ],
+      "properties": {
+        "name": "Landing",
+        "duration_minutes": 1,
+        "touchdownSpeed_kt": 55,
+        "flapSetting_deg": 30,
+        "fieldElevation_ft": 622,
+        "arrivalRunway": "09/27",
+        "groundRoll_m": 175,
+        "distance_nm": 0.3,
+        "startTime": "2026-06-08T12:18Z",
+        "endTime": "2026-06-08T12:19Z"
+      }
+    },
+    {
+      "id": "flight009",
+      "labels": [
+        "Flight"
+      ],
+      "properties": {
+        "name": "Flight 009",
+        "departureAerodrome": "EGGD",
+        "destinationAerodrome": "EGHH",
+        "date": "2026-06-11",
+        "callsign": "GECHO",
+        "flightRules": "VFR",
+        "distance_nm": 49,
+        "cruiseAltitude_ft": 3000,
+        "squawk": "5073",
+        "blockTime_minutes": 46,
+        "flightTime_hours": 0.7,
+        "timezone": "UTC",
+        "offBlockTime": "2026-06-11T10:15Z",
+        "departureTime": "2026-06-11T10:21Z",
+        "arrivalTime": "2026-06-11T11:00Z",
+        "onBlockTime": "2026-06-11T11:01Z"
+      }
+    },
+    {
+      "id": "ph_009_preflight",
+      "labels": [
+        "FlightPhase",
+        "Preflight"
+      ],
+      "properties": {
+        "name": "Preflight",
+        "duration_minutes": 15,
+        "location": "apron",
+        "fieldElevation_ft": 622,
+        "groundspeed_kt": 0,
+        "distance_nm": 0,
+        "activity": "walkaround & cockpit checks",
+        "fuelState": "full tanks",
+        "startTime": "2026-06-11T10:00Z",
+        "endTime": "2026-06-11T10:15Z"
+      }
+    },
+    {
+      "id": "ph_009_taxi",
+      "labels": [
+        "FlightPhase",
+        "Taxi"
+      ],
+      "properties": {
+        "name": "Taxi",
+        "duration_minutes": 5,
+        "groundspeed_kt": 10,
+        "fieldElevation_ft": 622,
+        "distance_nm": 0.8,
+        "route": "apron to holding point",
+        "startTime": "2026-06-11T10:15Z",
+        "endTime": "2026-06-11T10:20Z"
+      }
+    },
+    {
+      "id": "ph_009_takeoff",
+      "labels": [
+        "FlightPhase",
+        "Takeoff"
+      ],
+      "properties": {
+        "name": "Takeoff",
+        "duration_minutes": 1,
+        "rotateSpeed_kt": 55,
+        "flapSetting_deg": 10,
+        "fieldElevation_ft": 622,
+        "departureRunway": "09/27",
+        "liftoffSpeed_kt": 56,
+        "groundRoll_m": 290,
+        "distance_nm": 0.2,
+        "startTime": "2026-06-11T10:20Z",
+        "endTime": "2026-06-11T10:21Z"
+      }
+    },
+    {
+      "id": "ph_009_climb",
+      "labels": [
+        "FlightPhase",
+        "Climb"
+      ],
+      "properties": {
+        "name": "Climb",
+        "duration_minutes": 4,
+        "airspeed_kt": 74,
+        "climbRate_fpm": 700,
+        "targetAltitude_ft": 3000,
+        "startAltitude_ft": 622,
+        "groundspeed_kt": 75,
+        "distance_nm": 5.0,
+        "powerSetting": "full throttle",
+        "startTime": "2026-06-11T10:21Z",
+        "endTime": "2026-06-11T10:25Z"
+      }
+    },
+    {
+      "id": "ph_009_cruise",
+      "labels": [
+        "FlightPhase",
+        "Cruise"
+      ],
+      "properties": {
+        "name": "Cruise",
+        "duration_minutes": 24,
+        "altitude_ft": 3000,
+        "airspeed_kt": 110,
+        "power_pct": 65,
+        "trueAirspeed_kt": 115,
+        "groundspeed_kt": 110,
+        "fuelBurn_gph": 8.5,
+        "distance_nm": 38,
+        "startTime": "2026-06-11T10:25Z",
+        "endTime": "2026-06-11T10:49Z",
+        "squawk": "7000"
+      }
+    },
+    {
+      "id": "ph_009_descent",
+      "labels": [
+        "FlightPhase",
+        "Descent"
+      ],
+      "properties": {
+        "name": "Descent",
+        "duration_minutes": 6,
+        "airspeed_kt": 110,
+        "descentRate_fpm": 500,
+        "startAltitude_ft": 3000,
+        "targetAltitude_ft": 1038,
+        "groundspeed_kt": 120,
+        "distance_nm": 12.0,
+        "startTime": "2026-06-11T10:49Z",
+        "endTime": "2026-06-11T10:55Z"
+      }
+    },
+    {
+      "id": "ph_009_approach",
+      "labels": [
+        "FlightPhase",
+        "Approach"
+      ],
+      "properties": {
+        "name": "Approach",
+        "duration_minutes": 5,
+        "airspeed_kt": 65,
+        "flapSetting_deg": 30,
+        "patternAltitude_ft": 1038,
+        "glidepath_deg": 3,
+        "groundspeed_kt": 70,
+        "distance_nm": 5.8,
+        "arrivalRunway": "08/26",
+        "startTime": "2026-06-11T10:55Z",
+        "endTime": "2026-06-11T11:00Z"
+      }
+    },
+    {
+      "id": "ph_009_landing",
+      "labels": [
+        "FlightPhase",
+        "Landing"
+      ],
+      "properties": {
+        "name": "Landing",
+        "duration_minutes": 1,
+        "touchdownSpeed_kt": 55,
+        "flapSetting_deg": 30,
+        "fieldElevation_ft": 38,
+        "arrivalRunway": "08/26",
+        "groundRoll_m": 175,
+        "distance_nm": 0.3,
+        "startTime": "2026-06-11T11:00Z",
+        "endTime": "2026-06-11T11:01Z"
+      }
+    },
+    {
+      "id": "flight010",
+      "labels": [
+        "Flight"
+      ],
+      "properties": {
+        "name": "Flight 010",
+        "departureAerodrome": "EGBJ",
+        "destinationAerodrome": "EGTK",
+        "date": "2026-06-14",
+        "callsign": "GECHO",
+        "flightRules": "VFR",
+        "distance_nm": 44,
+        "cruiseAltitude_ft": 3500,
+        "squawk": "5074",
+        "blockTime_minutes": 42,
+        "flightTime_hours": 0.6,
+        "timezone": "UTC",
+        "offBlockTime": "2026-06-14T08:45Z",
+        "departureTime": "2026-06-14T08:51Z",
+        "arrivalTime": "2026-06-14T09:26Z",
+        "onBlockTime": "2026-06-14T09:27Z"
+      }
+    },
+    {
+      "id": "ph_010_preflight",
+      "labels": [
+        "FlightPhase",
+        "Preflight"
+      ],
+      "properties": {
+        "name": "Preflight",
+        "duration_minutes": 15,
+        "location": "apron",
+        "fieldElevation_ft": 101,
+        "groundspeed_kt": 0,
+        "distance_nm": 0,
+        "activity": "walkaround & cockpit checks",
+        "fuelState": "full tanks",
+        "startTime": "2026-06-14T08:30Z",
+        "endTime": "2026-06-14T08:45Z"
+      }
+    },
+    {
+      "id": "ph_010_taxi",
+      "labels": [
+        "FlightPhase",
+        "Taxi"
+      ],
+      "properties": {
+        "name": "Taxi",
+        "duration_minutes": 5,
+        "groundspeed_kt": 10,
+        "fieldElevation_ft": 101,
+        "distance_nm": 0.8,
+        "route": "apron to holding point",
+        "startTime": "2026-06-14T08:45Z",
+        "endTime": "2026-06-14T08:50Z"
+      }
+    },
+    {
+      "id": "ph_010_takeoff",
+      "labels": [
+        "FlightPhase",
+        "Takeoff"
+      ],
+      "properties": {
+        "name": "Takeoff",
+        "duration_minutes": 1,
+        "rotateSpeed_kt": 55,
+        "flapSetting_deg": 10,
+        "fieldElevation_ft": 101,
+        "departureRunway": "09/27",
+        "liftoffSpeed_kt": 56,
+        "groundRoll_m": 290,
+        "distance_nm": 0.2,
+        "startTime": "2026-06-14T08:50Z",
+        "endTime": "2026-06-14T08:51Z"
+      }
+    },
+    {
+      "id": "ph_010_climb",
+      "labels": [
+        "FlightPhase",
+        "Climb"
+      ],
+      "properties": {
+        "name": "Climb",
+        "duration_minutes": 4,
+        "airspeed_kt": 74,
+        "climbRate_fpm": 700,
+        "targetAltitude_ft": 3500,
+        "startAltitude_ft": 101,
+        "groundspeed_kt": 75,
+        "distance_nm": 5.0,
+        "powerSetting": "full throttle",
+        "startTime": "2026-06-14T08:51Z",
+        "endTime": "2026-06-14T08:55Z"
+      }
+    },
+    {
+      "id": "ph_010_cruise",
+      "labels": [
+        "FlightPhase",
+        "Cruise"
+      ],
+      "properties": {
+        "name": "Cruise",
+        "duration_minutes": 20,
+        "altitude_ft": 3500,
+        "airspeed_kt": 110,
+        "power_pct": 65,
+        "trueAirspeed_kt": 115,
+        "groundspeed_kt": 110,
+        "fuelBurn_gph": 8.5,
+        "distance_nm": 33,
+        "startTime": "2026-06-14T08:55Z",
+        "endTime": "2026-06-14T09:15Z",
+        "squawk": "7000"
+      }
+    },
+    {
+      "id": "ph_010_descent",
+      "labels": [
+        "FlightPhase",
+        "Descent"
+      ],
+      "properties": {
+        "name": "Descent",
+        "duration_minutes": 6,
+        "airspeed_kt": 110,
+        "descentRate_fpm": 500,
+        "startAltitude_ft": 3500,
+        "targetAltitude_ft": 1270,
+        "groundspeed_kt": 120,
+        "distance_nm": 12.0,
+        "startTime": "2026-06-14T09:15Z",
+        "endTime": "2026-06-14T09:21Z"
+      }
+    },
+    {
+      "id": "ph_010_approach",
+      "labels": [
+        "FlightPhase",
+        "Approach"
+      ],
+      "properties": {
+        "name": "Approach",
+        "duration_minutes": 5,
+        "airspeed_kt": 65,
+        "flapSetting_deg": 30,
+        "patternAltitude_ft": 1270,
+        "glidepath_deg": 3,
+        "groundspeed_kt": 70,
+        "distance_nm": 5.8,
+        "arrivalRunway": "01/19",
+        "startTime": "2026-06-14T09:21Z",
+        "endTime": "2026-06-14T09:26Z"
+      }
+    },
+    {
+      "id": "ph_010_landing",
+      "labels": [
+        "FlightPhase",
+        "Landing"
+      ],
+      "properties": {
+        "name": "Landing",
+        "duration_minutes": 1,
+        "touchdownSpeed_kt": 55,
+        "flapSetting_deg": 30,
+        "fieldElevation_ft": 270,
+        "arrivalRunway": "01/19",
+        "groundRoll_m": 175,
+        "distance_nm": 0.3,
+        "startTime": "2026-06-14T09:26Z",
+        "endTime": "2026-06-14T09:27Z"
+      }
+    },
+    {
+      "id": "flight011",
+      "labels": [
+        "Flight"
+      ],
+      "properties": {
+        "name": "Flight 011",
+        "departureAerodrome": "EGTE",
+        "destinationAerodrome": "EGGD",
+        "date": "2026-06-18",
+        "callsign": "GECHO",
+        "flightRules": "VFR",
+        "distance_nm": 47,
+        "cruiseAltitude_ft": 3500,
+        "squawk": "5075",
+        "blockTime_minutes": 44,
+        "flightTime_hours": 0.6,
+        "timezone": "UTC",
+        "offBlockTime": "2026-06-18T15:15Z",
+        "departureTime": "2026-06-18T15:21Z",
+        "arrivalTime": "2026-06-18T15:58Z",
+        "onBlockTime": "2026-06-18T15:59Z"
+      }
+    },
+    {
+      "id": "ph_011_preflight",
+      "labels": [
+        "FlightPhase",
+        "Preflight"
+      ],
+      "properties": {
+        "name": "Preflight",
+        "duration_minutes": 15,
+        "location": "apron",
+        "fieldElevation_ft": 102,
+        "groundspeed_kt": 0,
+        "distance_nm": 0,
+        "activity": "walkaround & cockpit checks",
+        "fuelState": "full tanks",
+        "startTime": "2026-06-18T15:00Z",
+        "endTime": "2026-06-18T15:15Z"
+      }
+    },
+    {
+      "id": "ph_011_taxi",
+      "labels": [
+        "FlightPhase",
+        "Taxi"
+      ],
+      "properties": {
+        "name": "Taxi",
+        "duration_minutes": 5,
+        "groundspeed_kt": 10,
+        "fieldElevation_ft": 102,
+        "distance_nm": 0.8,
+        "route": "apron to holding point",
+        "startTime": "2026-06-18T15:15Z",
+        "endTime": "2026-06-18T15:20Z"
+      }
+    },
+    {
+      "id": "ph_011_takeoff",
+      "labels": [
+        "FlightPhase",
+        "Takeoff"
+      ],
+      "properties": {
+        "name": "Takeoff",
+        "duration_minutes": 1,
+        "rotateSpeed_kt": 55,
+        "flapSetting_deg": 10,
+        "fieldElevation_ft": 102,
+        "departureRunway": "08/26",
+        "liftoffSpeed_kt": 56,
+        "groundRoll_m": 290,
+        "distance_nm": 0.2,
+        "startTime": "2026-06-18T15:20Z",
+        "endTime": "2026-06-18T15:21Z"
+      }
+    },
+    {
+      "id": "ph_011_climb",
+      "labels": [
+        "FlightPhase",
+        "Climb"
+      ],
+      "properties": {
+        "name": "Climb",
+        "duration_minutes": 4,
+        "airspeed_kt": 74,
+        "climbRate_fpm": 700,
+        "targetAltitude_ft": 3500,
+        "startAltitude_ft": 102,
+        "groundspeed_kt": 75,
+        "distance_nm": 5.0,
+        "powerSetting": "full throttle",
+        "startTime": "2026-06-18T15:21Z",
+        "endTime": "2026-06-18T15:25Z"
+      }
+    },
+    {
+      "id": "ph_011_cruise",
+      "labels": [
+        "FlightPhase",
+        "Cruise"
+      ],
+      "properties": {
+        "name": "Cruise",
+        "duration_minutes": 22,
+        "altitude_ft": 3500,
+        "airspeed_kt": 110,
+        "power_pct": 65,
+        "trueAirspeed_kt": 115,
+        "groundspeed_kt": 110,
+        "fuelBurn_gph": 8.5,
+        "distance_nm": 36,
+        "startTime": "2026-06-18T15:25Z",
+        "endTime": "2026-06-18T15:47Z",
+        "squawk": "7000"
+      }
+    },
+    {
+      "id": "ph_011_descent",
+      "labels": [
+        "FlightPhase",
+        "Descent"
+      ],
+      "properties": {
+        "name": "Descent",
+        "duration_minutes": 6,
+        "airspeed_kt": 110,
+        "descentRate_fpm": 500,
+        "startAltitude_ft": 3500,
+        "targetAltitude_ft": 1622,
+        "groundspeed_kt": 120,
+        "distance_nm": 12.0,
+        "startTime": "2026-06-18T15:47Z",
+        "endTime": "2026-06-18T15:53Z"
+      }
+    },
+    {
+      "id": "ph_011_approach",
+      "labels": [
+        "FlightPhase",
+        "Approach"
+      ],
+      "properties": {
+        "name": "Approach",
+        "duration_minutes": 5,
+        "airspeed_kt": 65,
+        "flapSetting_deg": 30,
+        "patternAltitude_ft": 1622,
+        "glidepath_deg": 3,
+        "groundspeed_kt": 70,
+        "distance_nm": 5.8,
+        "arrivalRunway": "09/27",
+        "startTime": "2026-06-18T15:53Z",
+        "endTime": "2026-06-18T15:58Z"
+      }
+    },
+    {
+      "id": "ph_011_landing",
+      "labels": [
+        "FlightPhase",
+        "Landing"
+      ],
+      "properties": {
+        "name": "Landing",
+        "duration_minutes": 1,
+        "touchdownSpeed_kt": 55,
+        "flapSetting_deg": 30,
+        "fieldElevation_ft": 622,
+        "arrivalRunway": "09/27",
+        "groundRoll_m": 175,
+        "distance_nm": 0.3,
+        "startTime": "2026-06-18T15:58Z",
+        "endTime": "2026-06-18T15:59Z"
+      }
+    },
+    {
+      "id": "flight012",
+      "labels": [
+        "Flight"
+      ],
+      "properties": {
+        "name": "Flight 012",
+        "departureAerodrome": "EGBP",
+        "destinationAerodrome": "EGFF",
+        "date": "2026-06-21",
+        "callsign": "GECHO",
+        "flightRules": "VFR",
+        "distance_nm": 38,
+        "cruiseAltitude_ft": 2500,
+        "squawk": "5076",
+        "blockTime_minutes": 40,
+        "flightTime_hours": 0.6,
+        "timezone": "UTC",
+        "offBlockTime": "2026-06-21T12:15Z",
+        "departureTime": "2026-06-21T12:21Z",
+        "arrivalTime": "2026-06-21T12:54Z",
+        "onBlockTime": "2026-06-21T12:55Z"
+      }
+    },
+    {
+      "id": "ph_012_preflight",
+      "labels": [
+        "FlightPhase",
+        "Preflight"
+      ],
+      "properties": {
+        "name": "Preflight",
+        "duration_minutes": 15,
+        "location": "apron",
+        "fieldElevation_ft": 433,
+        "groundspeed_kt": 0,
+        "distance_nm": 0,
+        "activity": "walkaround & cockpit checks",
+        "fuelState": "full tanks",
+        "startTime": "2026-06-21T12:00Z",
+        "endTime": "2026-06-21T12:15Z"
+      }
+    },
+    {
+      "id": "ph_012_taxi",
+      "labels": [
+        "FlightPhase",
+        "Taxi"
+      ],
+      "properties": {
+        "name": "Taxi",
+        "duration_minutes": 5,
+        "groundspeed_kt": 10,
+        "fieldElevation_ft": 433,
+        "distance_nm": 0.8,
+        "route": "apron to holding point",
+        "startTime": "2026-06-21T12:15Z",
+        "endTime": "2026-06-21T12:20Z"
+      }
+    },
+    {
+      "id": "ph_012_takeoff",
+      "labels": [
+        "FlightPhase",
+        "Takeoff"
+      ],
+      "properties": {
+        "name": "Takeoff",
+        "duration_minutes": 1,
+        "rotateSpeed_kt": 55,
+        "flapSetting_deg": 10,
+        "fieldElevation_ft": 433,
+        "departureRunway": "08/26",
+        "liftoffSpeed_kt": 56,
+        "groundRoll_m": 290,
+        "distance_nm": 0.2,
+        "startTime": "2026-06-21T12:20Z",
+        "endTime": "2026-06-21T12:21Z"
+      }
+    },
+    {
+      "id": "ph_012_climb",
+      "labels": [
+        "FlightPhase",
+        "Climb"
+      ],
+      "properties": {
+        "name": "Climb",
+        "duration_minutes": 4,
+        "airspeed_kt": 74,
+        "climbRate_fpm": 700,
+        "targetAltitude_ft": 2500,
+        "startAltitude_ft": 433,
+        "groundspeed_kt": 75,
+        "distance_nm": 5.0,
+        "powerSetting": "full throttle",
+        "startTime": "2026-06-21T12:21Z",
+        "endTime": "2026-06-21T12:25Z"
+      }
+    },
+    {
+      "id": "ph_012_cruise",
+      "labels": [
+        "FlightPhase",
+        "Cruise"
+      ],
+      "properties": {
+        "name": "Cruise",
+        "duration_minutes": 18,
+        "altitude_ft": 2500,
+        "airspeed_kt": 110,
+        "power_pct": 65,
+        "trueAirspeed_kt": 115,
+        "groundspeed_kt": 110,
+        "fuelBurn_gph": 8.5,
+        "distance_nm": 27,
+        "startTime": "2026-06-21T12:25Z",
+        "endTime": "2026-06-21T12:43Z",
+        "squawk": "7000"
+      }
+    },
+    {
+      "id": "ph_012_descent",
+      "labels": [
+        "FlightPhase",
+        "Descent"
+      ],
+      "properties": {
+        "name": "Descent",
+        "duration_minutes": 6,
+        "airspeed_kt": 110,
+        "descentRate_fpm": 500,
+        "startAltitude_ft": 2500,
+        "targetAltitude_ft": 1220,
+        "groundspeed_kt": 120,
+        "distance_nm": 12.0,
+        "startTime": "2026-06-21T12:43Z",
+        "endTime": "2026-06-21T12:49Z"
+      }
+    },
+    {
+      "id": "ph_012_approach",
+      "labels": [
+        "FlightPhase",
+        "Approach"
+      ],
+      "properties": {
+        "name": "Approach",
+        "duration_minutes": 5,
+        "airspeed_kt": 65,
+        "flapSetting_deg": 30,
+        "patternAltitude_ft": 1220,
+        "glidepath_deg": 3,
+        "groundspeed_kt": 70,
+        "distance_nm": 5.8,
+        "arrivalRunway": "12/30",
+        "startTime": "2026-06-21T12:49Z",
+        "endTime": "2026-06-21T12:54Z"
+      }
+    },
+    {
+      "id": "ph_012_landing",
+      "labels": [
+        "FlightPhase",
+        "Landing"
+      ],
+      "properties": {
+        "name": "Landing",
+        "duration_minutes": 1,
+        "touchdownSpeed_kt": 55,
+        "flapSetting_deg": 30,
+        "fieldElevation_ft": 220,
+        "arrivalRunway": "12/30",
+        "groundRoll_m": 175,
+        "distance_nm": 0.3,
+        "startTime": "2026-06-21T12:54Z",
+        "endTime": "2026-06-21T12:55Z"
       }
     }
   ],
@@ -2884,13 +4746,6 @@
       "properties": {}
     },
     {
-      "id": "r73",
-      "type": "HANDLED_BY",
-      "startNode": "flight001",
-      "endNode": "atc",
-      "properties": {}
-    },
-    {
       "id": "r74",
       "type": "HAS_CONTROL_SURFACE",
       "startNode": "leftWing",
@@ -3280,20 +5135,6 @@
       "type": "USES_RUNWAY",
       "startNode": "ph_landing",
       "endNode": "rwyEGBP08",
-      "properties": {}
-    },
-    {
-      "id": "r131",
-      "type": "PROVIDES_SERVICE_AT",
-      "startNode": "atc",
-      "endNode": "EGGD",
-      "properties": {}
-    },
-    {
-      "id": "r132",
-      "type": "PROVIDES_SERVICE_AT",
-      "startNode": "atc",
-      "endNode": "EGBP",
       "properties": {}
     },
     {
@@ -3743,24 +5584,10 @@
       "properties": {}
     },
     {
-      "id": "r195",
-      "type": "PROVIDES_SERVICE_AT",
-      "startNode": "atc",
-      "endNode": "EGBJ",
-      "properties": {}
-    },
-    {
       "id": "r196",
       "type": "HAS_RUNWAY",
       "startNode": "EGFF",
       "endNode": "rwyEGFF12",
-      "properties": {}
-    },
-    {
-      "id": "r197",
-      "type": "PROVIDES_SERVICE_AT",
-      "startNode": "atc",
-      "endNode": "EGFF",
       "properties": {}
     },
     {
@@ -3771,13 +5598,6 @@
       "properties": {}
     },
     {
-      "id": "r199",
-      "type": "PROVIDES_SERVICE_AT",
-      "startNode": "atc",
-      "endNode": "EGTE",
-      "properties": {}
-    },
-    {
       "id": "r200",
       "type": "HAS_RUNWAY",
       "startNode": "EGTK",
@@ -3785,24 +5605,10 @@
       "properties": {}
     },
     {
-      "id": "r201",
-      "type": "PROVIDES_SERVICE_AT",
-      "startNode": "atc",
-      "endNode": "EGTK",
-      "properties": {}
-    },
-    {
       "id": "r202",
       "type": "HAS_RUNWAY",
       "startNode": "EGHH",
       "endNode": "rwyEGHH08",
-      "properties": {}
-    },
-    {
-      "id": "r203",
-      "type": "PROVIDES_SERVICE_AT",
-      "startNode": "atc",
-      "endNode": "EGHH",
       "properties": {}
     },
     {
@@ -3817,13 +5623,6 @@
       "type": "HAS_PIC",
       "startNode": "flight002",
       "endNode": "pic",
-      "properties": {}
-    },
-    {
-      "id": "r206",
-      "type": "HANDLED_BY",
-      "startNode": "flight002",
-      "endNode": "atc",
       "properties": {}
     },
     {
@@ -3855,13 +5654,6 @@
       "properties": {}
     },
     {
-      "id": "r213",
-      "type": "HANDLED_BY",
-      "startNode": "flight003",
-      "endNode": "atc",
-      "properties": {}
-    },
-    {
       "id": "r214",
       "type": "DEPARTS_FROM",
       "startNode": "flight003",
@@ -3887,13 +5679,6 @@
       "type": "HAS_PIC",
       "startNode": "flight004",
       "endNode": "pic",
-      "properties": {}
-    },
-    {
-      "id": "r220",
-      "type": "HANDLED_BY",
-      "startNode": "flight004",
-      "endNode": "atc",
       "properties": {}
     },
     {
@@ -3925,13 +5710,6 @@
       "properties": {}
     },
     {
-      "id": "r227",
-      "type": "HANDLED_BY",
-      "startNode": "flight005",
-      "endNode": "atc",
-      "properties": {}
-    },
-    {
       "id": "r228",
       "type": "DEPARTS_FROM",
       "startNode": "flight005",
@@ -3957,13 +5735,6 @@
       "type": "HAS_PIC",
       "startNode": "flight006",
       "endNode": "pic",
-      "properties": {}
-    },
-    {
-      "id": "r234",
-      "type": "HANDLED_BY",
-      "startNode": "flight006",
-      "endNode": "atc",
       "properties": {}
     },
     {
@@ -4748,6 +6519,2911 @@
       "type": "USES_RUNWAY",
       "startNode": "ph_006_landing",
       "endNode": "rwyEGHH08",
+      "properties": {}
+    },
+    {
+      "id": "r347",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGGD_atis",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r348",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGGD_atis",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r349",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGGD_gnd",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r350",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGGD_gnd",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r351",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGGD_twr",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r352",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGGD_twr",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r353",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGGD_app",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r354",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGGD_app",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r355",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGFF_atis",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r356",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGFF_atis",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r357",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGFF_twr",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r358",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGFF_twr",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r359",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGFF_app",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r360",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGFF_app",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r361",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGTE_twr",
+      "endNode": "EGTE",
+      "properties": {}
+    },
+    {
+      "id": "r362",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGTE_twr",
+      "endNode": "EGTE",
+      "properties": {}
+    },
+    {
+      "id": "r363",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGTE_app",
+      "endNode": "EGTE",
+      "properties": {}
+    },
+    {
+      "id": "r364",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGTE_app",
+      "endNode": "EGTE",
+      "properties": {}
+    },
+    {
+      "id": "r365",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGHH_twr",
+      "endNode": "EGHH",
+      "properties": {}
+    },
+    {
+      "id": "r366",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGHH_twr",
+      "endNode": "EGHH",
+      "properties": {}
+    },
+    {
+      "id": "r367",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGHH_app",
+      "endNode": "EGHH",
+      "properties": {}
+    },
+    {
+      "id": "r368",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGHH_app",
+      "endNode": "EGHH",
+      "properties": {}
+    },
+    {
+      "id": "r369",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGBJ_twr",
+      "endNode": "EGBJ",
+      "properties": {}
+    },
+    {
+      "id": "r370",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGBJ_twr",
+      "endNode": "EGBJ",
+      "properties": {}
+    },
+    {
+      "id": "r371",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGBJ_app",
+      "endNode": "EGBJ",
+      "properties": {}
+    },
+    {
+      "id": "r372",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGBJ_app",
+      "endNode": "EGBJ",
+      "properties": {}
+    },
+    {
+      "id": "r373",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGTK_twr",
+      "endNode": "EGTK",
+      "properties": {}
+    },
+    {
+      "id": "r374",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGTK_twr",
+      "endNode": "EGTK",
+      "properties": {}
+    },
+    {
+      "id": "r375",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGTK_app",
+      "endNode": "EGTK",
+      "properties": {}
+    },
+    {
+      "id": "r376",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGTK_app",
+      "endNode": "EGTK",
+      "properties": {}
+    },
+    {
+      "id": "r377",
+      "type": "LOCATED_AT",
+      "startNode": "atcEGBP_info",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r378",
+      "type": "PROVIDES_SERVICE_AT",
+      "startNode": "atcEGBP_info",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r379",
+      "type": "OPERATES",
+      "startNode": "pic2",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r380",
+      "type": "HAS_SPECIFICATION",
+      "startNode": "G-ECHO",
+      "endNode": "dims",
+      "properties": {}
+    },
+    {
+      "id": "r381",
+      "type": "GOVERNED_BY",
+      "startNode": "dims",
+      "endNode": "poh",
+      "properties": {}
+    },
+    {
+      "id": "r382",
+      "type": "HAS_SPECIFICATION",
+      "startNode": "G-ECHO",
+      "endNode": "weights",
+      "properties": {}
+    },
+    {
+      "id": "r383",
+      "type": "GOVERNED_BY",
+      "startNode": "weights",
+      "endNode": "poh",
+      "properties": {}
+    },
+    {
+      "id": "r384",
+      "type": "HAS_SPECIFICATION",
+      "startNode": "G-ECHO",
+      "endNode": "perf",
+      "properties": {}
+    },
+    {
+      "id": "r385",
+      "type": "GOVERNED_BY",
+      "startNode": "perf",
+      "endNode": "poh",
+      "properties": {}
+    },
+    {
+      "id": "r386",
+      "type": "HAS_SPECIFICATION",
+      "startNode": "G-ECHO",
+      "endNode": "vspeeds",
+      "properties": {}
+    },
+    {
+      "id": "r387",
+      "type": "GOVERNED_BY",
+      "startNode": "vspeeds",
+      "endNode": "poh",
+      "properties": {}
+    },
+    {
+      "id": "r388",
+      "type": "HAS_SPECIFICATION",
+      "startNode": "G-ECHO",
+      "endNode": "limits",
+      "properties": {}
+    },
+    {
+      "id": "r389",
+      "type": "GOVERNED_BY",
+      "startNode": "limits",
+      "endNode": "poh",
+      "properties": {}
+    },
+    {
+      "id": "r390",
+      "type": "GOVERNED_BY",
+      "startNode": "G-ECHO",
+      "endNode": "checklist",
+      "properties": {}
+    },
+    {
+      "id": "r391",
+      "type": "GOVERNED_BY",
+      "startNode": "G-ECHO",
+      "endNode": "wbSheet",
+      "properties": {}
+    },
+    {
+      "id": "r392",
+      "type": "REFERENCES",
+      "startNode": "G-ECHO",
+      "endNode": "g1000Manual",
+      "properties": {}
+    },
+    {
+      "id": "r393",
+      "type": "REFERENCES",
+      "startNode": "G-ECHO",
+      "endNode": "afmSupp",
+      "properties": {}
+    },
+    {
+      "id": "r394",
+      "type": "GOVERNED_BY",
+      "startNode": "avionics",
+      "endNode": "g1000Manual",
+      "properties": {}
+    },
+    {
+      "id": "r395",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "oilPump",
+      "properties": {}
+    },
+    {
+      "id": "r396",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "fuelFlowXducer",
+      "properties": {}
+    },
+    {
+      "id": "r397",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "ignitionHarness",
+      "properties": {}
+    },
+    {
+      "id": "r398",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "chtProbes",
+      "properties": {}
+    },
+    {
+      "id": "r399",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "egtProbes",
+      "properties": {}
+    },
+    {
+      "id": "r400",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "oilPressSensor",
+      "properties": {}
+    },
+    {
+      "id": "r401",
+      "type": "HAS_PART",
+      "startNode": "io360",
+      "endNode": "oilTempSensor",
+      "properties": {}
+    },
+    {
+      "id": "r402",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "pfd",
+      "properties": {}
+    },
+    {
+      "id": "r403",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "standbyAi",
+      "properties": {}
+    },
+    {
+      "id": "r404",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "standbyAlt",
+      "properties": {}
+    },
+    {
+      "id": "r405",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "standbyAsi",
+      "properties": {}
+    },
+    {
+      "id": "r406",
+      "type": "HAS_COMPONENT",
+      "startNode": "electrical",
+      "endNode": "beacon",
+      "properties": {}
+    },
+    {
+      "id": "r407",
+      "type": "HAS_COMPONENT",
+      "startNode": "electrical",
+      "endNode": "strobes",
+      "properties": {}
+    },
+    {
+      "id": "r408",
+      "type": "HAS_COMPONENT",
+      "startNode": "electrical",
+      "endNode": "taxiLight",
+      "properties": {}
+    },
+    {
+      "id": "r409",
+      "type": "HAS_COMPONENT",
+      "startNode": "pitotStatic",
+      "endNode": "pitotTube",
+      "properties": {}
+    },
+    {
+      "id": "r410",
+      "type": "HAS_COMPONENT",
+      "startNode": "pitotStatic",
+      "endNode": "staticPorts",
+      "properties": {}
+    },
+    {
+      "id": "r411",
+      "type": "HAS_COMPONENT",
+      "startNode": "pitotStatic",
+      "endNode": "altStatic",
+      "properties": {}
+    },
+    {
+      "id": "r412",
+      "type": "HAS_COMPONENT",
+      "startNode": "flightControls",
+      "endNode": "trimWheel",
+      "properties": {}
+    },
+    {
+      "id": "r413",
+      "type": "HAS_COMPONENT",
+      "startNode": "airframe",
+      "endNode": "cabinHeat",
+      "properties": {}
+    },
+    {
+      "id": "r414",
+      "type": "HAS_COMPONENT",
+      "startNode": "fuel",
+      "endNode": "fuelQtySensors",
+      "properties": {}
+    },
+    {
+      "id": "r415",
+      "type": "FEEDS",
+      "startNode": "ignitionHarness",
+      "endNode": "sparkPlugs",
+      "properties": {}
+    },
+    {
+      "id": "r416",
+      "type": "CONTROLS",
+      "startNode": "pitotHeat",
+      "endNode": "pitotTube",
+      "properties": {}
+    },
+    {
+      "id": "r417",
+      "type": "FEEDS",
+      "startNode": "chtProbes",
+      "endNode": "gea71",
+      "properties": {}
+    },
+    {
+      "id": "r418",
+      "type": "FEEDS",
+      "startNode": "egtProbes",
+      "endNode": "gea71",
+      "properties": {}
+    },
+    {
+      "id": "r419",
+      "type": "FEEDS",
+      "startNode": "oilPressSensor",
+      "endNode": "gea71",
+      "properties": {}
+    },
+    {
+      "id": "r420",
+      "type": "FEEDS",
+      "startNode": "oilTempSensor",
+      "endNode": "gea71",
+      "properties": {}
+    },
+    {
+      "id": "r421",
+      "type": "POWERED_BY",
+      "startNode": "pfd",
+      "endNode": "gia1",
+      "properties": {}
+    },
+    {
+      "id": "r422",
+      "type": "ACTUATES",
+      "startNode": "trimWheel",
+      "endNode": "elevator",
+      "properties": {}
+    },
+    {
+      "id": "r423",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight001",
+      "endNode": "atcEGGD_atis",
+      "properties": {}
+    },
+    {
+      "id": "r424",
+      "type": "HANDLED_BY",
+      "startNode": "flight001",
+      "endNode": "atcEGGD_gnd",
+      "properties": {}
+    },
+    {
+      "id": "r425",
+      "type": "HANDLED_BY",
+      "startNode": "flight001",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r426",
+      "type": "HANDLED_BY",
+      "startNode": "flight001",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r427",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight001",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r428",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight001",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r429",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_preflight",
+      "endNode": "atcEGGD_atis",
+      "properties": {}
+    },
+    {
+      "id": "r430",
+      "type": "HANDLED_BY",
+      "startNode": "ph_taxi",
+      "endNode": "atcEGGD_gnd",
+      "properties": {}
+    },
+    {
+      "id": "r431",
+      "type": "HANDLED_BY",
+      "startNode": "ph_takeoff",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r432",
+      "type": "HANDLED_BY",
+      "startNode": "ph_climb",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r433",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_cruise",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r434",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_descent",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r435",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_approach",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r436",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_landing",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r437",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight002",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r438",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight002",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r439",
+      "type": "HANDLED_BY",
+      "startNode": "flight002",
+      "endNode": "atcEGBJ_app",
+      "properties": {}
+    },
+    {
+      "id": "r440",
+      "type": "HANDLED_BY",
+      "startNode": "flight002",
+      "endNode": "atcEGBJ_twr",
+      "properties": {}
+    },
+    {
+      "id": "r441",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_002_preflight",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r442",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_002_taxi",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r443",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_002_takeoff",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r444",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_002_climb",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r445",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_002_cruise",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r446",
+      "type": "HANDLED_BY",
+      "startNode": "ph_002_descent",
+      "endNode": "atcEGBJ_app",
+      "properties": {}
+    },
+    {
+      "id": "r447",
+      "type": "HANDLED_BY",
+      "startNode": "ph_002_approach",
+      "endNode": "atcEGBJ_app",
+      "properties": {}
+    },
+    {
+      "id": "r448",
+      "type": "HANDLED_BY",
+      "startNode": "ph_002_landing",
+      "endNode": "atcEGBJ_twr",
+      "properties": {}
+    },
+    {
+      "id": "r449",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight003",
+      "endNode": "atcEGGD_atis",
+      "properties": {}
+    },
+    {
+      "id": "r450",
+      "type": "HANDLED_BY",
+      "startNode": "flight003",
+      "endNode": "atcEGGD_gnd",
+      "properties": {}
+    },
+    {
+      "id": "r451",
+      "type": "HANDLED_BY",
+      "startNode": "flight003",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r452",
+      "type": "HANDLED_BY",
+      "startNode": "flight003",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r453",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight003",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r454",
+      "type": "HANDLED_BY",
+      "startNode": "flight003",
+      "endNode": "atcEGFF_app",
+      "properties": {}
+    },
+    {
+      "id": "r455",
+      "type": "HANDLED_BY",
+      "startNode": "flight003",
+      "endNode": "atcEGFF_twr",
+      "properties": {}
+    },
+    {
+      "id": "r456",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_003_preflight",
+      "endNode": "atcEGGD_atis",
+      "properties": {}
+    },
+    {
+      "id": "r457",
+      "type": "HANDLED_BY",
+      "startNode": "ph_003_taxi",
+      "endNode": "atcEGGD_gnd",
+      "properties": {}
+    },
+    {
+      "id": "r458",
+      "type": "HANDLED_BY",
+      "startNode": "ph_003_takeoff",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r459",
+      "type": "HANDLED_BY",
+      "startNode": "ph_003_climb",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r460",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_003_cruise",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r461",
+      "type": "HANDLED_BY",
+      "startNode": "ph_003_descent",
+      "endNode": "atcEGFF_app",
+      "properties": {}
+    },
+    {
+      "id": "r462",
+      "type": "HANDLED_BY",
+      "startNode": "ph_003_approach",
+      "endNode": "atcEGFF_app",
+      "properties": {}
+    },
+    {
+      "id": "r463",
+      "type": "HANDLED_BY",
+      "startNode": "ph_003_landing",
+      "endNode": "atcEGFF_twr",
+      "properties": {}
+    },
+    {
+      "id": "r464",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight004",
+      "endNode": "atcEGGD_atis",
+      "properties": {}
+    },
+    {
+      "id": "r465",
+      "type": "HANDLED_BY",
+      "startNode": "flight004",
+      "endNode": "atcEGGD_gnd",
+      "properties": {}
+    },
+    {
+      "id": "r466",
+      "type": "HANDLED_BY",
+      "startNode": "flight004",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r467",
+      "type": "HANDLED_BY",
+      "startNode": "flight004",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r468",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight004",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r469",
+      "type": "HANDLED_BY",
+      "startNode": "flight004",
+      "endNode": "atcEGTE_app",
+      "properties": {}
+    },
+    {
+      "id": "r470",
+      "type": "HANDLED_BY",
+      "startNode": "flight004",
+      "endNode": "atcEGTE_twr",
+      "properties": {}
+    },
+    {
+      "id": "r471",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_004_preflight",
+      "endNode": "atcEGGD_atis",
+      "properties": {}
+    },
+    {
+      "id": "r472",
+      "type": "HANDLED_BY",
+      "startNode": "ph_004_taxi",
+      "endNode": "atcEGGD_gnd",
+      "properties": {}
+    },
+    {
+      "id": "r473",
+      "type": "HANDLED_BY",
+      "startNode": "ph_004_takeoff",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r474",
+      "type": "HANDLED_BY",
+      "startNode": "ph_004_climb",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r475",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_004_cruise",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r476",
+      "type": "HANDLED_BY",
+      "startNode": "ph_004_descent",
+      "endNode": "atcEGTE_app",
+      "properties": {}
+    },
+    {
+      "id": "r477",
+      "type": "HANDLED_BY",
+      "startNode": "ph_004_approach",
+      "endNode": "atcEGTE_app",
+      "properties": {}
+    },
+    {
+      "id": "r478",
+      "type": "HANDLED_BY",
+      "startNode": "ph_004_landing",
+      "endNode": "atcEGTE_twr",
+      "properties": {}
+    },
+    {
+      "id": "r479",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight005",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r480",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight005",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r481",
+      "type": "HANDLED_BY",
+      "startNode": "flight005",
+      "endNode": "atcEGTK_app",
+      "properties": {}
+    },
+    {
+      "id": "r482",
+      "type": "HANDLED_BY",
+      "startNode": "flight005",
+      "endNode": "atcEGTK_twr",
+      "properties": {}
+    },
+    {
+      "id": "r483",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_005_preflight",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r484",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_005_taxi",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r485",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_005_takeoff",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r486",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_005_climb",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r487",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_005_cruise",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r488",
+      "type": "HANDLED_BY",
+      "startNode": "ph_005_descent",
+      "endNode": "atcEGTK_app",
+      "properties": {}
+    },
+    {
+      "id": "r489",
+      "type": "HANDLED_BY",
+      "startNode": "ph_005_approach",
+      "endNode": "atcEGTK_app",
+      "properties": {}
+    },
+    {
+      "id": "r490",
+      "type": "HANDLED_BY",
+      "startNode": "ph_005_landing",
+      "endNode": "atcEGTK_twr",
+      "properties": {}
+    },
+    {
+      "id": "r491",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight006",
+      "endNode": "atcEGGD_atis",
+      "properties": {}
+    },
+    {
+      "id": "r492",
+      "type": "HANDLED_BY",
+      "startNode": "flight006",
+      "endNode": "atcEGGD_gnd",
+      "properties": {}
+    },
+    {
+      "id": "r493",
+      "type": "HANDLED_BY",
+      "startNode": "flight006",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r494",
+      "type": "HANDLED_BY",
+      "startNode": "flight006",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r495",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight006",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r496",
+      "type": "HANDLED_BY",
+      "startNode": "flight006",
+      "endNode": "atcEGHH_app",
+      "properties": {}
+    },
+    {
+      "id": "r497",
+      "type": "HANDLED_BY",
+      "startNode": "flight006",
+      "endNode": "atcEGHH_twr",
+      "properties": {}
+    },
+    {
+      "id": "r498",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_006_preflight",
+      "endNode": "atcEGGD_atis",
+      "properties": {}
+    },
+    {
+      "id": "r499",
+      "type": "HANDLED_BY",
+      "startNode": "ph_006_taxi",
+      "endNode": "atcEGGD_gnd",
+      "properties": {}
+    },
+    {
+      "id": "r500",
+      "type": "HANDLED_BY",
+      "startNode": "ph_006_takeoff",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r501",
+      "type": "HANDLED_BY",
+      "startNode": "ph_006_climb",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r502",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_006_cruise",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r503",
+      "type": "HANDLED_BY",
+      "startNode": "ph_006_descent",
+      "endNode": "atcEGHH_app",
+      "properties": {}
+    },
+    {
+      "id": "r504",
+      "type": "HANDLED_BY",
+      "startNode": "ph_006_approach",
+      "endNode": "atcEGHH_app",
+      "properties": {}
+    },
+    {
+      "id": "r505",
+      "type": "HANDLED_BY",
+      "startNode": "ph_006_landing",
+      "endNode": "atcEGHH_twr",
+      "properties": {}
+    },
+    {
+      "id": "r506",
+      "type": "USES_AIRCRAFT",
+      "startNode": "flight007",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r507",
+      "type": "HAS_PIC",
+      "startNode": "flight007",
+      "endNode": "pic",
+      "properties": {}
+    },
+    {
+      "id": "r508",
+      "type": "DEPARTS_FROM",
+      "startNode": "flight007",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r509",
+      "type": "ARRIVES_AT",
+      "startNode": "flight007",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r510",
+      "type": "HAS_PHASE",
+      "startNode": "flight007",
+      "endNode": "ph_007_preflight",
+      "properties": {}
+    },
+    {
+      "id": "r511",
+      "type": "OCCURS_AT",
+      "startNode": "ph_007_preflight",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r512",
+      "type": "HAS_PHASE",
+      "startNode": "flight007",
+      "endNode": "ph_007_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r513",
+      "type": "OCCURS_AT",
+      "startNode": "ph_007_taxi",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r514",
+      "type": "HAS_PHASE",
+      "startNode": "flight007",
+      "endNode": "ph_007_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r515",
+      "type": "OCCURS_AT",
+      "startNode": "ph_007_takeoff",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r516",
+      "type": "HAS_PHASE",
+      "startNode": "flight007",
+      "endNode": "ph_007_climb",
+      "properties": {}
+    },
+    {
+      "id": "r517",
+      "type": "OCCURS_AT",
+      "startNode": "ph_007_climb",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r518",
+      "type": "HAS_PHASE",
+      "startNode": "flight007",
+      "endNode": "ph_007_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r519",
+      "type": "OCCURS_AT",
+      "startNode": "ph_007_cruise",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r520",
+      "type": "HAS_PHASE",
+      "startNode": "flight007",
+      "endNode": "ph_007_descent",
+      "properties": {}
+    },
+    {
+      "id": "r521",
+      "type": "OCCURS_AT",
+      "startNode": "ph_007_descent",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r522",
+      "type": "HAS_PHASE",
+      "startNode": "flight007",
+      "endNode": "ph_007_approach",
+      "properties": {}
+    },
+    {
+      "id": "r523",
+      "type": "OCCURS_AT",
+      "startNode": "ph_007_approach",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r524",
+      "type": "HAS_PHASE",
+      "startNode": "flight007",
+      "endNode": "ph_007_landing",
+      "properties": {}
+    },
+    {
+      "id": "r525",
+      "type": "OCCURS_AT",
+      "startNode": "ph_007_landing",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r526",
+      "type": "FOLLOWS",
+      "startNode": "ph_007_preflight",
+      "endNode": "ph_007_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r527",
+      "type": "FOLLOWS",
+      "startNode": "ph_007_taxi",
+      "endNode": "ph_007_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r528",
+      "type": "FOLLOWS",
+      "startNode": "ph_007_takeoff",
+      "endNode": "ph_007_climb",
+      "properties": {}
+    },
+    {
+      "id": "r529",
+      "type": "FOLLOWS",
+      "startNode": "ph_007_climb",
+      "endNode": "ph_007_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r530",
+      "type": "FOLLOWS",
+      "startNode": "ph_007_cruise",
+      "endNode": "ph_007_descent",
+      "properties": {}
+    },
+    {
+      "id": "r531",
+      "type": "FOLLOWS",
+      "startNode": "ph_007_descent",
+      "endNode": "ph_007_approach",
+      "properties": {}
+    },
+    {
+      "id": "r532",
+      "type": "FOLLOWS",
+      "startNode": "ph_007_approach",
+      "endNode": "ph_007_landing",
+      "properties": {}
+    },
+    {
+      "id": "r533",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_007_takeoff",
+      "endNode": "rwyEGGD27",
+      "properties": {}
+    },
+    {
+      "id": "r534",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_007_landing",
+      "endNode": "rwyEGFF12",
+      "properties": {}
+    },
+    {
+      "id": "r535",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight007",
+      "endNode": "atcEGGD_atis",
+      "properties": {}
+    },
+    {
+      "id": "r536",
+      "type": "HANDLED_BY",
+      "startNode": "flight007",
+      "endNode": "atcEGGD_gnd",
+      "properties": {}
+    },
+    {
+      "id": "r537",
+      "type": "HANDLED_BY",
+      "startNode": "flight007",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r538",
+      "type": "HANDLED_BY",
+      "startNode": "flight007",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r539",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight007",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r540",
+      "type": "HANDLED_BY",
+      "startNode": "flight007",
+      "endNode": "atcEGFF_app",
+      "properties": {}
+    },
+    {
+      "id": "r541",
+      "type": "HANDLED_BY",
+      "startNode": "flight007",
+      "endNode": "atcEGFF_twr",
+      "properties": {}
+    },
+    {
+      "id": "r542",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_007_preflight",
+      "endNode": "atcEGGD_atis",
+      "properties": {}
+    },
+    {
+      "id": "r543",
+      "type": "HANDLED_BY",
+      "startNode": "ph_007_taxi",
+      "endNode": "atcEGGD_gnd",
+      "properties": {}
+    },
+    {
+      "id": "r544",
+      "type": "HANDLED_BY",
+      "startNode": "ph_007_takeoff",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r545",
+      "type": "HANDLED_BY",
+      "startNode": "ph_007_climb",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r546",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_007_cruise",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r547",
+      "type": "HANDLED_BY",
+      "startNode": "ph_007_descent",
+      "endNode": "atcEGFF_app",
+      "properties": {}
+    },
+    {
+      "id": "r548",
+      "type": "HANDLED_BY",
+      "startNode": "ph_007_approach",
+      "endNode": "atcEGFF_app",
+      "properties": {}
+    },
+    {
+      "id": "r549",
+      "type": "HANDLED_BY",
+      "startNode": "ph_007_landing",
+      "endNode": "atcEGFF_twr",
+      "properties": {}
+    },
+    {
+      "id": "r550",
+      "type": "USES_AIRCRAFT",
+      "startNode": "flight008",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r551",
+      "type": "HAS_PIC",
+      "startNode": "flight008",
+      "endNode": "pic",
+      "properties": {}
+    },
+    {
+      "id": "r552",
+      "type": "DEPARTS_FROM",
+      "startNode": "flight008",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r553",
+      "type": "ARRIVES_AT",
+      "startNode": "flight008",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r554",
+      "type": "HAS_PHASE",
+      "startNode": "flight008",
+      "endNode": "ph_008_preflight",
+      "properties": {}
+    },
+    {
+      "id": "r555",
+      "type": "OCCURS_AT",
+      "startNode": "ph_008_preflight",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r556",
+      "type": "HAS_PHASE",
+      "startNode": "flight008",
+      "endNode": "ph_008_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r557",
+      "type": "OCCURS_AT",
+      "startNode": "ph_008_taxi",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r558",
+      "type": "HAS_PHASE",
+      "startNode": "flight008",
+      "endNode": "ph_008_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r559",
+      "type": "OCCURS_AT",
+      "startNode": "ph_008_takeoff",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r560",
+      "type": "HAS_PHASE",
+      "startNode": "flight008",
+      "endNode": "ph_008_climb",
+      "properties": {}
+    },
+    {
+      "id": "r561",
+      "type": "OCCURS_AT",
+      "startNode": "ph_008_climb",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r562",
+      "type": "HAS_PHASE",
+      "startNode": "flight008",
+      "endNode": "ph_008_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r563",
+      "type": "OCCURS_AT",
+      "startNode": "ph_008_cruise",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r564",
+      "type": "HAS_PHASE",
+      "startNode": "flight008",
+      "endNode": "ph_008_descent",
+      "properties": {}
+    },
+    {
+      "id": "r565",
+      "type": "OCCURS_AT",
+      "startNode": "ph_008_descent",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r566",
+      "type": "HAS_PHASE",
+      "startNode": "flight008",
+      "endNode": "ph_008_approach",
+      "properties": {}
+    },
+    {
+      "id": "r567",
+      "type": "OCCURS_AT",
+      "startNode": "ph_008_approach",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r568",
+      "type": "HAS_PHASE",
+      "startNode": "flight008",
+      "endNode": "ph_008_landing",
+      "properties": {}
+    },
+    {
+      "id": "r569",
+      "type": "OCCURS_AT",
+      "startNode": "ph_008_landing",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r570",
+      "type": "FOLLOWS",
+      "startNode": "ph_008_preflight",
+      "endNode": "ph_008_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r571",
+      "type": "FOLLOWS",
+      "startNode": "ph_008_taxi",
+      "endNode": "ph_008_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r572",
+      "type": "FOLLOWS",
+      "startNode": "ph_008_takeoff",
+      "endNode": "ph_008_climb",
+      "properties": {}
+    },
+    {
+      "id": "r573",
+      "type": "FOLLOWS",
+      "startNode": "ph_008_climb",
+      "endNode": "ph_008_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r574",
+      "type": "FOLLOWS",
+      "startNode": "ph_008_cruise",
+      "endNode": "ph_008_descent",
+      "properties": {}
+    },
+    {
+      "id": "r575",
+      "type": "FOLLOWS",
+      "startNode": "ph_008_descent",
+      "endNode": "ph_008_approach",
+      "properties": {}
+    },
+    {
+      "id": "r576",
+      "type": "FOLLOWS",
+      "startNode": "ph_008_approach",
+      "endNode": "ph_008_landing",
+      "properties": {}
+    },
+    {
+      "id": "r577",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_008_takeoff",
+      "endNode": "rwyEGFF12",
+      "properties": {}
+    },
+    {
+      "id": "r578",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_008_landing",
+      "endNode": "rwyEGGD27",
+      "properties": {}
+    },
+    {
+      "id": "r579",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight008",
+      "endNode": "atcEGFF_atis",
+      "properties": {}
+    },
+    {
+      "id": "r580",
+      "type": "HANDLED_BY",
+      "startNode": "flight008",
+      "endNode": "atcEGFF_twr",
+      "properties": {}
+    },
+    {
+      "id": "r581",
+      "type": "HANDLED_BY",
+      "startNode": "flight008",
+      "endNode": "atcEGFF_app",
+      "properties": {}
+    },
+    {
+      "id": "r582",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight008",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r583",
+      "type": "HANDLED_BY",
+      "startNode": "flight008",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r584",
+      "type": "HANDLED_BY",
+      "startNode": "flight008",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r585",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_008_preflight",
+      "endNode": "atcEGFF_atis",
+      "properties": {}
+    },
+    {
+      "id": "r586",
+      "type": "HANDLED_BY",
+      "startNode": "ph_008_taxi",
+      "endNode": "atcEGFF_twr",
+      "properties": {}
+    },
+    {
+      "id": "r587",
+      "type": "HANDLED_BY",
+      "startNode": "ph_008_takeoff",
+      "endNode": "atcEGFF_twr",
+      "properties": {}
+    },
+    {
+      "id": "r588",
+      "type": "HANDLED_BY",
+      "startNode": "ph_008_climb",
+      "endNode": "atcEGFF_app",
+      "properties": {}
+    },
+    {
+      "id": "r589",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_008_cruise",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r590",
+      "type": "HANDLED_BY",
+      "startNode": "ph_008_descent",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r591",
+      "type": "HANDLED_BY",
+      "startNode": "ph_008_approach",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r592",
+      "type": "HANDLED_BY",
+      "startNode": "ph_008_landing",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r593",
+      "type": "USES_AIRCRAFT",
+      "startNode": "flight009",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r594",
+      "type": "HAS_PIC",
+      "startNode": "flight009",
+      "endNode": "pic2",
+      "properties": {}
+    },
+    {
+      "id": "r595",
+      "type": "DEPARTS_FROM",
+      "startNode": "flight009",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r596",
+      "type": "ARRIVES_AT",
+      "startNode": "flight009",
+      "endNode": "EGHH",
+      "properties": {}
+    },
+    {
+      "id": "r597",
+      "type": "HAS_PHASE",
+      "startNode": "flight009",
+      "endNode": "ph_009_preflight",
+      "properties": {}
+    },
+    {
+      "id": "r598",
+      "type": "OCCURS_AT",
+      "startNode": "ph_009_preflight",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r599",
+      "type": "HAS_PHASE",
+      "startNode": "flight009",
+      "endNode": "ph_009_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r600",
+      "type": "OCCURS_AT",
+      "startNode": "ph_009_taxi",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r601",
+      "type": "HAS_PHASE",
+      "startNode": "flight009",
+      "endNode": "ph_009_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r602",
+      "type": "OCCURS_AT",
+      "startNode": "ph_009_takeoff",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r603",
+      "type": "HAS_PHASE",
+      "startNode": "flight009",
+      "endNode": "ph_009_climb",
+      "properties": {}
+    },
+    {
+      "id": "r604",
+      "type": "OCCURS_AT",
+      "startNode": "ph_009_climb",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r605",
+      "type": "HAS_PHASE",
+      "startNode": "flight009",
+      "endNode": "ph_009_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r606",
+      "type": "OCCURS_AT",
+      "startNode": "ph_009_cruise",
+      "endNode": "EGHH",
+      "properties": {}
+    },
+    {
+      "id": "r607",
+      "type": "HAS_PHASE",
+      "startNode": "flight009",
+      "endNode": "ph_009_descent",
+      "properties": {}
+    },
+    {
+      "id": "r608",
+      "type": "OCCURS_AT",
+      "startNode": "ph_009_descent",
+      "endNode": "EGHH",
+      "properties": {}
+    },
+    {
+      "id": "r609",
+      "type": "HAS_PHASE",
+      "startNode": "flight009",
+      "endNode": "ph_009_approach",
+      "properties": {}
+    },
+    {
+      "id": "r610",
+      "type": "OCCURS_AT",
+      "startNode": "ph_009_approach",
+      "endNode": "EGHH",
+      "properties": {}
+    },
+    {
+      "id": "r611",
+      "type": "HAS_PHASE",
+      "startNode": "flight009",
+      "endNode": "ph_009_landing",
+      "properties": {}
+    },
+    {
+      "id": "r612",
+      "type": "OCCURS_AT",
+      "startNode": "ph_009_landing",
+      "endNode": "EGHH",
+      "properties": {}
+    },
+    {
+      "id": "r613",
+      "type": "FOLLOWS",
+      "startNode": "ph_009_preflight",
+      "endNode": "ph_009_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r614",
+      "type": "FOLLOWS",
+      "startNode": "ph_009_taxi",
+      "endNode": "ph_009_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r615",
+      "type": "FOLLOWS",
+      "startNode": "ph_009_takeoff",
+      "endNode": "ph_009_climb",
+      "properties": {}
+    },
+    {
+      "id": "r616",
+      "type": "FOLLOWS",
+      "startNode": "ph_009_climb",
+      "endNode": "ph_009_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r617",
+      "type": "FOLLOWS",
+      "startNode": "ph_009_cruise",
+      "endNode": "ph_009_descent",
+      "properties": {}
+    },
+    {
+      "id": "r618",
+      "type": "FOLLOWS",
+      "startNode": "ph_009_descent",
+      "endNode": "ph_009_approach",
+      "properties": {}
+    },
+    {
+      "id": "r619",
+      "type": "FOLLOWS",
+      "startNode": "ph_009_approach",
+      "endNode": "ph_009_landing",
+      "properties": {}
+    },
+    {
+      "id": "r620",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_009_takeoff",
+      "endNode": "rwyEGGD27",
+      "properties": {}
+    },
+    {
+      "id": "r621",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_009_landing",
+      "endNode": "rwyEGHH08",
+      "properties": {}
+    },
+    {
+      "id": "r622",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight009",
+      "endNode": "atcEGGD_atis",
+      "properties": {}
+    },
+    {
+      "id": "r623",
+      "type": "HANDLED_BY",
+      "startNode": "flight009",
+      "endNode": "atcEGGD_gnd",
+      "properties": {}
+    },
+    {
+      "id": "r624",
+      "type": "HANDLED_BY",
+      "startNode": "flight009",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r625",
+      "type": "HANDLED_BY",
+      "startNode": "flight009",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r626",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight009",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r627",
+      "type": "HANDLED_BY",
+      "startNode": "flight009",
+      "endNode": "atcEGHH_app",
+      "properties": {}
+    },
+    {
+      "id": "r628",
+      "type": "HANDLED_BY",
+      "startNode": "flight009",
+      "endNode": "atcEGHH_twr",
+      "properties": {}
+    },
+    {
+      "id": "r629",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_009_preflight",
+      "endNode": "atcEGGD_atis",
+      "properties": {}
+    },
+    {
+      "id": "r630",
+      "type": "HANDLED_BY",
+      "startNode": "ph_009_taxi",
+      "endNode": "atcEGGD_gnd",
+      "properties": {}
+    },
+    {
+      "id": "r631",
+      "type": "HANDLED_BY",
+      "startNode": "ph_009_takeoff",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r632",
+      "type": "HANDLED_BY",
+      "startNode": "ph_009_climb",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r633",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_009_cruise",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r634",
+      "type": "HANDLED_BY",
+      "startNode": "ph_009_descent",
+      "endNode": "atcEGHH_app",
+      "properties": {}
+    },
+    {
+      "id": "r635",
+      "type": "HANDLED_BY",
+      "startNode": "ph_009_approach",
+      "endNode": "atcEGHH_app",
+      "properties": {}
+    },
+    {
+      "id": "r636",
+      "type": "HANDLED_BY",
+      "startNode": "ph_009_landing",
+      "endNode": "atcEGHH_twr",
+      "properties": {}
+    },
+    {
+      "id": "r637",
+      "type": "USES_AIRCRAFT",
+      "startNode": "flight010",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r638",
+      "type": "HAS_PIC",
+      "startNode": "flight010",
+      "endNode": "pic",
+      "properties": {}
+    },
+    {
+      "id": "r639",
+      "type": "DEPARTS_FROM",
+      "startNode": "flight010",
+      "endNode": "EGBJ",
+      "properties": {}
+    },
+    {
+      "id": "r640",
+      "type": "ARRIVES_AT",
+      "startNode": "flight010",
+      "endNode": "EGTK",
+      "properties": {}
+    },
+    {
+      "id": "r641",
+      "type": "HAS_PHASE",
+      "startNode": "flight010",
+      "endNode": "ph_010_preflight",
+      "properties": {}
+    },
+    {
+      "id": "r642",
+      "type": "OCCURS_AT",
+      "startNode": "ph_010_preflight",
+      "endNode": "EGBJ",
+      "properties": {}
+    },
+    {
+      "id": "r643",
+      "type": "HAS_PHASE",
+      "startNode": "flight010",
+      "endNode": "ph_010_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r644",
+      "type": "OCCURS_AT",
+      "startNode": "ph_010_taxi",
+      "endNode": "EGBJ",
+      "properties": {}
+    },
+    {
+      "id": "r645",
+      "type": "HAS_PHASE",
+      "startNode": "flight010",
+      "endNode": "ph_010_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r646",
+      "type": "OCCURS_AT",
+      "startNode": "ph_010_takeoff",
+      "endNode": "EGBJ",
+      "properties": {}
+    },
+    {
+      "id": "r647",
+      "type": "HAS_PHASE",
+      "startNode": "flight010",
+      "endNode": "ph_010_climb",
+      "properties": {}
+    },
+    {
+      "id": "r648",
+      "type": "OCCURS_AT",
+      "startNode": "ph_010_climb",
+      "endNode": "EGBJ",
+      "properties": {}
+    },
+    {
+      "id": "r649",
+      "type": "HAS_PHASE",
+      "startNode": "flight010",
+      "endNode": "ph_010_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r650",
+      "type": "OCCURS_AT",
+      "startNode": "ph_010_cruise",
+      "endNode": "EGTK",
+      "properties": {}
+    },
+    {
+      "id": "r651",
+      "type": "HAS_PHASE",
+      "startNode": "flight010",
+      "endNode": "ph_010_descent",
+      "properties": {}
+    },
+    {
+      "id": "r652",
+      "type": "OCCURS_AT",
+      "startNode": "ph_010_descent",
+      "endNode": "EGTK",
+      "properties": {}
+    },
+    {
+      "id": "r653",
+      "type": "HAS_PHASE",
+      "startNode": "flight010",
+      "endNode": "ph_010_approach",
+      "properties": {}
+    },
+    {
+      "id": "r654",
+      "type": "OCCURS_AT",
+      "startNode": "ph_010_approach",
+      "endNode": "EGTK",
+      "properties": {}
+    },
+    {
+      "id": "r655",
+      "type": "HAS_PHASE",
+      "startNode": "flight010",
+      "endNode": "ph_010_landing",
+      "properties": {}
+    },
+    {
+      "id": "r656",
+      "type": "OCCURS_AT",
+      "startNode": "ph_010_landing",
+      "endNode": "EGTK",
+      "properties": {}
+    },
+    {
+      "id": "r657",
+      "type": "FOLLOWS",
+      "startNode": "ph_010_preflight",
+      "endNode": "ph_010_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r658",
+      "type": "FOLLOWS",
+      "startNode": "ph_010_taxi",
+      "endNode": "ph_010_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r659",
+      "type": "FOLLOWS",
+      "startNode": "ph_010_takeoff",
+      "endNode": "ph_010_climb",
+      "properties": {}
+    },
+    {
+      "id": "r660",
+      "type": "FOLLOWS",
+      "startNode": "ph_010_climb",
+      "endNode": "ph_010_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r661",
+      "type": "FOLLOWS",
+      "startNode": "ph_010_cruise",
+      "endNode": "ph_010_descent",
+      "properties": {}
+    },
+    {
+      "id": "r662",
+      "type": "FOLLOWS",
+      "startNode": "ph_010_descent",
+      "endNode": "ph_010_approach",
+      "properties": {}
+    },
+    {
+      "id": "r663",
+      "type": "FOLLOWS",
+      "startNode": "ph_010_approach",
+      "endNode": "ph_010_landing",
+      "properties": {}
+    },
+    {
+      "id": "r664",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_010_takeoff",
+      "endNode": "rwyEGBJ09",
+      "properties": {}
+    },
+    {
+      "id": "r665",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_010_landing",
+      "endNode": "rwyEGTK01",
+      "properties": {}
+    },
+    {
+      "id": "r666",
+      "type": "HANDLED_BY",
+      "startNode": "flight010",
+      "endNode": "atcEGBJ_twr",
+      "properties": {}
+    },
+    {
+      "id": "r667",
+      "type": "HANDLED_BY",
+      "startNode": "flight010",
+      "endNode": "atcEGBJ_app",
+      "properties": {}
+    },
+    {
+      "id": "r668",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight010",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r669",
+      "type": "HANDLED_BY",
+      "startNode": "flight010",
+      "endNode": "atcEGTK_app",
+      "properties": {}
+    },
+    {
+      "id": "r670",
+      "type": "HANDLED_BY",
+      "startNode": "flight010",
+      "endNode": "atcEGTK_twr",
+      "properties": {}
+    },
+    {
+      "id": "r671",
+      "type": "HANDLED_BY",
+      "startNode": "ph_010_preflight",
+      "endNode": "atcEGBJ_twr",
+      "properties": {}
+    },
+    {
+      "id": "r672",
+      "type": "HANDLED_BY",
+      "startNode": "ph_010_taxi",
+      "endNode": "atcEGBJ_twr",
+      "properties": {}
+    },
+    {
+      "id": "r673",
+      "type": "HANDLED_BY",
+      "startNode": "ph_010_takeoff",
+      "endNode": "atcEGBJ_twr",
+      "properties": {}
+    },
+    {
+      "id": "r674",
+      "type": "HANDLED_BY",
+      "startNode": "ph_010_climb",
+      "endNode": "atcEGBJ_app",
+      "properties": {}
+    },
+    {
+      "id": "r675",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_010_cruise",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r676",
+      "type": "HANDLED_BY",
+      "startNode": "ph_010_descent",
+      "endNode": "atcEGTK_app",
+      "properties": {}
+    },
+    {
+      "id": "r677",
+      "type": "HANDLED_BY",
+      "startNode": "ph_010_approach",
+      "endNode": "atcEGTK_app",
+      "properties": {}
+    },
+    {
+      "id": "r678",
+      "type": "HANDLED_BY",
+      "startNode": "ph_010_landing",
+      "endNode": "atcEGTK_twr",
+      "properties": {}
+    },
+    {
+      "id": "r679",
+      "type": "USES_AIRCRAFT",
+      "startNode": "flight011",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r680",
+      "type": "HAS_PIC",
+      "startNode": "flight011",
+      "endNode": "pic2",
+      "properties": {}
+    },
+    {
+      "id": "r681",
+      "type": "DEPARTS_FROM",
+      "startNode": "flight011",
+      "endNode": "EGTE",
+      "properties": {}
+    },
+    {
+      "id": "r682",
+      "type": "ARRIVES_AT",
+      "startNode": "flight011",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r683",
+      "type": "HAS_PHASE",
+      "startNode": "flight011",
+      "endNode": "ph_011_preflight",
+      "properties": {}
+    },
+    {
+      "id": "r684",
+      "type": "OCCURS_AT",
+      "startNode": "ph_011_preflight",
+      "endNode": "EGTE",
+      "properties": {}
+    },
+    {
+      "id": "r685",
+      "type": "HAS_PHASE",
+      "startNode": "flight011",
+      "endNode": "ph_011_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r686",
+      "type": "OCCURS_AT",
+      "startNode": "ph_011_taxi",
+      "endNode": "EGTE",
+      "properties": {}
+    },
+    {
+      "id": "r687",
+      "type": "HAS_PHASE",
+      "startNode": "flight011",
+      "endNode": "ph_011_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r688",
+      "type": "OCCURS_AT",
+      "startNode": "ph_011_takeoff",
+      "endNode": "EGTE",
+      "properties": {}
+    },
+    {
+      "id": "r689",
+      "type": "HAS_PHASE",
+      "startNode": "flight011",
+      "endNode": "ph_011_climb",
+      "properties": {}
+    },
+    {
+      "id": "r690",
+      "type": "OCCURS_AT",
+      "startNode": "ph_011_climb",
+      "endNode": "EGTE",
+      "properties": {}
+    },
+    {
+      "id": "r691",
+      "type": "HAS_PHASE",
+      "startNode": "flight011",
+      "endNode": "ph_011_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r692",
+      "type": "OCCURS_AT",
+      "startNode": "ph_011_cruise",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r693",
+      "type": "HAS_PHASE",
+      "startNode": "flight011",
+      "endNode": "ph_011_descent",
+      "properties": {}
+    },
+    {
+      "id": "r694",
+      "type": "OCCURS_AT",
+      "startNode": "ph_011_descent",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r695",
+      "type": "HAS_PHASE",
+      "startNode": "flight011",
+      "endNode": "ph_011_approach",
+      "properties": {}
+    },
+    {
+      "id": "r696",
+      "type": "OCCURS_AT",
+      "startNode": "ph_011_approach",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r697",
+      "type": "HAS_PHASE",
+      "startNode": "flight011",
+      "endNode": "ph_011_landing",
+      "properties": {}
+    },
+    {
+      "id": "r698",
+      "type": "OCCURS_AT",
+      "startNode": "ph_011_landing",
+      "endNode": "EGGD",
+      "properties": {}
+    },
+    {
+      "id": "r699",
+      "type": "FOLLOWS",
+      "startNode": "ph_011_preflight",
+      "endNode": "ph_011_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r700",
+      "type": "FOLLOWS",
+      "startNode": "ph_011_taxi",
+      "endNode": "ph_011_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r701",
+      "type": "FOLLOWS",
+      "startNode": "ph_011_takeoff",
+      "endNode": "ph_011_climb",
+      "properties": {}
+    },
+    {
+      "id": "r702",
+      "type": "FOLLOWS",
+      "startNode": "ph_011_climb",
+      "endNode": "ph_011_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r703",
+      "type": "FOLLOWS",
+      "startNode": "ph_011_cruise",
+      "endNode": "ph_011_descent",
+      "properties": {}
+    },
+    {
+      "id": "r704",
+      "type": "FOLLOWS",
+      "startNode": "ph_011_descent",
+      "endNode": "ph_011_approach",
+      "properties": {}
+    },
+    {
+      "id": "r705",
+      "type": "FOLLOWS",
+      "startNode": "ph_011_approach",
+      "endNode": "ph_011_landing",
+      "properties": {}
+    },
+    {
+      "id": "r706",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_011_takeoff",
+      "endNode": "rwyEGTE08",
+      "properties": {}
+    },
+    {
+      "id": "r707",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_011_landing",
+      "endNode": "rwyEGGD27",
+      "properties": {}
+    },
+    {
+      "id": "r708",
+      "type": "HANDLED_BY",
+      "startNode": "flight011",
+      "endNode": "atcEGTE_twr",
+      "properties": {}
+    },
+    {
+      "id": "r709",
+      "type": "HANDLED_BY",
+      "startNode": "flight011",
+      "endNode": "atcEGTE_app",
+      "properties": {}
+    },
+    {
+      "id": "r710",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight011",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r711",
+      "type": "HANDLED_BY",
+      "startNode": "flight011",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r712",
+      "type": "HANDLED_BY",
+      "startNode": "flight011",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r713",
+      "type": "HANDLED_BY",
+      "startNode": "ph_011_preflight",
+      "endNode": "atcEGTE_twr",
+      "properties": {}
+    },
+    {
+      "id": "r714",
+      "type": "HANDLED_BY",
+      "startNode": "ph_011_taxi",
+      "endNode": "atcEGTE_twr",
+      "properties": {}
+    },
+    {
+      "id": "r715",
+      "type": "HANDLED_BY",
+      "startNode": "ph_011_takeoff",
+      "endNode": "atcEGTE_twr",
+      "properties": {}
+    },
+    {
+      "id": "r716",
+      "type": "HANDLED_BY",
+      "startNode": "ph_011_climb",
+      "endNode": "atcEGTE_app",
+      "properties": {}
+    },
+    {
+      "id": "r717",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_011_cruise",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r718",
+      "type": "HANDLED_BY",
+      "startNode": "ph_011_descent",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r719",
+      "type": "HANDLED_BY",
+      "startNode": "ph_011_approach",
+      "endNode": "atcEGGD_app",
+      "properties": {}
+    },
+    {
+      "id": "r720",
+      "type": "HANDLED_BY",
+      "startNode": "ph_011_landing",
+      "endNode": "atcEGGD_twr",
+      "properties": {}
+    },
+    {
+      "id": "r721",
+      "type": "USES_AIRCRAFT",
+      "startNode": "flight012",
+      "endNode": "G-ECHO",
+      "properties": {}
+    },
+    {
+      "id": "r722",
+      "type": "HAS_PIC",
+      "startNode": "flight012",
+      "endNode": "pic",
+      "properties": {}
+    },
+    {
+      "id": "r723",
+      "type": "DEPARTS_FROM",
+      "startNode": "flight012",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r724",
+      "type": "ARRIVES_AT",
+      "startNode": "flight012",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r725",
+      "type": "HAS_PHASE",
+      "startNode": "flight012",
+      "endNode": "ph_012_preflight",
+      "properties": {}
+    },
+    {
+      "id": "r726",
+      "type": "OCCURS_AT",
+      "startNode": "ph_012_preflight",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r727",
+      "type": "HAS_PHASE",
+      "startNode": "flight012",
+      "endNode": "ph_012_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r728",
+      "type": "OCCURS_AT",
+      "startNode": "ph_012_taxi",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r729",
+      "type": "HAS_PHASE",
+      "startNode": "flight012",
+      "endNode": "ph_012_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r730",
+      "type": "OCCURS_AT",
+      "startNode": "ph_012_takeoff",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r731",
+      "type": "HAS_PHASE",
+      "startNode": "flight012",
+      "endNode": "ph_012_climb",
+      "properties": {}
+    },
+    {
+      "id": "r732",
+      "type": "OCCURS_AT",
+      "startNode": "ph_012_climb",
+      "endNode": "EGBP",
+      "properties": {}
+    },
+    {
+      "id": "r733",
+      "type": "HAS_PHASE",
+      "startNode": "flight012",
+      "endNode": "ph_012_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r734",
+      "type": "OCCURS_AT",
+      "startNode": "ph_012_cruise",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r735",
+      "type": "HAS_PHASE",
+      "startNode": "flight012",
+      "endNode": "ph_012_descent",
+      "properties": {}
+    },
+    {
+      "id": "r736",
+      "type": "OCCURS_AT",
+      "startNode": "ph_012_descent",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r737",
+      "type": "HAS_PHASE",
+      "startNode": "flight012",
+      "endNode": "ph_012_approach",
+      "properties": {}
+    },
+    {
+      "id": "r738",
+      "type": "OCCURS_AT",
+      "startNode": "ph_012_approach",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r739",
+      "type": "HAS_PHASE",
+      "startNode": "flight012",
+      "endNode": "ph_012_landing",
+      "properties": {}
+    },
+    {
+      "id": "r740",
+      "type": "OCCURS_AT",
+      "startNode": "ph_012_landing",
+      "endNode": "EGFF",
+      "properties": {}
+    },
+    {
+      "id": "r741",
+      "type": "FOLLOWS",
+      "startNode": "ph_012_preflight",
+      "endNode": "ph_012_taxi",
+      "properties": {}
+    },
+    {
+      "id": "r742",
+      "type": "FOLLOWS",
+      "startNode": "ph_012_taxi",
+      "endNode": "ph_012_takeoff",
+      "properties": {}
+    },
+    {
+      "id": "r743",
+      "type": "FOLLOWS",
+      "startNode": "ph_012_takeoff",
+      "endNode": "ph_012_climb",
+      "properties": {}
+    },
+    {
+      "id": "r744",
+      "type": "FOLLOWS",
+      "startNode": "ph_012_climb",
+      "endNode": "ph_012_cruise",
+      "properties": {}
+    },
+    {
+      "id": "r745",
+      "type": "FOLLOWS",
+      "startNode": "ph_012_cruise",
+      "endNode": "ph_012_descent",
+      "properties": {}
+    },
+    {
+      "id": "r746",
+      "type": "FOLLOWS",
+      "startNode": "ph_012_descent",
+      "endNode": "ph_012_approach",
+      "properties": {}
+    },
+    {
+      "id": "r747",
+      "type": "FOLLOWS",
+      "startNode": "ph_012_approach",
+      "endNode": "ph_012_landing",
+      "properties": {}
+    },
+    {
+      "id": "r748",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_012_takeoff",
+      "endNode": "rwyEGBP08",
+      "properties": {}
+    },
+    {
+      "id": "r749",
+      "type": "USES_RUNWAY",
+      "startNode": "ph_012_landing",
+      "endNode": "rwyEGFF12",
+      "properties": {}
+    },
+    {
+      "id": "r750",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight012",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r751",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "flight012",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r752",
+      "type": "HANDLED_BY",
+      "startNode": "flight012",
+      "endNode": "atcEGFF_app",
+      "properties": {}
+    },
+    {
+      "id": "r753",
+      "type": "HANDLED_BY",
+      "startNode": "flight012",
+      "endNode": "atcEGFF_twr",
+      "properties": {}
+    },
+    {
+      "id": "r754",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_012_preflight",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r755",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_012_taxi",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r756",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_012_takeoff",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r757",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_012_climb",
+      "endNode": "atcEGBP_info",
+      "properties": {}
+    },
+    {
+      "id": "r758",
+      "type": "IN_COMMUNICATION_WITH",
+      "startNode": "ph_012_cruise",
+      "endNode": "atcLondonInfo",
+      "properties": {}
+    },
+    {
+      "id": "r759",
+      "type": "HANDLED_BY",
+      "startNode": "ph_012_descent",
+      "endNode": "atcEGFF_app",
+      "properties": {}
+    },
+    {
+      "id": "r760",
+      "type": "HANDLED_BY",
+      "startNode": "ph_012_approach",
+      "endNode": "atcEGFF_app",
+      "properties": {}
+    },
+    {
+      "id": "r761",
+      "type": "HANDLED_BY",
+      "startNode": "ph_012_landing",
+      "endNode": "atcEGFF_twr",
       "properties": {}
     }
   ]

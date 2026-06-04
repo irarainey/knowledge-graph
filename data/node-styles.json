@@ -6,6 +6,10 @@
     "Person":      { "color": "#b070f8", "dimColor": "#3a1060", "label": "PERSON",       "size": 8 },
     "Flight":      { "color": "#f05060", "dimColor": "#4a0d18", "label": "FLIGHT",       "size": 14 },
     "Document":    { "color": "#20d8d0", "dimColor": "#084840", "label": "DOCUMENT",     "size": 8 },
-    "FlightPhase": { "color": "#f8a030", "dimColor": "#5a3008", "label": "FLIGHT PHASE", "size": 8 }
+    "FlightPhase": { "color": "#f8a030", "dimColor": "#5a3008", "label": "FLIGHT PHASE", "size": 8 },
+    "Aerodrome":   { "color": "#7fd060", "dimColor": "#284a18", "label": "AERODROME",   "size": 14 },
+    "Runway":      { "color": "#9aa0a8", "dimColor": "#33373c", "label": "RUNWAY",      "size": 8 },
+    "ATC":         { "color": "#f070c0", "dimColor": "#5a1042", "label": "ATC",         "size": 10 },
+    "Specification": { "color": "#c0c060", "dimColor": "#4a4a18", "label": "SPECIFICATION", "size": 10 }
   }
 }
