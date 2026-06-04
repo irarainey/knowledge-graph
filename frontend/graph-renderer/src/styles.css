@@ -32,6 +32,16 @@ body {
 }
 
 /* ── SVG canvas ── */
+.hull-label {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-anchor: middle;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
 .link {
   stroke-opacity: 0.5;
   stroke-width: 1;
@@ -43,7 +53,8 @@ body {
 
 .link-label {
   font-family: var(--font);
-  font-size: 9px;
+  font-size: 7px;
+  font-weight: 400;
   fill: var(--text-dim);
   pointer-events: none;
 }
@@ -62,8 +73,8 @@ body {
 
 .node-label {
   font-family: var(--font);
-  font-size: 10px;
-  font-weight: 500;
+  font-size: 7px;
+  font-weight: 400;
   fill: var(--text);
   pointer-events: none;
   text-anchor: middle;
@@ -72,6 +83,7 @@ body {
 .node,
 .link,
 .node-label,
-.link-label {
+.link-label,
+.hull-label {
   transition: opacity 0.2s ease;
 }

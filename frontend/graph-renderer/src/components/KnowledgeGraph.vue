@@ -3,6 +3,7 @@ import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import * as d3 from 'd3'
 import type { Graph, GraphNode, LayoutMode } from '../types'
 import type { StyleResolver } from '../graph'
+import { humanizeType } from '../graph'
 
 const props = defineProps<{
   graph: Graph
@@ -34,6 +35,11 @@ let zoomBehavior: d3.ZoomBehavior<SVGSVGElement, unknown> | null = null
 let linkSel: d3.Selection<SVGLineElement, SimLink, SVGGElement, unknown> | null = null
 let linkLabelSel: d3.Selection<SVGTextElement, SimLink, SVGGElement, unknown> | null = null
 let nodeSel: d3.Selection<SVGGElement, SimNode, SVGGElement, unknown> | null = null
+// Cluster labels: a small heading per node type, positioned above each type's
+// cluster. Only populated in the clustered (default) layout.
+let hullLabelSel: d3.Selection<SVGTextElement, string, SVGGElement, unknown> | null = null
+// Per-build: nodes grouped by primary type, used to position cluster labels.
+let nodesByType = new Map<string, SimNode[]>()
 
 // Relationship types that form the containment hierarchy (the tree spine).
 const HIERARCHY = ['HAS_SYSTEM', 'HAS_COMPONENT', 'HAS_PART', 'HAS_PHASE', 'HAS_RUNWAY']
@@ -44,16 +50,16 @@ const isHierarchy = (rel: string): boolean => HIERARCHY.includes(rel)
 // Smaller graphs render exactly as before.
 const SHADOW_MAX_NODES = 600
 const LINK_LABEL_MAX_LINKS = 1200
+// Cluster labels iterate every node of a type each tick to find their heading
+// position, so they are only drawn while the graph is small enough to stay cheap.
+const CLUSTER_LABEL_MAX_NODES = 1500
+// Vertical gap (px) between a cluster's topmost node and its heading label.
+const CLUSTER_LABEL_GAP = 32
 
 // Remembered node positions so layout switches aren't jarring.
 const posCache = new Map<string, { x: number; y: number }>()
 // The live zoom transform, preserved across rebuilds.
 let savedTransform: d3.ZoomTransform = d3.zoomIdentity
-let zoomK = 1
-// Whether link labels are currently shown by zoom level (the only zoom-dependent
-// visual). Tracked so panning/zooming only restyles labels when crossing the LOD
-// threshold instead of restyling the whole graph on every frame.
-let labelLOD = false
 
 // Per-build derived structure, recomputed on every build().
 let parentMap = new Map<string, string>()
@@ -71,6 +77,7 @@ function teardown(): void {
   linkSel = null
   linkLabelSel = null
   nodeSel = null
+  hullLabelSel = null
   zoomBehavior = null
 }
 
@@ -144,12 +151,10 @@ function build(): void {
     .zoom<SVGSVGElement, unknown>()
     .scaleExtent([0.2, 4])
     .on('zoom', (e) => {
+      // Edges and labels depend only on the type filter and selection (never on
+      // zoom/pan), so a zoom/pan is purely a transform update — nothing to restyle.
       savedTransform = e.transform
-      zoomK = e.transform.k
       container.attr('transform', e.transform.toString())
-      // Only link-label visibility depends on zoom; nothing depends on panning.
-      // Restyle labels solely when crossing the LOD threshold to keep pan/zoom O(1).
-      if (zoomK > 1.4 !== labelLOD) applyLinkLabelLOD()
     })
   root.call(zoomBehavior)
   // Clicking empty canvas clears the current selection.
@@ -193,6 +198,20 @@ function build(): void {
   for (const n of nodes) maxDepth = Math.max(maxDepth, n.depth)
   const ringGap = Math.max(70, Math.min(160, Math.min(W, H) / 2 / (maxDepth + 1.5)))
 
+  // Group nodes by primary type and give each type a stable anchor on a ring
+  // around the centre. In the default layout a gentle force pulls each node toward
+  // its type anchor so same-type nodes settle into their own readable cluster.
+  nodesByType = d3.group(nodes, (d) => d.type)
+  const clusterTypes = props.types.filter((t) => nodesByType.has(t))
+  const typeAnchors = new Map<string, { x: number; y: number }>()
+  const clusterR = Math.min(W, H) / 3.2
+  clusterTypes.forEach((t, i) => {
+    const a = (i / Math.max(1, clusterTypes.length)) * 2 * Math.PI - Math.PI / 2
+    typeAnchors.set(t, { x: W / 2 + clusterR * Math.cos(a), y: H / 2 + clusterR * Math.sin(a) })
+  })
+  const anchorX = (d: SimNode): number => typeAnchors.get(d.type)?.x ?? W / 2
+  const anchorY = (d: SimNode): number => typeAnchors.get(d.type)?.y ?? H / 2
+
   simulation = d3
     .forceSimulation<SimNode>(nodes)
     .force(
@@ -206,7 +225,7 @@ function build(): void {
           if (d.rel === 'FOLLOWS') return 60
           return 90
         })
-        .strength(radial ? 0.15 : 0.6),
+        .strength(radial ? 0.15 : 0.5),
     )
     .force('charge', d3.forceManyBody().strength(radial ? -140 : -220))
     .force('collision', d3.forceCollide(22))
@@ -220,7 +239,23 @@ function build(): void {
       .force('x', d3.forceX(W / 2).strength(0.02))
       .force('y', d3.forceY(H / 2).strength(0.02))
   } else {
-    simulation.force('center', d3.forceCenter(W / 2, H / 2))
+    simulation
+      .force('x', d3.forceX<SimNode>(anchorX).strength(0.18))
+      .force('y', d3.forceY<SimNode>(anchorY).strength(0.18))
+  }
+
+  // Cluster headings: one label per type, drawn above each type's cluster in the
+  // default layout. Created here (before nodes) so positions update each tick.
+  if (!radial && nodes.length <= CLUSTER_LABEL_MAX_NODES) {
+    const hullLabelGroup = container.append('g').attr('class', 'hull-labels')
+    hullLabelSel = hullLabelGroup
+      .selectAll<SVGTextElement, string>('text')
+      .data(clusterTypes)
+      .enter()
+      .append('text')
+      .attr('class', 'hull-label')
+      .attr('fill', (t) => props.styleFor(t).color)
+      .text((t) => humanizeType(t))
   }
 
   const typeOf = (n: SimNode | string | number): string => (typeof n === 'object' ? n.type : '')
@@ -308,6 +343,8 @@ function build(): void {
     .text((d) => d.label)
 
   simulation.on('tick', () => {
+    if (hullLabelSel) updateClusterLabels()
+
     linkSel!
       .attr('x1', (d) => (d.source as SimNode).x ?? 0)
       .attr('y1', (d) => (d.source as SimNode).y ?? 0)
@@ -337,8 +374,23 @@ function build(): void {
   applyVisualState()
 }
 
-// Nodes with no cached position spawn near their parent so the layout grows
-// outward instead of flinging nodes across the canvas.
+// Reposition each cluster heading above its type's topmost node, centred on the
+// cluster. Cheap at PoC scale; gated by CLUSTER_LABEL_MAX_NODES on big graphs.
+function updateClusterLabels(): void {
+  if (!hullLabelSel) return
+  hullLabelSel.attr('transform', (type) => {
+    const ns = nodesByType.get(type)
+    if (!ns || ns.length === 0) return 'translate(-9999,-9999)'
+    let minY = Infinity
+    let sumX = 0
+    for (const n of ns) {
+      sumX += n.x ?? 0
+      minY = Math.min(minY, n.y ?? 0)
+    }
+    return `translate(${sumX / ns.length},${minY - CLUSTER_LABEL_GAP})`
+  })
+}
+
 function seedFromParent(id: string, W: number, H: number): { x: number; y: number } {
   const parent = parentMap.get(id)
   const p = parent ? posCache.get(parent) : undefined
@@ -370,8 +422,10 @@ function downstreamSet(id: string): Set<string> {
 }
 
 // Single source of truth for all visual emphasis: type filter (fade), the
-// click-selected focus (fade everything but the node and its downstream subtree)
-// and label level-of-detail. Computed from state — never patched incrementally.
+// click-selected focus (reveal the node and its downstream subtree). Edges are
+// always drawn but kept faint; selecting a node brightens the edges of its focus
+// subtree and reveals their labels, so the graph stays readable when unselected.
+// Computed from state — never patched incrementally.
 function applyVisualState(): void {
   if (!nodeSel || !linkSel) return
   const active = props.activeTypes
@@ -384,54 +438,109 @@ function applyVisualState(): void {
 
   nodeSel.style('opacity', (d) => {
     if (!typeVisible(d)) return 0.08
-    if (focusId && !inFocus(d.id)) return 0.12
+    if (focusId && !inFocus(d.id)) return 0.08
     return 1
   })
 
-  nodeSel
-    .select<SVGTextElement>('text.node-label')
-    .style('opacity', (d) => (labelVisible(d) ? 1 : 0))
+  nodeSel.select<SVGTextElement>('text.node-label').style('opacity', (d) => {
+    if (!labelVisible(d)) return 0
+    if (focusId && !inFocus(d.id)) return 0.15
+    return 1
+  })
+
+  // An edge is in focus when a node is selected and both endpoints fall inside
+  // that selection's focus subtree — those edges brighten and reveal their labels.
+  const edgeInFocus = (d: SimLink): boolean => {
+    if (!focus) return false
+    const sn = d.source as SimNode
+    const tn = d.target as SimNode
+    return focus.has(sn.id) && focus.has(tn.id)
+  }
 
   linkSel.style('opacity', (d) => {
     const sn = d.source as SimNode
     const tn = d.target as SimNode
-    if (!active.has(sn.type) || !active.has(tn.type)) return 0.06
-    if (focus && !(focus.has(sn.id) && focus.has(tn.id))) return 0.1
-    return 0.45
+    if (!active.has(sn.type) || !active.has(tn.type)) return 0.04
+    if (edgeInFocus(d)) return 0.6
+    // A selection is active but this edge is outside it — fade it well back so the
+    // focused subtree stands out; otherwise keep the default faint structural line.
+    return focusId ? 0.05 : 0.22
   })
 
-  applyLinkLabelLOD()
-}
+  if (linkLabelSel) {
+    linkLabelSel.style('opacity', (d) => {
+      const sn = d.source as SimNode
+      const tn = d.target as SimNode
+      if (!active.has(sn.type) || !active.has(tn.type)) return 0
+      return edgeInFocus(d) ? 0.85 : 0
+    })
+  }
 
-// Link-label level-of-detail — the only visual that depends on zoom. Split out so
-// the zoom handler can update labels alone (and only when crossing the threshold)
-// instead of restyling every node and link on each pan/zoom frame. Always leaves
-// `labelLOD` in sync with the current zoom so the zoom handler stays consistent.
-function applyLinkLabelLOD(): void {
-  labelLOD = zoomK > 1.4
-  if (!linkLabelSel) return
-  const active = props.activeTypes
-  const focus = props.selectedId ? downstreamSet(props.selectedId) : null
-  linkLabelSel.style('opacity', (d) => {
-    const sn = d.source as SimNode
-    const tn = d.target as SimNode
-    if (!active.has(sn.type) || !active.has(tn.type)) return 0
-    const inFocusEdge = !!focus && focus.has(sn.id) && focus.has(tn.id)
-    return labelLOD || inFocusEdge ? 0.75 : 0
-  })
+  // Cluster labels track the type filter, and recede while a node is selected so
+  // the focused subtree isn't competing with the group headings for attention.
+  if (hullLabelSel) {
+    const labelFade = focusId ? 0.4 : 1
+    hullLabelSel.style('opacity', (type) => (active.has(type) ? 0.9 * labelFade : 0))
+  }
 }
 
 function resetView(): void {
   const svgEl = svgRef.value
   if (!svgEl || !zoomBehavior) return
   savedTransform = d3.zoomIdentity
-  zoomK = 1
   d3.select(svgEl).transition().duration(400).call(zoomBehavior.transform, d3.zoomIdentity)
   simulation?.alpha(0.5).restart()
 }
 
-// Resizes fire rapidly; debounce so the canvas rebuilds once the gesture settles
-// instead of tearing down and re-running the simulation on every event.
+// When a node is selected, smoothly scale/pan so its whole focus subtree fits the
+// visible canvas. The fit target excludes the fixed side panels (left filter rail,
+// right info panel) and the top header so the selection lands in clear space.
+// These insets mirror the panel sizes in SidebarFilters.vue / InfoPanel.vue.
+const PANEL_LEFT = 220
+const PANEL_RIGHT = 280
+const PANEL_TOP = 56
+function zoomToFocus(id: string): void {
+  const svgEl = svgRef.value
+  if (!svgEl || !zoomBehavior) return
+
+  const focus = downstreamSet(id)
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  let count = 0
+  for (const nid of focus) {
+    const p = posCache.get(nid)
+    if (!p) continue
+    minX = Math.min(minX, p.x)
+    maxX = Math.max(maxX, p.x)
+    minY = Math.min(minY, p.y)
+    maxY = Math.max(maxY, p.y)
+    count++
+  }
+  if (count === 0) return
+
+  const fullW = svgEl.clientWidth
+  const fullH = svgEl.clientHeight
+  const availW = Math.max(100, fullW - PANEL_LEFT - PANEL_RIGHT)
+  const availH = Math.max(100, fullH - PANEL_TOP)
+  const midX = (minX + maxX) / 2
+  const midY = (minY + maxY) / 2
+  // Floor the span so a single node (or tight cluster) isn't magnified excessively.
+  const spanX = Math.max(maxX - minX, 200)
+  const spanY = Math.max(maxY - minY, 200)
+  const margin = 1.2 // ~20% breathing room around the focus subtree
+
+  let scale = Math.min(availW / (spanX * margin), availH / (spanY * margin))
+  scale = Math.max(0.2, Math.min(2.5, scale))
+
+  // Centre the focus within the visible region between the panels.
+  const cx = PANEL_LEFT + availW / 2
+  const cy = PANEL_TOP + availH / 2
+  const transform = d3.zoomIdentity.translate(cx - scale * midX, cy - scale * midY).scale(scale)
+  d3.select(svgEl).transition().duration(500).call(zoomBehavior.transform, transform)
+}
+
 let resizeTimer: ReturnType<typeof setTimeout> | null = null
 function onResize(): void {
   if (resizeTimer !== null) clearTimeout(resizeTimer)
@@ -472,7 +581,10 @@ watch(
 )
 watch(
   () => props.selectedId,
-  () => applyVisualState(),
+  (id) => {
+    applyVisualState()
+    if (id) zoomToFocus(id)
+  },
 )
 </script>
 
