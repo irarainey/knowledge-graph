@@ -35,9 +35,10 @@ from styles import PAGE_CSS
 def render_message(message: dict[str, Any]) -> None:
     """Render a single chat message (user or assistant) and its supporting detail."""
     with st.chat_message(message["role"]):
-        content = message.get("content")
-        if content:
-            st.markdown(content)
+        # Always emit a content slot (even when empty) so the live turn and this
+        # history re-render produce the same element structure — otherwise a slot
+        # mismatch strands the previous answer's debug panel as a ghost on rerun.
+        st.markdown(message.get("content") or "")
         if message.get("error"):
             st.error(message["error"])
 
@@ -60,12 +61,13 @@ def handle_question(base_url: str, question: str) -> None:
 
     holder: dict[str, Any] = {"cypher": [], "records": [], "error": None, "stats": None}
     with st.chat_message("assistant"):
-        # The "thinking" indicator lives in its own placeholder above the answer so it
-        # can be cleared on completion — the finished answer then sits at the top with
-        # the debug panel below it (no lingering "Done" box).
-        status_placeholder = st.empty()
+        # A SINGLE placeholder carries the turn from the "thinking" status through the
+        # streamed answer, so the live turn has exactly the same element structure as
+        # the history re-render: one content slot followed by the debug panel. Using a
+        # separate status placeholder added an extra slot, which left the previous
+        # answer's debug expander stranded as a ghost panel during the next question.
         message_placeholder = st.empty()
-        status = status_placeholder.status("Asking the LLM for the graph data…", expanded=False)
+        status = message_placeholder.status("Asking the LLM for the graph data…", expanded=False)
         parts: list[str] = []
         for event in stream_answer(base_url, question, holder):
             if event["type"] == "metadata":
@@ -74,11 +76,11 @@ def handle_question(base_url: str, question: str) -> None:
                 status.update(label="Asking the LLM to generate the answer…")
             elif event["type"] == "token":
                 parts.append(event["text"])
+                # The first token replaces the status box in the same slot.
                 message_placeholder.markdown("".join(parts) + " ▌")
         answer = "".join(parts)
         message_placeholder.markdown(answer)
 
-        status_placeholder.empty()
         if holder["error"]:
             st.error(holder["error"])
         render_debug(holder["stats"], holder["cypher"], holder["records"])
