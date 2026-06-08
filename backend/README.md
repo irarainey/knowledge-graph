@@ -17,6 +17,7 @@ All tasks use [poethepoet](https://poethepoet.naber.dev/) via `uv run poe`:
 uv run poe lint          # ruff check + format check + mypy
 uv run poe format        # auto-fix lint issues and format code
 uv run poe test          # run all tests
+uv run poe evaluate      # offline evaluation of /ask (see "Evaluation" below)
 ```
 
 Run a single test:
@@ -234,6 +235,7 @@ are present.
 | `AZURE_OPENAI_API_KEY` | `<key>` | API key. |
 | `AZURE_OPENAI_DEPLOYMENT` | `gpt-5.4` | Deployment (model) name. |
 | `AZURE_OPENAI_API_VERSION` | `2024-10-21` | API version (used only for classic, non-`/openai/v1` endpoints). |
+| `AZURE_OPENAI_TEMPERATURE` | `0` | Optional. Temperature for text-to-Cypher generation; pin to `0` for more deterministic, reproducible queries. Omitted when unset — leave unset for models that reject a non-default temperature. |
 
 ### `POST /ask`
 
@@ -288,6 +290,93 @@ curl -N -X POST http://localhost:8080/ask \
 
 The [`frontend/chat-ui`](../frontend/chat-ui) project consumes this endpoint to stream answers
 into a chat interface.
+
+## Evaluation
+
+`uv run poe evaluate` runs an **offline, deterministic** evaluation of the `/ask`
+pipeline against a pre-baked ground-truth file — **no LLM-as-judge**. It drives the
+in-process `KnowledgeGraphAgent` (the same code path the API uses), so it needs the
+same Neo4j and Azure OpenAI settings in `backend/.env`, and the graph must already be
+imported.
+
+```bash
+uv run poe evaluate                                   # eval/ground_truth.json -> eval/results/eval-<timestamp>.json
+uv run python scripts/evaluate.py --tag aggregation   # only questions tagged "aggregation"
+uv run python scripts/evaluate.py --question-id flight-count --output -   # one question, report to stdout
+uv run python scripts/evaluate.py --f1-threshold 0.7  # stricter pass bar
+```
+
+### Ground truth
+
+[`eval/ground_truth.json`](eval/ground_truth.json) holds a list of questions, each with
+a hand-written **gold Cypher** query (validated against the imported data) and optional
+`tags`, `expected_answer_values`, and `answer_key`:
+
+```json
+{
+  "id": "powerplant-components",
+  "question": "What components make up the powerplant system?",
+  "tags": ["multi-hop", "list"],
+  "gold_cypher": "MATCH (:PowerplantSystem)-[:HAS_COMPONENT]->(c:Component) RETURN DISTINCT c.name AS component ORDER BY component",
+  "answer_key": "component",
+  "expected_answer_values": ["Propeller", "Exhaust"]
+}
+```
+
+`answer_key` (optional) pins the gold side of the retrieval comparison to a single
+column — useful when the natural query returns extra descriptive columns that the
+generated query may or may not include.
+
+### Metrics
+
+For each question the script runs the gold Cypher to get the expected rows, drives the
+agent to get its generated Cypher, retrieved rows and streamed answer (from the
+`metadata`/`token`/`stats` debug events), then computes:
+
+- **Retrieval — value-based (primary)**: precision, recall, **F1**, Jaccard and
+  exact-match comparing the *set of cell values* the agent retrieved against the gold
+  rows, **ignoring column names** and **tolerating float formatting** (rounded to
+  `--round-digits`, default `3`). This is the realistic measure: text-to-Cypher is
+  non-deterministic and aliases columns, reorders results and rounds differently
+  run-to-run, so comparing whole rows verbatim would punish correct answers. A wrong
+  *value* (e.g. weight in lb instead of kg) still counts as a miss. A question *passes*
+  when its value F1 ≥ `--f1-threshold` (default `0.5`).
+- **Retrieval — strict (secondary diagnostic)**: `strict_exact_match` / `strict_f1`
+  compare whole rows verbatim (column names, every column, exact formatting). Reported
+  for insight into how much the generated Cypher's *shape* drifts from the gold; not used
+  for pass/fail.
+- **Answer** (string-matched, no judge): **coverage** — fraction of
+  `expected_answer_values` present in the answer text; **groundedness** — fraction of
+  those values also present in the retrieved rows (values stated in the answer but absent
+  from the rows are flagged as a hallucination signal).
+- **Operational**: Cypher **validity** rate, **empty-retrieval** rate, and token/latency
+  **cost** taken from the pipeline's own `stats` event.
+
+The metric functions live alongside the CLI in
+[`scripts/evaluate.py`](scripts/evaluate.py) and are unit-tested in
+[`tests/test_evaluation.py`](tests/test_evaluation.py).
+
+### Output
+
+A single JSON report is written to `eval/results/` (git-ignored) containing run metadata,
+an overall `summary`, a per-tag breakdown (`by_tag`), and full per-question detail
+(both Cypher queries, both row counts, all metrics, the answer text and the cost). A
+compact summary is also logged at the end of the run.
+
+### Dashboard
+
+[`eval/dashboard.html`](eval/dashboard.html) is a dependency-free HTML dashboard that
+loads **every** report in `eval/results/`, showing summary cards, a metric trend across
+runs, the per-tag breakdown and expandable per-question detail. A static file cannot list
+a directory over `file://`, so serve the folder:
+
+```bash
+cd eval && python -m http.server 8000
+# then open http://localhost:8000/dashboard.html
+```
+
+It discovers result files by parsing the served directory listing (it also honours an
+optional `results/index.json` manifest if one exists).
 
 ## Logging and observability
 

@@ -28,38 +28,50 @@ class AzureOpenAISettings:
     api_key: str
     deployment: str
     api_version: str
+    temperature: float | None = None
 
     @classmethod
     def from_env(cls) -> AzureOpenAISettings:
         missing = [v for v in ("AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_DEPLOYMENT") if not os.environ.get(v)]
         if missing:
             raise RuntimeError(f"Missing required environment variable(s): {', '.join(missing)}")
+        raw_temperature = os.environ.get("AZURE_OPENAI_TEMPERATURE")
         return cls(
             endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
             api_key=os.environ["AZURE_OPENAI_API_KEY"],
             deployment=os.environ["AZURE_OPENAI_DEPLOYMENT"],
             api_version=os.environ.get("AZURE_OPENAI_API_VERSION", DEFAULT_API_VERSION),
+            temperature=float(raw_temperature) if raw_temperature else None,
         )
 
 
 def build_llm(settings: AzureOpenAISettings) -> LLMInterface:
-    """Create a neo4j-graphrag LLM for the configured Azure OpenAI endpoint.
+    """Create a neo4j-graphrag LLM (text-to-Cypher generation) for the endpoint.
 
     Azure AI Foundry / "v1" deployments expose an OpenAI-compatible surface at
     ``<resource>/openai/v1`` and are reached with the plain OpenAI client via
     ``base_url``. Classic Azure OpenAI resources use deployment routing via
     ``azure_endpoint`` + ``api_version``.
+
+    When ``AZURE_OPENAI_TEMPERATURE`` is set it is forwarded as ``temperature`` so
+    Cypher generation can be pinned (e.g. ``0``) for more deterministic, reproducible
+    queries. It is opt-in and omitted by default because some models (e.g. certain
+    reasoning models) reject a non-default ``temperature``.
     """
     endpoint = settings.endpoint.rstrip("/")
+    model_params = {"temperature": settings.temperature} if settings.temperature is not None else None
+    if model_params is not None:
+        logger.debug("Pinning cypher-generation temperature to %s", settings.temperature)
     if "/openai/v1" in endpoint:
         logger.debug("Building OpenAI-compatible (v1) LLM for deployment '%s'", settings.deployment)
-        return OpenAILLM(model_name=settings.deployment, base_url=endpoint, api_key=settings.api_key)
+        return OpenAILLM(model_name=settings.deployment, base_url=endpoint, api_key=settings.api_key, model_params=model_params)
     logger.debug("Building classic Azure OpenAI LLM for deployment '%s' (api_version=%s)", settings.deployment, settings.api_version)
     return AzureOpenAILLM(
         model_name=settings.deployment,
         azure_endpoint=endpoint,
         api_version=settings.api_version,
         api_key=settings.api_key,
+        model_params=model_params,
     )
 
 

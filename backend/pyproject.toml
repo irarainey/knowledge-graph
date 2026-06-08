@@ -73,6 +73,10 @@ cmd = "python scripts/import_graph.py"
 help = "Regenerate data/small_plane_ontology.ttl from data/knowledge-graph.json (pass --check to verify)"
 cmd = "python scripts/generate_ttl.py"
 
+[tool.poe.tasks.evaluate]
+help = "Run offline evaluation of the /ask pipeline against eval/ground_truth.json"
+cmd = "python scripts/evaluate.py"
+
 [tool.poe.tasks.serve]
 help = "Run the FastAPI query API with autoreload"
 cmd = "uvicorn app:app --app-dir src --reload --host 0.0.0.0 --port 8080"

@@ -230,6 +230,23 @@ The Streamlit UI consumes this endpoint to stream answers live. See
 [backend/README.md](backend/README.md#post-ask) for configuration and the full
 event table.
 
+## Evaluating answer quality
+
+The backend ships an **offline, deterministic** evaluation harness (no LLM-as-judge) that
+scores the `/ask` pipeline against a pre-baked ground-truth file and writes a timestamped
+JSON report per run. Run it manually with `cd backend && uv run poe evaluate`. A
+dependency-free [`backend/eval/dashboard.html`](backend/eval/dashboard.html) visualizes
+every report — summary cards, a metric trend across runs, a per-tag breakdown and
+expandable per-question detail:
+
+```bash
+cd backend/eval && python -m http.server 8000
+# then open http://localhost:8000/dashboard.html
+```
+
+See [backend/README.md](backend/README.md#evaluation) for the metrics, ground-truth
+format and report schema.
+
 ## Streamlit chat UI
 
 The [`frontend/chat-ui`](frontend/chat-ui) project is a chat front end for `/ask` with

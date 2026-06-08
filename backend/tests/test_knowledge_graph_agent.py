@@ -100,6 +100,18 @@ def test_build_llm_uses_azure_client_for_classic_endpoint() -> None:
     assert isinstance(llm, AzureOpenAILLM)
 
 
+def test_build_llm_omits_temperature_by_default() -> None:
+    settings = AzureOpenAISettings("https://res.openai.azure.com/openai/v1", "key", "gpt-5.4", "2024-10-21")
+    llm = build_llm(settings)
+    assert llm.model_params == {}
+
+
+def test_build_llm_pins_temperature_when_set() -> None:
+    settings = AzureOpenAISettings("https://res.openai.azure.com/openai/v1", "key", "gpt-5.4", "2024-10-21", temperature=0)
+    llm = build_llm(settings)
+    assert llm.model_params == {"temperature": 0}
+
+
 # ── Test fakes ───────────────────────────────────────────────────────────────
 class FakeDriver:
     def __init__(self) -> None:

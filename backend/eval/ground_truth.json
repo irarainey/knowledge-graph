@@ -1,0 +1,76 @@
+{
+  "description": "Ground-truth questions for offline evaluation of the /ask pipeline. Each gold_cypher is hand-written and validated against the imported data/knowledge-graph.json. The primary retrieval metric compares cell VALUES (ignoring column names, tolerating float formatting); optional answer_key restricts the gold side to a single column when the query returns extra descriptive columns. expected_answer_values are key facts a correct natural-language answer should mention (used for coverage/groundedness, not for the retrieval F1).",
+  "questions": [
+    {
+      "id": "flight-count",
+      "question": "How many flights are recorded?",
+      "tags": ["aggregation"],
+      "gold_cypher": "MATCH (f:Flight) RETURN count(f) AS flights",
+      "expected_answer_values": [12]
+    },
+    {
+      "id": "engine-model",
+      "question": "What is the make and model of the engine, and how much horsepower does it produce?",
+      "tags": ["lookup"],
+      "gold_cypher": "MATCH (e:PistonEngine) RETURN e.name AS engine, e.model AS model, e.ratedHorsepower AS hp",
+      "expected_answer_values": ["Lycoming IO-360", "IO-360-L2A", 180]
+    },
+    {
+      "id": "aircraft-mtow",
+      "question": "What is the registration and maximum take-off weight of the aircraft?",
+      "tags": ["lookup"],
+      "gold_cypher": "MATCH (ac:Aircraft) RETURN ac.registration AS registration, ac.mtow_kg AS mtow_kg",
+      "expected_answer_values": ["G-ECHO", 1157]
+    },
+    {
+      "id": "engine-cylinders",
+      "question": "How many cylinders does the engine have?",
+      "tags": ["lookup"],
+      "gold_cypher": "MATCH (e:PistonEngine) RETURN e.cylinders AS cylinders",
+      "expected_answer_values": [4]
+    },
+    {
+      "id": "total-flight-hours",
+      "question": "What is the total number of flying hours across all recorded flights?",
+      "tags": ["aggregation"],
+      "gold_cypher": "MATCH (f:Flight) RETURN round(sum(coalesce(f.flightTime_hours, 0)), 1) AS total_hours",
+      "expected_answer_values": [6.6]
+    },
+    {
+      "id": "longest-flight",
+      "question": "Which flight covered the greatest distance, and how far was it in nautical miles?",
+      "tags": ["aggregation", "filter"],
+      "gold_cypher": "MATCH (f:Flight) RETURN f.name AS flight, f.distance_nm AS distance_nm ORDER BY f.distance_nm DESC LIMIT 1",
+      "expected_answer_values": ["Flight 006", 49]
+    },
+    {
+      "id": "flights-on-2026-05-20",
+      "question": "How many flights took place on 20 May 2026?",
+      "tags": ["filter", "aggregation"],
+      "gold_cypher": "MATCH (f:Flight) WHERE date(f.date) = date('2026-05-20') RETURN count(f) AS flights",
+      "expected_answer_values": [1]
+    },
+    {
+      "id": "aerodromes-visited",
+      "question": "Which aerodromes has the aircraft flown to?",
+      "tags": ["multi-hop", "list"],
+      "gold_cypher": "MATCH (:Flight)-[:ARRIVES_AT]->(a:Aerodrome) RETURN DISTINCT a.name AS aerodrome ORDER BY aerodrome",
+      "expected_answer_values": ["Bristol", "Cardiff", "Exeter", "Bournemouth", "Gloucestershire"]
+    },
+    {
+      "id": "powerplant-components",
+      "question": "What components make up the powerplant system?",
+      "tags": ["multi-hop", "list"],
+      "gold_cypher": "MATCH (:PowerplantSystem)-[:HAS_COMPONENT]->(c:Component) RETURN DISTINCT c.name AS component ORDER BY component",
+      "answer_key": "component",
+      "expected_answer_values": ["Propeller", "Exhaust"]
+    },
+    {
+      "id": "system-count",
+      "question": "How many systems does the aircraft have?",
+      "tags": ["multi-hop", "aggregation"],
+      "gold_cypher": "MATCH (:Aircraft)-[:HAS_SYSTEM]->(s:System) RETURN count(DISTINCT s) AS systems",
+      "expected_answer_values": [8]
+    }
+  ]
+}

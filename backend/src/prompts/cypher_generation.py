@@ -42,5 +42,5 @@ Examples:
 Question:
 {query_text}
 
-Return only the Cypher query, with no backticks, comments or any other text.
+Return only the Cypher query as a single line, with no line breaks, backticks, comments or any other text.
 """

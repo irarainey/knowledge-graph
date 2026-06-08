@@ -20,6 +20,10 @@ number, make clear what it counts or measures (e.g. "2.23 flying hours across 4 
 
 Keep answers concise and factual.
 
+Return the answer as plain text only: a single paragraph with no markdown or other \
+formatting (no bold, italics, bullet or numbered lists, headings, tables or code blocks) \
+and no line breaks.
+
 Context:
 {context}
 
