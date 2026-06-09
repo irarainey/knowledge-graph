@@ -50,17 +50,20 @@ links out to the Vue renderer and the Neo4j browser, opening each in a new tab.)
   `/ask` endpoint with live token streaming and a per-answer debug panel. Uses uv.
   Runs on <http://localhost:8501>. Sidebar buttons open the Vue graph renderer and the
   Neo4j browser in a new tab.
-- **Backend** — Python FastAPI service that retrieves from Neo4j with **text-to-Cypher**
-  (Neo4j's `neo4j-graphrag` package), then uses a **Microsoft Agent Framework** agent
-  (backed by Azure OpenAI) to generate the answer from the retrieved rows.
-  Uses uv. Runs on <http://localhost:8080>.
+- **Backend** — Python FastAPI service. A single **Microsoft Agent Framework** agent
+  (backed by Azure OpenAI) is given one tool that retrieves from Neo4j with
+  **text-to-Cypher** (Neo4j's `neo4j-graphrag` package); the agent is forced to retrieve
+  before answering from the rows. A deterministic relevance guardrail (no extra LLM call)
+  rejects off-topic questions up front. Uses uv. Runs on <http://localhost:8080>.
 - **Neo4j** — Graph database running as a Docker container, storing the aircraft's nodes
   and relationships.
 
 ### Request workflow
 
-A question asked in the Streamlit UI flows through a two-LLM **retrieve → generate**
-pipeline. The same four steps are surfaced, in order, in the UI's per-answer **Debug
+A question asked in the Streamlit UI is first screened by a deterministic relevance
+guardrail (no LLM call), then handled by a single **Microsoft Agent Framework** agent that
+is forced to retrieve via its text-to-Cypher tool before generating the answer. The
+retrieval and answer steps are surfaced, in order, in the UI's per-answer **Debug
 details** panel.
 
 ```
@@ -68,23 +71,26 @@ User ─ question ─▶ Streamlit UI ─ POST /ask ─▶ Backend
                                                         │
    ┌────────────────────────────────────────────────────┘
    ▼
-Step 1 · Call the LLM with the graph schema
-         Backend ──(schema + examples + question)──▶ Azure OpenAI
+Step 0 · Relevance guardrail (no LLM)
+         Backend ──(off-topic? → fixed refusal)──▶ Streamlit UI   [on-topic: continue]
+Step 1 · Agent is forced to call its retrieval tool
+         (inside the tool) Backend ──(schema + examples + question)──▶ Azure OpenAI
 Step 2 · LLM returns a Cypher query
          Azure OpenAI ──(Cypher)──▶ Backend
 Step 3 · Query the graph database
          Backend ──(EXPLAIN read-only, then run Cypher)──▶ Neo4j ──(rows)──▶ Backend
          Backend ──(metadata event: cypher_used, records)──▶ Streamlit UI
-Step 4 · Call the LLM with the retrieved rows
-         Backend ──(rows as context + question)──▶ Azure OpenAI
+Step 4 · Agent generates the answer from the retrieved rows
+         Backend ──(rows as tool result)──▶ Azure OpenAI
          Azure OpenAI ──(answer tokens)──▶ Backend ──(token events)──▶ Streamlit UI
 Finally  Backend ──(stats event: tokens, durations)──▶ Streamlit UI ─▶ Debug details
          Backend ──(done event)──▶ Streamlit UI
 ```
 
-While this runs, the Streamlit status indicator moves from *asking the LLM for the
-graph data* (steps 1–3) to *asking the LLM to generate the answer* (step 4), then
-clears so the answer sits at the top with the Debug details panel below it.
+While this runs, the backend emits `progress` events at each pipeline boundary and the
+Streamlit status indicator tracks them — *Selecting the retrieval tool…* →
+*Generating the Cypher query…* → *Querying the graph database…* → *Generating the
+answer…* — then clears so the answer sits at the top with the Debug details panel below it.
 
 ## Getting Started
 
@@ -191,14 +197,14 @@ interactive docs.
 
 ## Asking questions in natural language
 
-The backend answers natural-language questions with a two-stage **retrieve → generate**
-pipeline: Neo4j's
-[`neo4j-graphrag`](https://neo4j.com/docs/neo4j-graphrag-python/current/) package handles
-**text-to-Cypher** retrieval — it reads the live graph schema, has the LLM write a
-read-only Cypher query, and runs it to fetch context — then a **Microsoft Agent Framework**
-agent generates the answer from those rows.
-Set the `AZURE_OPENAI_*` variables in `backend/.env` (see `backend/.env.example`) to
-enable it.
+The backend answers natural-language questions with a single **Microsoft Agent Framework**
+agent that is given one retrieval tool and forced to use it before answering. The tool wraps
+Neo4j's [`neo4j-graphrag`](https://neo4j.com/docs/neo4j-graphrag-python/current/) package for
+**text-to-Cypher** retrieval — it reads the live graph schema, has the LLM write a read-only
+Cypher query, and runs it to fetch context — and the agent then generates the answer from
+those rows. A deterministic relevance guardrail (no extra LLM call) rejects off-topic
+questions before any retrieval. Set the `AZURE_OPENAI_*` variables in `backend/.env` (see
+`backend/.env.example`) to enable it.
 
 > Optional: set `LOG_LEVEL` (default `INFO`; use `DEBUG` for per-step pipeline detail)
 > and `APPLICATIONINSIGHTS_CONNECTION_STRING` (to export OpenTelemetry traces, metrics
@@ -221,7 +227,7 @@ then a final `done` event.
 {"type": "token", "text": "Since "}
 {"type": "token", "text": "2026-05-25"}
 ...
-{"type": "stats", "model": "gpt-5.4", "llm_calls": 2, "tokens": {"prompt": 10667, "completion": 67, "total": 10734}, ...}
+{"type": "stats", "model": "gpt-5.4", "llm_calls": 3, "tokens": {"prompt": 10944, "completion": 106, "total": 11050}, ...}
 {"type": "done"}
 ```
 
@@ -250,9 +256,10 @@ format and report schema.
 ## Streamlit chat UI
 
 The [`frontend/chat-ui`](frontend/chat-ui) project is a chat front end for `/ask` with
-live token streaming. While a question is in flight, a status indicator reflects the
-current step (asking the LLM for the graph data → asking the LLM to generate the
-answer). Each answer carries a single **Debug details** panel that lays the request out
+live token streaming. While a question is in flight, a status indicator tracks the
+backend's `progress` events through each step (selecting the retrieval tool → generating
+the Cypher query → querying the graph database → generating the answer). Each answer
+carries a single **Debug details** panel that lays the request out
 as the four-step workflow above — the LLM prompts (in collapsed panels), the generated
 Cypher, the retrieved rows, and a summary of tokens and timings. Sidebar buttons open
 the Vue graph renderer and the Neo4j browser. Run it on its own with:

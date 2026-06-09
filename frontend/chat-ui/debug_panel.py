@@ -1,7 +1,9 @@
 """The per-request "Debug details" expander rendering and its formatting helpers.
 
-This panel lays out the agent's retrieve-then-generate pipeline in chronological
-order, driven entirely by the ``stats`` event the backend emits on the stream.
+This panel lays out the agent's workflow in chronological order, driven entirely by the
+``stats`` event the backend emits on the stream. A single Microsoft Agent Framework agent
+is forced to call its text-to-Cypher retrieval tool, then writes the answer from the rows
+the tool returns.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ def _fmt_ms(value: Any) -> str:
 
 
 _STAGE_LABELS = {
+    "agent_planning": "Agent planning (LLM)",
     "cypher_generation": "Cypher generation (LLM)",
     "answer_generation": "Answer generation (LLM)",
 }
@@ -73,16 +76,19 @@ def render_debug(
     """Render the single per-request "Debug details" expander for an assistant turn.
 
     The contents flow in chronological workflow order so they read top-to-bottom like
-    the pipeline the agent ran:
-    (1) call the LLM with the graph schema, (2) the Cypher the LLM produced,
-    (3) run that Cypher against Neo4j, (4) call the LLM again with the retrieved rows
-    to write the answer — each LLM request payload sits in a collapsed panel — followed
-    by an overall summary of tokens and timings at the bottom.
+    the agent's run, surfacing every one of the three LLM calls a question makes:
+    (1) the agent's tool-planning turn (it decides to call the retrieval tool),
+    (2) the cypher-generation call inside that tool (its prompt carries the graph schema)
+    and the Cypher it produced, (3) running that Cypher against Neo4j, and (4) the
+    answer-generation turn (its request includes the retrieved rows as the tool result).
+    Each LLM request payload sits in a collapsed panel, followed by an overall summary of
+    tokens and timings at the bottom.
     """
     stats = stats or {}
     calls = stats.get("calls") or []
     tokens = stats.get("tokens") or {}
     durations = stats.get("durations_ms") or {}
+    planning_calls = [c for c in calls if c.get("stage") == "agent_planning"]
     cypher_calls = [c for c in calls if c.get("stage") == "cypher_generation"]
     answer_calls = [c for c in calls if c.get("stage") == "answer_generation"]
 
@@ -90,8 +96,19 @@ def render_debug(
         return
 
     with st.expander("Debug details"):
-        # Step 1 — Call the LLM with the graph schema to generate a query.
-        st.markdown("**1 · Call the LLM with the graph schema** &nbsp;`LLM`")
+        # Step 1 — The agent's tool-planning turn: it decides to call the retrieval tool.
+        st.markdown("**1 · Agent selects the retrieval tool** &nbsp;`LLM`")
+        if planning_calls:
+            for call in planning_calls:
+                st.caption(_call_meta(call))
+                request = call.get("request") or []
+                if request:
+                    st.html(_payload_details("Prompt sent to the LLM (the agent decides which tool to call)", request))
+        else:
+            st.caption("No telemetry was reported for this step.")
+
+        # Step 2 — Cypher generation inside the tool (prompt carries the graph schema).
+        st.markdown("**2 · Generate the Cypher query** &nbsp;`LLM`")
         if cypher_calls:
             for call in cypher_calls:
                 st.caption(_call_meta(call))
@@ -100,9 +117,6 @@ def render_debug(
                     st.html(_payload_details("Prompt sent to the LLM (includes the graph schema)", request))
         else:
             st.caption("No telemetry was reported for this step.")
-
-        # Step 2 — The Cypher the LLM produced.
-        st.markdown("**2 · Generate the Cypher query**")
         if cyphers:
             for cypher in cyphers:
                 st.code(cypher, language="cypher")
@@ -117,14 +131,20 @@ def render_debug(
         else:
             st.caption("No rows were retrieved.")
 
-        # Step 4 — Call the LLM again with the retrieved rows to write the answer.
-        st.markdown("**4 · Call the LLM with the retrieved data** &nbsp;`LLM`")
+        # Step 4 — The agent writes the answer; its request includes the tool-result rows.
+        st.markdown("**4 · Generate the answer from the retrieved data** &nbsp;`LLM`")
         if answer_calls:
             for call in answer_calls:
                 st.caption(_call_meta(call))
                 request = call.get("request") or []
                 if request:
-                    st.html(_payload_details("Prompt sent to the LLM (includes the retrieved rows)", request))
+                    st.html(
+                        _payload_details(
+                            "Prompt sent to the LLM (system instructions, your question, and the "
+                            "retrieved rows delivered as the tool result)",
+                            request,
+                        )
+                    )
         else:
             st.caption("No telemetry was reported for this step.")
         st.caption("The generated answer is shown above.")
@@ -147,7 +167,10 @@ def render_debug(
             st.markdown("**Tokens**")
             st.markdown(_md_table(["Call", "Prompt", "Completion", "Total"], token_rows))
 
-            timing_rows = [["Cypher generation (LLM)", _fmt_ms(call.get("duration_ms"))] for call in cypher_calls]
+            # Timings in workflow order: planning → cypher generation → graph query →
+            # answer generation → total.
+            timing_rows = [["Agent planning (LLM)", _fmt_ms(call.get("duration_ms"))] for call in planning_calls]
+            timing_rows += [["Cypher generation (LLM)", _fmt_ms(call.get("duration_ms"))] for call in cypher_calls]
             timing_rows.append(["Graph query", _fmt_ms(durations.get("graph_query"))])
             timing_rows += [["Answer generation (LLM)", _fmt_ms(call.get("duration_ms"))] for call in answer_calls]
             timing_rows.append(["**Total**", _fmt_ms(durations.get("total"))])

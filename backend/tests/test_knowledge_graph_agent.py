@@ -17,7 +17,7 @@ from agents.knowledge_graph_agent import KnowledgeGraphAgent
 from common.azure_openai import AzureOpenAISettings, build_llm
 from common.graph_schema import fetch_schema_text
 from common.retrieval import record_to_item
-from common.telemetry import usage_sink
+from common.telemetry import maf_call_sink, usage_sink
 
 
 # ── fetch_schema_text ────────────────────────────────────────────────────────
@@ -137,18 +137,55 @@ class FakeAgentResponse:
 
 
 class FakeResponseStream:
-    """Async-iterable stand-in for MAF ResponseStream with get_final_response()."""
+    """Async-iterable stand-in for MAF ResponseStream with get_final_response().
 
-    def __init__(self, texts: list[str], final: FakeAgentResponse, *, error: Exception | None = None) -> None:
+    Simulates the agentic flow and the per-turn chat middleware that records each LLM
+    call. On the first iteration it: (1) records the agent's *tool-planning* turn into
+    ``maf_call_sink``, (2) awaits ``tool_call`` (which populates ``retrieval_sink`` like
+    the real tool) and records the *cypher-generation* call into ``usage_sink``. When the
+    final response is drained it records the *answer-generation* turn into
+    ``maf_call_sink`` — mirroring the three real LLM calls a question makes.
+    """
+
+    def __init__(
+        self,
+        texts: list[str],
+        final: FakeAgentResponse,
+        *,
+        error: Exception | None = None,
+        tool_call: Any = None,
+        question: str = "",
+        instructions: str = "",
+        planning_usage: dict[str, Any] | None = None,
+        cypher_usage: dict[str, Any] | None = None,
+    ) -> None:
         self._texts = texts
         self._final = final
         self._error = error
+        self._tool_call = tool_call
+        self._question = question
+        self._instructions = instructions
+        self._planning_usage = planning_usage
+        self._cypher_usage = cypher_usage
+        self._tool_done = False
+        self._answer_recorded = False
 
     def __aiter__(self) -> FakeResponseStream:
         self._iter = iter(self._texts)
+        self._tool_done = False
         return self
 
     async def __anext__(self) -> FakeUpdate:
+        if self._tool_call is not None and not self._tool_done:
+            self._tool_done = True
+            # The agent's tool-planning turn happens first.
+            _record_maf_call("agent_planning", self._planning_usage, self._instructions, self._question)
+            # Then the tool runs (cypher generation + graph query).
+            await self._tool_call(self._question)
+            if self._cypher_usage is not None:
+                sink = usage_sink.get()
+                if sink is not None:
+                    sink.append({**self._cypher_usage, "duration_ms": 1.0, "request": []})
         if self._error is not None:
             raise self._error
         try:
@@ -157,11 +194,38 @@ class FakeResponseStream:
             raise StopAsyncIteration from exc
 
     async def get_final_response(self) -> FakeAgentResponse:
+        # Draining the final response fires the answer-turn middleware hook.
+        if not self._answer_recorded:
+            self._answer_recorded = True
+            _record_maf_call("answer_generation", self._final.usage_details, self._instructions, self._question)
         return self._final
 
 
+def _record_maf_call(stage: str, usage: dict[str, Any] | None, instructions: str, question: str) -> None:
+    """Append a simulated MAF turn entry to ``maf_call_sink`` (mimics _MafTurnRecorder)."""
+    sink = maf_call_sink.get()
+    if sink is None:
+        return
+    tokens = {
+        "prompt": (usage or {}).get("input_token_count"),
+        "completion": (usage or {}).get("output_token_count"),
+        "total": (usage or {}).get("total_token_count"),
+    }
+    sink.append(
+        {
+            "stage": stage,
+            **tokens,
+            "duration_ms": 1.0,
+            "request": [
+                {"role": "system", "content": instructions},
+                {"role": "user", "content": question},
+            ],
+        }
+    )
+
+
 class FakeMafAgent:
-    """Stands in for agent_framework.Agent: records prompts, returns canned output."""
+    """Stands in for agent_framework.Agent: invokes the forced tool, returns canned output."""
 
     def __init__(
         self,
@@ -170,24 +234,33 @@ class FakeMafAgent:
         usage_details: dict[str, Any] | None = None,
         stream_texts: list[str] | None = None,
         stream_error: Exception | None = None,
+        planning_usage: dict[str, Any] | None = None,
+        cypher_usage: dict[str, Any] | None = None,
     ) -> None:
         self._text = text
         self._usage = usage_details
         self._stream_texts = stream_texts or []
         self._stream_error = stream_error
+        self._planning_usage = planning_usage
+        self._cypher_usage = cypher_usage
         self.prompts: list[str] = []
+        self.instructions: str = ""
+        # Wired by the test to the agent's retrieval tool to simulate the forced call.
+        self.tool_call: Any = None
 
     def run(self, messages: str, *, stream: bool = True) -> FakeResponseStream:
         self.prompts.append(messages)
         final = FakeAgentResponse(self._text, self._usage)
-        return FakeResponseStream(self._stream_texts, final, error=self._stream_error)
-
-
-class FakePromptTemplate:
-    system_instructions = "Answer the user question using the provided context."
-
-    def format(self, query_text: str, context: str, examples: str) -> str:
-        return f"Q: {query_text}\nCTX: {context}"
+        return FakeResponseStream(
+            self._stream_texts,
+            final,
+            error=self._stream_error,
+            tool_call=self.tool_call,
+            question=messages,
+            instructions=self.instructions,
+            planning_usage=self._planning_usage,
+            cypher_usage=self._cypher_usage,
+        )
 
 
 def test_close_closes_driver() -> None:
@@ -215,14 +288,22 @@ class FakeStreamRetriever:
         return self._result
 
 
+_TEST_INSTRUCTIONS = "Answer the user question using the knowledge graph tool."
+
+
 def _make_stream_agent(retriever: FakeStreamRetriever, maf_agent: FakeMafAgent) -> KnowledgeGraphAgent:
     agent = object.__new__(KnowledgeGraphAgent)
     agent._driver = FakeDriver()  # type: ignore[assignment]
     agent._retriever = retriever  # type: ignore[assignment]
     agent._agent = maf_agent  # type: ignore[assignment]
     agent._llm = SimpleNamespace(model_name="fake-model")  # type: ignore[assignment]
-    agent._prompt_template = FakePromptTemplate()  # type: ignore[assignment]
-    agent._instructions = FakePromptTemplate.system_instructions  # type: ignore[assignment]
+    agent._instructions = _TEST_INSTRUCTIONS
+    # Permissive vocabulary so the relevance guardrail passes for "flight" questions.
+    agent._vocabulary = frozenset({"flight"})  # type: ignore[assignment]
+    # Simulate the agent being forced to call the retrieval tool, and the per-turn chat
+    # middleware that records each MAF LLM call.
+    maf_agent.tool_call = agent._run_retrieval_tool
+    maf_agent.instructions = _TEST_INSTRUCTIONS
     return agent
 
 
@@ -234,13 +315,21 @@ async def test_ask_emits_metadata_tokens_and_done() -> None:
     retriever = FakeStreamRetriever(result=result)
     maf = FakeMafAgent(
         stream_texts=["There ", "are 6 ", "flights."],
+        planning_usage={"input_token_count": 10, "output_token_count": 2, "total_token_count": 12},
+        cypher_usage={"prompt": 100, "completion": 5, "total": 105},
         usage_details={"input_token_count": 120, "output_token_count": 8, "total_token_count": 128},
     )
     agent = _make_stream_agent(retriever, maf)
 
     events = [event async for event in agent.ask("How many flights?")]
 
-    assert events[0] == {
+    # Progress phases are surfaced up front (planning → cypher → answering; the fake
+    # retriever bypasses the cypher recorder, so it emits no "querying").
+    phases = [event["phase"] for event in events if event["type"] == "progress"]
+    assert phases == ["planning", "cypher", "answering"]
+    # Metadata is the first non-progress event, before any answer tokens.
+    non_progress = [event for event in events if event["type"] != "progress"]
+    assert non_progress[0] == {
         "type": "metadata",
         "cypher_used": ["MATCH (f:Flight) RETURN count(f) AS flights"],
         "records": [{"flights": 6}],
@@ -248,24 +337,28 @@ async def test_ask_emits_metadata_tokens_and_done() -> None:
     tokens = [event["text"] for event in events if event["type"] == "token"]
     assert "".join(tokens) == "There are 6 flights."
     assert events[-1] == {"type": "done"}
+    # The agent's forced tool ran retrieval with the question.
     assert retriever.calls == ["How many flights?"]
-    # The MAF agent is handed the formatted prompt built from the retrieved rows.
-    assert maf.prompts == ['Q: How many flights?\nCTX: {"flights": 6}']
-    # A stats event with the answer-generation token usage precedes done.
+    # The MAF agent is handed the raw question; it orchestrates retrieval via the tool.
+    assert maf.prompts == ["How many flights?"]
+    # A stats event with the per-call token usage precedes done.
     stats = next(event for event in events if event["type"] == "stats")
     assert events.index(stats) == len(events) - 2
     assert stats["model"] == "fake-model"
-    assert stats["llm_calls"] == 1
-    assert stats["tokens"] == {"prompt": 120, "completion": 8, "total": 128}
-    assert len(stats["calls"]) == 1
-    answer_call = stats["calls"][0]
-    assert answer_call["stage"] == "answer_generation"
+    # Three real LLM calls: agent tool-planning, cypher generation, answer generation.
+    assert stats["llm_calls"] == 3
+    assert [call["stage"] for call in stats["calls"]] == ["agent_planning", "cypher_generation", "answer_generation"]
+    # Tokens aggregate across all three calls.
+    assert stats["tokens"] == {"prompt": 10 + 100 + 120, "completion": 2 + 5 + 8, "total": 12 + 105 + 128}
+    planning_call, cypher_call, answer_call = stats["calls"]
+    assert (planning_call["prompt"], planning_call["total"]) == (10, 12)
+    assert (cypher_call["prompt"], cypher_call["total"]) == (100, 105)
     assert {answer_call["prompt"], answer_call["completion"], answer_call["total"]} == {120, 8, 128}
     assert isinstance(answer_call["duration_ms"], float)
-    # The answer-generation request (the messages sent to the agent) is surfaced.
+    # The answer-generation request surfaces the messages the model received.
     assert answer_call["request"] == [
-        {"role": "system", "content": "Answer the user question using the provided context."},
-        {"role": "user", "content": 'Q: How many flights?\nCTX: {"flights": 6}'},
+        {"role": "system", "content": _TEST_INSTRUCTIONS},
+        {"role": "user", "content": "How many flights?"},
     ]
     assert stats["cypher_count"] == 1
     assert stats["record_count"] == 1
@@ -278,35 +371,67 @@ async def test_ask_handles_missing_usage() -> None:
         metadata={"cypher": "MATCH (n) RETURN count(n)"},
     )
     retriever = FakeStreamRetriever(result=result)
-    # No usage_details — the endpoint reported no token usage for the stream.
-    maf = FakeMafAgent(stream_texts=["ok"], usage_details=None)
+    # No usage reported by any call — every token field stays None (unknown, not 0).
+    maf = FakeMafAgent(
+        stream_texts=["ok"],
+        usage_details=None,
+        planning_usage=None,
+        cypher_usage={"prompt": None, "completion": None, "total": None},
+    )
     agent = _make_stream_agent(retriever, maf)
 
-    events = [event async for event in agent.ask("anything")]
+    events = [event async for event in agent.ask("how many flights?")]
 
     stats = next(event for event in events if event["type"] == "stats")
-    # The answer call still counts even though tokens are unknown (None, not 0).
-    assert stats["llm_calls"] == 1
+    # All three calls still count even though their token usage is unknown.
+    assert stats["llm_calls"] == 3
     assert stats["tokens"] == {"prompt": None, "completion": None, "total": None}
-    assert stats["calls"][0]["stage"] == "answer_generation"
+    assert [call["stage"] for call in stats["calls"]] == ["agent_planning", "cypher_generation", "answer_generation"]
     assert events[-1] == {"type": "done"}
 
 
-async def test_ask_degrades_on_retrieval_error() -> None:
-    retriever = FakeStreamRetriever(error=Text2CypherRetrievalError("bad cypher"))
-    maf = FakeMafAgent()
+async def test_ask_off_topic_question_is_refused() -> None:
+    retriever = FakeStreamRetriever(error=AssertionError("retrieval must not run for off-topic"))
+    maf = FakeMafAgent(stream_texts=["should not run"])
     agent = _make_stream_agent(retriever, maf)
 
-    events = [event async for event in agent.ask("nonsense")]
+    events = [event async for event in agent.ask("What is the capital of France?")]
 
     assert events[0] == {"type": "metadata", "cypher_used": [], "records": []}
-    assert any(event["type"] == "token" and "couldn't" in event["text"].lower() for event in events)
+    # Off-topic questions short-circuit before the pipeline runs, so no progress events.
+    assert not any(event["type"] == "progress" for event in events)
+    tokens = [event["text"] for event in events if event["type"] == "token"]
+    assert "only answer questions about the aircraft" in "".join(tokens)
     stats = next(event for event in events if event["type"] == "stats")
     assert stats["llm_calls"] == 0
     assert stats["calls"] == []
-    assert stats["tokens"] == {"prompt": None, "completion": None, "total": None}
     assert events[-1] == {"type": "done"}
-    assert maf.prompts == []  # generation never attempted when retrieval fails
+    # Neither retrieval nor the agent ran.
+    assert retriever.calls == []
+    assert maf.prompts == []
+
+
+async def test_ask_degrades_on_retrieval_error() -> None:
+    # Retrieval fails inside the tool; the agent still runs and answers from the
+    # tool's graceful message, so metadata is empty but generation still happens.
+    retriever = FakeStreamRetriever(error=Text2CypherRetrievalError("bad cypher"))
+    maf = FakeMafAgent(stream_texts=["I couldn't find that."])
+    agent = _make_stream_agent(retriever, maf)
+
+    events = [event async for event in agent.ask("how many flights?")]
+
+    non_progress = [event for event in events if event["type"] != "progress"]
+    assert non_progress[0] == {"type": "metadata", "cypher_used": [], "records": []}
+    tokens = [event["text"] for event in events if event["type"] == "token"]
+    assert "".join(tokens) == "I couldn't find that."
+    stats = next(event for event in events if event["type"] == "stats")
+    # The agent still made its planning and answer LLM calls (cypher-gen usage is absent
+    # because retrieval failed before reporting any).
+    assert stats["llm_calls"] == 2
+    assert [call["stage"] for call in stats["calls"]] == ["agent_planning", "answer_generation"]
+    assert stats["record_count"] == 0
+    assert events[-1] == {"type": "done"}
+    assert retriever.calls == ["how many flights?"]
 
 
 async def test_ask_emits_error_event_on_generation_failure() -> None:
@@ -318,10 +443,11 @@ async def test_ask_emits_error_event_on_generation_failure() -> None:
     maf = FakeMafAgent(stream_texts=["partial"], stream_error=RuntimeError("stream blew up"))
     agent = _make_stream_agent(retriever, maf)
 
-    events = [event async for event in agent.ask("anything")]
+    events = [event async for event in agent.ask("how many flights?")]
 
     # Metadata still precedes the failure; an error event is emitted, then stats + done.
-    assert events[0]["type"] == "metadata"
+    non_progress = [event for event in events if event["type"] != "progress"]
+    assert non_progress[0]["type"] == "metadata"
     assert any(event["type"] == "error" for event in events)
     assert events[-1] == {"type": "done"}
 
@@ -385,6 +511,110 @@ def test_install_usage_recorder_emits_cypher_generation_span(monkeypatch: pytest
     assert attrs["gen_ai.request.model"] == "fake-model"
     assert attrs["gen_ai.usage.input_tokens"] == 40
     assert attrs["gen_ai.usage.output_tokens"] == 12
+
+
+# ── MAF turn recorder middleware + message serialization ─────────────────────
+class FakeContent:
+    def __init__(self, type: str, **kwargs: Any) -> None:
+        self.type = type
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+
+class FakeMessage:
+    def __init__(self, role: str, contents: list[FakeContent], text: str = "") -> None:
+        self.role = role
+        self.contents = contents
+        self.text = text
+
+
+class FakeChatResponse:
+    def __init__(self, messages: list[FakeMessage], usage_details: dict[str, Any] | None) -> None:
+        self.messages = messages
+        self.usage_details = usage_details
+
+
+class FakeChatContext:
+    """Minimal ChatContext stand-in for exercising a ChatMiddleware in isolation."""
+
+    def __init__(self, messages: list[FakeMessage], *, stream: bool, result: FakeChatResponse) -> None:
+        self.messages = messages
+        self.stream = stream
+        self.result = result
+        self.stream_result_hooks: list[Any] = []
+
+
+def test_serialize_maf_messages_renders_text_calls_and_results() -> None:
+    from common.telemetry import serialize_maf_messages
+
+    messages = [
+        FakeMessage("user", [FakeContent("text", text="How many flights?")]),
+        FakeMessage("assistant", [FakeContent("function_call", name="search_knowledge_graph", arguments='{"question":"q"}')]),
+        FakeMessage("tool", [FakeContent("function_result", result='[{"flights": 12}]')]),
+    ]
+
+    serialized = serialize_maf_messages(messages)
+
+    assert serialized[0] == {"role": "user", "content": "How many flights?"}
+    assert serialized[1]["role"] == "assistant"
+    assert "→ call search_knowledge_graph(" in serialized[1]["content"]
+    assert serialized[2] == {"role": "tool", "content": '← result: [{"flights": 12}]'}
+
+
+async def test_maf_turn_recorder_records_planning_and_answer_turns() -> None:
+    from agents.knowledge_graph_agent import _MafTurnRecorder
+    from common.telemetry import maf_call_sink
+
+    recorder = _MafTurnRecorder("INSTRUCTIONS")
+    recorded: list[dict[str, Any]] = []
+    token = maf_call_sink.set(recorded)
+    try:
+        # Turn 1: planning — the response carries a function call.
+        planning_response = FakeChatResponse(
+            messages=[FakeMessage("assistant", [FakeContent("function_call", name="search_knowledge_graph", arguments="{}")])],
+            usage_details={"input_token_count": 10, "output_token_count": 2, "total_token_count": 12},
+        )
+        ctx1 = FakeChatContext([FakeMessage("user", [FakeContent("text", text="q")])], stream=True, result=planning_response)
+
+        async def _next1() -> None:
+            return None
+
+        await recorder.process(ctx1, _next1)  # type: ignore[arg-type]
+        # Streaming usage only resolves once the stream finalizes — fire the hook.
+        for hook in ctx1.stream_result_hooks:
+            hook(planning_response)
+
+        # Turn 2: answer — text only, request includes the tool-result rows.
+        answer_response = FakeChatResponse(
+            messages=[FakeMessage("assistant", [FakeContent("text", text="12 flights.")], text="12 flights.")],
+            usage_details={"input_token_count": 40, "output_token_count": 5, "total_token_count": 45},
+        )
+        ctx2 = FakeChatContext(
+            [
+                FakeMessage("user", [FakeContent("text", text="q")]),
+                FakeMessage("tool", [FakeContent("function_result", result='[{"flights": 12}]')]),
+            ],
+            stream=True,
+            result=answer_response,
+        )
+
+        async def _next2() -> None:
+            return None
+
+        await recorder.process(ctx2, _next2)  # type: ignore[arg-type]
+        for hook in ctx2.stream_result_hooks:
+            hook(answer_response)
+    finally:
+        maf_call_sink.reset(token)
+
+    assert [call["stage"] for call in recorded] == ["agent_planning", "answer_generation"]
+    assert (recorded[0]["prompt"], recorded[0]["total"]) == (10, 12)
+    assert (recorded[1]["prompt"], recorded[1]["total"]) == (40, 45)
+    # The answer turn's recorded request includes the system instructions and the
+    # tool-result rows the model actually saw.
+    answer_request = recorded[1]["request"]
+    assert answer_request[0] == {"role": "system", "content": "INSTRUCTIONS"}
+    assert any("flights" in msg["content"] for msg in answer_request)
 
 
 # ── /ask endpoint ─────────────────────────────────────────────────────

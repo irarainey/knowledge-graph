@@ -119,19 +119,26 @@ curl -X POST http://localhost:8080/query \
 > intended for trusted, local PoC use — do not expose it publicly without adding
 > authentication and query restrictions.
 
-## Natural-language questions (retrieve → generate agent)
+## Natural-language questions (agentic MAF + text-to-Cypher tool)
 
-`src/agents/knowledge_graph_agent.py` answers natural-language questions over the graph with a two-stage
-**retrieve → generate** pipeline. Retrieval uses Neo4j's
-[`neo4j-graphrag`](https://neo4j.com/docs/neo4j-graphrag-python/current/) package in a
-**text-to-Cypher** pattern: a `Text2CypherRetriever` asks the LLM to write a Cypher query
-from the question and the live graph schema, validates that it is **read-only** (via
-`EXPLAIN`), and runs it. The retrieved rows are then handed to a
-[**Microsoft Agent Framework**](https://github.com/microsoft/agent-framework)
-`Agent` (backed by an `OpenAIChatCompletionClient`), which generates the final answer.
+`src/agents/knowledge_graph_agent.py` answers natural-language questions over the graph
+with a single [**Microsoft Agent Framework**](https://github.com/microsoft/agent-framework)
+`Agent` that owns orchestration and is given **one tool**, `search_knowledge_graph`. The
+tool wraps Neo4j's [`neo4j-graphrag`](https://neo4j.com/docs/neo4j-graphrag-python/current/)
+package in a **text-to-Cypher** pattern: a `Text2CypherRetriever` asks the LLM to write a
+Cypher query from the question and the live graph schema, validates that it is **read-only**
+(via `EXPLAIN`), and runs it. The agent is **forced** to call this tool on its first turn,
+then writes the final answer from the rows it gets back.
 
-Read-only execution is enforced by the package itself, so the model can never
-modify the graph even if it generates a write.
+Forcing the tool preserves the grounding guarantee of a deterministic retrieve→generate
+pipeline (the agent only ever answers from rows it actually retrieved) while moving
+orchestration into native MAF, making it straightforward to add further tools later.
+Read-only execution is enforced by `neo4j-graphrag` itself, so the model can never modify
+the graph even if it generates a write.
+
+Before any retrieval or LLM call, a **deterministic relevance guardrail** (`common/guardrails.py`,
+**no extra LLM call**) rejects off-topic questions. Off-topic questions return a fixed
+refusal message with empty metadata and zero LLM usage.
 
 The graph schema is introspected with plain Cypher (no APOC required), so it works
 against a stock Neo4j Community container. The schema is read once at startup —
@@ -139,28 +146,36 @@ against a stock Neo4j Community container. The schema is read once at startup �
 
 ### How it works
 
-A request to `/ask` flows through a two-stage **retrieve → generate** pipeline:
+A request to `/ask` flows through the relevance guardrail, then a single MAF agent that
+is forced to retrieve once via its tool before answering:
 
 ```
 question
    │
    ▼
-┌─────────────────────────── Text2CypherRetriever ───────────────────────────┐
-│ 1. Build a cypher-generation prompt from: the graph schema + few-shot       │
-│    examples + the user's question.                                          │
-│ 2. LLM writes a Cypher query.                                               │
-│ 3. EXPLAIN the query; reject it unless Neo4j reports it as read-only.        │
-│ 4. Run the query (READ routing) and format each row as JSON.                │
+┌──────────────────────── Relevance guardrail (no LLM) ───────────────────────┐
+│ Tokenise the question and intersect it with a vocabulary built from the     │
+│ live graph schema + curated domain keywords. Off-topic → fixed refusal,     │
+│ empty metadata, zero LLM usage. On-topic → continue.                         │
 └──────────────────────────────────┬──────────────────────────────────────────┘
-                                    │ rows (context) + the generated Cypher
                                     ▼
 ┌──────────────────────────────── MAF Agent ──────────────────────────────────┐
-│ 5. Build an answer prompt from the rows (context) + the question.            │
-│ 6. The Microsoft Agent Framework agent writes the final answer.              │
+│ Turn 1 — LLM call #1 (tool-planning): forced to call search_knowledge_graph. │
+│   ┌──────────────────── Text2CypherRetriever (tool) ───────────────────────┐ │
+│   │ LLM call #2 (cypher generation): build a prompt from schema + few-shot  │ │
+│   │ examples; the LLM writes a Cypher query; EXPLAIN rejects it unless       │ │
+│   │ read-only; run it (READ routing); return the rows as JSON to the agent. │ │
+│   └─────────────────────────────────────────────────────────────────────────┘ │
+│ Turn 2 — LLM call #3 (answer): tool choice auto; the agent writes the final  │
+│ answer from the rows (delivered to the model as the tool-result message).    │
 └──────────────────────────────────┬──────────────────────────────────────────┘
                                     ▼
               NDJSON stream { metadata, token…, stats, done }
 ```
+
+A single on-topic question therefore makes **three** LLM calls — the agent's
+tool-planning turn, the cypher-generation call inside the tool, and the answer turn — all
+surfaced individually in the `stats` event (see [`POST /ask`](#post-ask)).
 
 Step by step, in `src/agents/knowledge_graph_agent.py`:
 
@@ -168,10 +183,21 @@ Step by step, in `src/agents/knowledge_graph_agent.py`:
    **synchronous** Neo4j driver (the `neo4j-graphrag` retrievers are sync-only,
    separate from the async driver that backs `/query`), builds the retrieval LLM
    client (`build_llm`) and the Microsoft Agent Framework chat client
-   (`build_chat_client`), introspects the schema once (`fetch_schema_text`), and wires
-   up a `Text2CypherRetriever` plus a MAF `Agent`.
+   (`build_chat_client`), introspects the schema once (`fetch_schema_text`), builds the
+   guardrail vocabulary from that schema (`build_relevance_vocabulary`), and wires up a
+   `Text2CypherRetriever` exposed as the `search_knowledge_graph` tool on a MAF `Agent`.
+   The agent's `default_options` pin the tool choice to `required` so retrieval is forced
+   on the first turn.
 
-2. **Schema introspection (`fetch_schema_text`).** Read-only Cypher queries collect
+2. **Relevance guardrail (`common/guardrails.py`).** When a question arrives, it is first
+   checked against a vocabulary derived from the live schema (label/relationship/property
+   tokens, CamelCase-split and singularised) plus curated domain keywords, minus a
+   denylist of generic tokens (`name`, `type`, `date`, …). If no question token matches,
+   the request is **refused without any LLM call** — a fixed message is streamed with
+   empty `metadata` and zero token usage. This is a relevance gate, **not** a
+   prompt-injection defence.
+
+3. **Schema introspection (`fetch_schema_text`).** Read-only Cypher queries collect
    node labels with their properties, the relationship types that connect labels, and
    relationship properties (no APOC). Each property is rendered with an inferred **type
    and example value** (e.g. `Flight: date (str, e.g. "2026-05-20")`) so the LLM can
@@ -179,49 +205,54 @@ Step by step, in `src/agents/knowledge_graph_agent.py`:
    super-labels shared across many node types (e.g. `System`, `Component`,
    `FlightPhase`) are trimmed to property names only to keep the prompt focused.
 
-3. **Cypher generation.** When a question arrives, the retriever fills its
-   `CYPHER_GENERATION_PROMPT` — a domain-tuned prompt — with the schema, the few-shot
-   `DEFAULT_EXAMPLES` (question → Cypher pairs), and the question, then asks the LLM for
-   a single Cypher query. The prompt encodes the rules that make queries actually
-   return data: cast ISO-string dates with `date()` on both sides, inline literals
-   (never use `$parameters`, which the retriever does not supply), traverse the
-   `Aircraft → System → Component → Part` hierarchy in full for component/part
-   questions (but query `:Flight` directly for flight/hours/date questions), use
-   `coalesce()`/`IS NOT NULL` for nullable numerics, never invent property names, and
-   aggregate for count/sum/total questions.
+4. **Cypher generation (inside the tool).** The forced `search_knowledge_graph` tool runs
+   the retriever, which fills its `CYPHER_GENERATION_PROMPT` — a domain-tuned prompt —
+   with the schema, the few-shot `DEFAULT_EXAMPLES` (question → Cypher pairs), and the
+   question, then asks the LLM for a single Cypher query. The prompt encodes the rules
+   that make queries actually return data: cast ISO-string dates with `date()` on both
+   sides, inline literals (never use `$parameters`, which the retriever does not supply),
+   traverse the `Aircraft → System → Component → Part` hierarchy in full for
+   component/part questions (but query `:Flight` directly for flight/hours/date
+   questions), use `coalesce()`/`IS NOT NULL` for nullable numerics, never invent
+   property names, and aggregate for count/sum/total questions.
 
-4. **Read-only enforcement.** Before executing, the retriever runs `EXPLAIN` on the
+5. **Read-only enforcement.** Before executing, the retriever runs `EXPLAIN` on the
    generated query and refuses anything Neo4j does not classify as read-only. The
    query then executes with READ routing. This is a database-level guarantee — the
    model cannot mutate the graph even if it emits `CREATE`/`DELETE`/`SET`.
 
-5. **Row formatting (`record_to_item`).** Each returned record is converted to a
+6. **Row formatting (`record_to_item`).** Each returned record is converted to a
    JSON-serialisable dict (via `to_jsonable`, which unpacks nodes/relationships into
    property maps) by the retriever's `result_formatter` (`record_to_item` in
-   `common/retrieval.py`). The JSON becomes the LLM's context; the structured dict is
-   kept so the API can return the raw `records`.
+   `common/retrieval.py`). The JSON is returned from the tool as the agent's context; the
+   structured dict is also stashed so the API can return the raw `records`. If retrieval
+   raises (e.g. `Text2CypherRetrievalError`) or returns no rows, the tool returns a
+   graceful message instead and the agent still answers (with empty `metadata`).
 
-6. **Answer generation.** The retrieved rows are formatted into the custom
-   `RAG_TEMPLATE` (context + question) and passed to the Microsoft Agent Framework
-   `Agent`, which writes the answer. The template instructs the model to answer
-   **only** from the retrieved rows, to say so when the data has no answer, and to
-   report numbers **exactly** (no rounding/reformatting).
+7. **Answer generation.** Once MAF resets the forced tool choice to `auto` after the
+   first iteration, the agent makes its second turn (LLM call #3) and writes the answer
+   from the tool's rows. Its system prompt
+   (`AGENT_SYSTEM_PROMPT`) instructs it to always call the tool, answer **only** from the
+   retrieved rows, say so when the data has no answer, report numbers **exactly** (no
+   rounding/reformatting), and reply in **plain text** (no markdown/formatting).
 
-7. **Response assembly (`ask`).** The synchronous retrieval step (`_retrieve`)
-   runs in a worker thread (`asyncio.to_thread`) so the FastAPI event loop stays
-   responsive; the shared sync driver is thread-safe for concurrent queries. The
-   retrieved Cypher and rows are emitted up front as a `metadata` event, then the MAF
-   agent is streamed natively (`self._agent.run(..., stream=True)`) so answer tokens are
-   forwarded as they arrive, followed by a `stats` and a `done` event. If cypher
-   generation/execution fails (e.g. `Text2CypherRetrievalError`) or any LLM/network
-   error occurs, `/ask` **degrades gracefully** — retrieval failures fall back to
-   a plain "couldn't find an answer" message, and generation failures emit an in-band
-   `error` event instead of returning a 500.
+8. **Response assembly (`ask`).** The synchronous retrieval inside the tool runs in a
+   worker thread (`asyncio.to_thread`) so the FastAPI event loop stays responsive; the
+   shared sync driver is thread-safe for concurrent queries. The retrieved Cypher and
+   rows are captured via a per-request `retrieval_sink` and emitted up front as a
+   `metadata` event, then the MAF agent is streamed natively
+   (`self._agent.run(..., stream=True)`) so answer tokens are forwarded as they arrive,
+   followed by a `stats` and a `done` event. A `_MafTurnRecorder` chat middleware records
+   each of the agent's two LLM turns (planning + answer) individually — MAF otherwise
+   aggregates their token usage — so the `stats` event can report all three calls
+   separately. If a generation/network error occurs, `/ask` **degrades gracefully** — it
+   emits an in-band `error` event instead of returning a 500.
 
-The two LLM calls use separate clients: cypher generation uses the `neo4j-graphrag` LLM
-client, and answer generation uses the Microsoft Agent Framework chat client. Both target
-the same Azure OpenAI deployment. Built-in rate-limit handling (retry with exponential
-backoff) is provided by `neo4j-graphrag` for the retrieval call.
+All **three** LLM calls (the agent's tool-planning turn, cypher generation inside the
+tool, and the agent's answer turn) target the same Azure OpenAI deployment: cypher
+generation uses the `neo4j-graphrag` LLM client and the agent's two turns use the
+Microsoft Agent Framework chat client. Built-in rate-limit handling
+(retry with exponential backoff) is provided by `neo4j-graphrag` for the retrieval call.
 
 ### Configuration
 
@@ -250,28 +281,44 @@ one object per line:
 
 | Event | Shape | When |
 | --- | --- | --- |
-| `metadata` | `{ "type": "metadata", "cypher_used": [...], "records": [...] }` | Once, first — after retrieval, before any tokens. |
+| `progress` | `{ "type": "progress", "phase": "planning" \| "cypher" \| "querying" \| "answering" }` | Repeated, as the pipeline advances through its stages — so the client can show which step is in flight. Skipped for off-topic questions. |
+| `metadata` | `{ "type": "metadata", "cypher_used": [...], "records": [...] }` | Once, after retrieval, before any tokens. |
 | `token` | `{ "type": "token", "text": "..." }` | Repeated, as answer tokens arrive. |
 | `error` | `{ "type": "error", "message": "..." }` | Only on failure (in-band, since headers are already sent). |
 | `stats` | `{ "type": "stats", "model": ..., "llm_calls": N, "tokens": {...}, "calls": [...], "durations_ms": {...}, "cypher_count": N, "record_count": N }` | Once, just before `done` — debug/telemetry for the request. |
 | `done` | `{ "type": "done" }` | Always last. |
 
 The `stats` event reports debug telemetry for the request: the model, the number of
-LLM calls (cypher-generation + answer-generation), aggregated token usage with a
+LLM calls (agent tool-planning + cypher-generation + answer-generation = 3 for an
+on-topic question), aggregated token usage with a
 per-call breakdown, and timings. Each entry in `calls` carries its own `duration_ms`,
 and `durations_ms` reports `retrieval`, `graph_query` (the Neo4j execution, i.e.
 retrieval minus the cypher-generation LLM call), `generation` and `total`. Token and
 duration fields per call let the UI show how long each LLM call and the graph query
-took. Answer-generation tokens come from the Microsoft Agent Framework response's
-`usage_details` (read from the streamed agent's final response); cypher-generation
+took. The agent's planning and answer tokens are captured per-turn by the
+`_MafTurnRecorder` middleware (MAF's response otherwise aggregates them); cypher-generation
 tokens and timing are captured by wrapping the retriever's internal `llm.invoke` call.
 Token fields are `null` when usage is not reported.
+
+The `progress` events let the client surface the pipeline stage currently in flight.
+The cypher-generation and graph-query steps run inside the forced tool and emit no
+answer tokens, so without these events the UI would stall on one label for seconds.
+Each stage calls a per-request progress callback at its boundary (`planning` up front,
+then `cypher`, `querying` and `answering`); `ask` merges those onto the response stream
+alongside the answer tokens (the cypher recorder runs in a worker thread, so its
+progress is marshalled back onto the event loop). The phases mirror the four steps in
+the chat UI's debug panel.
 
 Because retrieval runs first, the client receives the Cypher and rows up front and can
 render the answer progressively. The retrieval step runs in a worker thread while
 tokens are produced via the async OpenAI client; `asyncio.CancelledError` (client
 disconnect) closes the upstream stream cleanly. The same 503 applies if Azure OpenAI
 is not configured (raised before streaming begins).
+
+**Off-topic questions** are rejected by the relevance guardrail before any retrieval or
+LLM call: the stream is still well-formed (`metadata` with empty `cypher_used`/`records`,
+a `token` carrying a fixed refusal message, a zero-usage `stats` event with
+`llm_calls: 0`, then `done`), so clients need no special handling.
 
 ```bash
 curl -N -X POST http://localhost:8080/ask \
@@ -280,11 +327,15 @@ curl -N -X POST http://localhost:8080/ask \
 ```
 
 ```
+{"type": "progress", "phase": "planning"}
+{"type": "progress", "phase": "cypher"}
+{"type": "progress", "phase": "querying"}
+{"type": "progress", "phase": "answering"}
 {"type": "metadata", "cypher_used": ["MATCH (ac:Aircraft)-..."], "records": [{"engine": "Lycoming IO-360", "flights": 4, "hours": 2.2}]}
 {"type": "token", "text": "Since "}
 {"type": "token", "text": "2026-05-25"}
 ...
-{"type": "stats", "model": "gpt-5.4", "llm_calls": 2, "tokens": {"prompt": 10667, "completion": 67, "total": 10734}, "calls": [{"stage": "cypher_generation", "prompt": 10390, "completion": 28, "total": 10418, "duration_ms": 1850.4}, {"stage": "answer_generation", "prompt": 277, "completion": 39, "total": 316, "duration_ms": 1269.9}], "durations_ms": {"retrieval": 1859.5, "graph_query": 9.1, "generation": 1269.9, "total": 3129.5}, "cypher_count": 1, "record_count": 6}
+{"type": "stats", "model": "gpt-5.4", "llm_calls": 3, "tokens": {"prompt": 10944, "completion": 106, "total": 11050}, "calls": [{"stage": "agent_planning", "prompt": 277, "completion": 39, "total": 316, "duration_ms": 720.3}, {"stage": "cypher_generation", "prompt": 10390, "completion": 28, "total": 10418, "duration_ms": 1850.4}, {"stage": "answer_generation", "prompt": 277, "completion": 39, "total": 316, "duration_ms": 1269.9}], "durations_ms": {"retrieval": 1859.5, "graph_query": 9.1, "generation": 1269.9, "total": 3849.8}, "cypher_count": 1, "record_count": 6}
 {"type": "done"}
 ```
 
@@ -401,15 +452,15 @@ instrumentation when a connection string is present:
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | `InstrumentationKey=...;IngestionEndpoint=...` | Azure Application Insights connection string. When unset, telemetry is silently skipped — no Azure resources are needed for local development. |
 
 Each `/ask` request appears as one App Insights *operation* (the FastAPI request span,
-auto-instrumented by `configure_azure_monitor`). Both LLM calls in the retrieve →
+auto-instrumented by `configure_azure_monitor`). The LLM calls in the retrieve →
 generate pipeline are traced as `gen_ai` child spans under it:
 
-- **Answer generation** is traced automatically by the Microsoft Agent Framework's
-  instrumentation (it runs through the MAF chat client).
+- **The agent's tool-planning and answer turns** are traced automatically by the
+  Microsoft Agent Framework's instrumentation (they run through the MAF chat client).
 - **Cypher generation** runs through `neo4j-graphrag`'s own OpenAI client, which the
   MAF instrumentation does not see, so it is traced with an explicit `gen_ai` span
   emitted from the agent's `invoke` wrapper (`_install_usage_recorder`). Without this,
-  only the answer-generation call would be visible.
+  only the agent's own calls would be visible.
 
 ## Running with the UIs
 

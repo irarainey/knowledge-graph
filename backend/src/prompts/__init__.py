@@ -6,8 +6,8 @@ Each prompt lives in its own module; this package re-exports them so callers can
 
 from __future__ import annotations
 
-from prompts.answer_generation import RAG_TEMPLATE
+from prompts.answer_generation import AGENT_SYSTEM_PROMPT, RAG_TEMPLATE
 from prompts.cypher_generation import CYPHER_GENERATION_PROMPT
 from prompts.examples import DEFAULT_EXAMPLES
 
-__all__ = ["CYPHER_GENERATION_PROMPT", "DEFAULT_EXAMPLES", "RAG_TEMPLATE"]
+__all__ = ["AGENT_SYSTEM_PROMPT", "CYPHER_GENERATION_PROMPT", "DEFAULT_EXAMPLES", "RAG_TEMPLATE"]

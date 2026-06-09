@@ -62,19 +62,22 @@ The chat UI needs no secrets of its own; Azure OpenAI credentials live in `backe
 
 - Chat-style history of questions and answers.
 - **Live token streaming** with a "thinking" status indicator that reflects the
-  current phase: *asking the LLM for the graph data* (cypher generation) → *asking
-  the LLM to generate the answer* (answer generation), then it clears so the answer
-  sits at the top.
+  current pipeline phase from the backend's `progress` events: *Selecting the retrieval
+  tool…* → *Generating the Cypher query…* → *Querying the graph database…* →
+  *Generating the answer…*, then it clears so the answer sits at the top.
 - A single **Debug details** expander per answer, laid out as the request **workflow**
   in chronological order so it reads top-to-bottom like the steps the agent ran:
-  1. **Call the LLM with the graph schema** — timing/tokens, with the prompt in a
-     collapsible panel (collapsed by default).
-  2. **Generate the Cypher query** — the Cypher the LLM produced.
+  1. **Agent selects the retrieval tool** — the agent's tool-planning LLM turn, with
+     timing/tokens and the request in a collapsible panel (collapsed by default).
+  2. **Generate the Cypher query** — the cypher-generation LLM call inside the tool; shows
+     the Cypher the LLM produced.
   3. **Query the graph database** — the graph-query duration and the retrieved rows.
-  4. **Call the LLM with the retrieved data** — timing/tokens, with the answer prompt
-     in a collapsible panel (collapsed by default).
+  4. **Generate the answer from the retrieved data** — the agent's answer LLM turn, with
+     the answer prompt (system instructions + your question) in a collapsible panel; the
+     retrieved rows are supplied to the model separately as the tool result.
 
-  A **Summary** at the bottom lists the model, LLM-call count, a token table
+  A **Summary** at the bottom lists the model, LLM-call count (**3** for an on-topic
+  question: tool-planning + cypher-generation + answer), a token table
   (prompt/completion/total per call) and a timings table. All telemetry comes from a
   `stats` event the backend emits on the stream.
 - Sidebar with a **New conversation** button, one-click **example questions**, and

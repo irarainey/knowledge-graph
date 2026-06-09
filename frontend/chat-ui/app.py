@@ -31,6 +31,16 @@ from config import BACKEND_URL, EXAMPLE_QUESTIONS, FRONTEND_URL, NEO4J_BROWSER_U
 from debug_panel import render_debug
 from styles import PAGE_CSS
 
+# Human-readable status labels for each backend pipeline ``progress`` phase, shown in
+# the "thinking" status box so it reflects the stage actually in flight. Mirrors the
+# four steps in the debug panel: tool-planning → cypher → graph query → answer.
+_PROGRESS_LABELS = {
+    "planning": "Selecting the retrieval tool…",
+    "cypher": "Generating the Cypher query…",
+    "querying": "Querying the graph database…",
+    "answering": "Generating the answer…",
+}
+
 
 def render_message(message: dict[str, Any]) -> None:
     """Render a single chat message (user or assistant) and its supporting detail."""
@@ -67,13 +77,18 @@ def handle_question(base_url: str, question: str) -> None:
         # separate status placeholder added an extra slot, which left the previous
         # answer's debug expander stranded as a ghost panel during the next question.
         message_placeholder = st.empty()
-        status = message_placeholder.status("Asking the LLM for the graph data…", expanded=False)
+        status = message_placeholder.status(_PROGRESS_LABELS["planning"], expanded=False)
         parts: list[str] = []
         for event in stream_answer(base_url, question, holder):
-            if event["type"] == "metadata":
-                # Cypher-generation (LLM call #1) done and the graph queried; the
-                # answer-generation LLM call (#2) is next.
-                status.update(label="Asking the LLM to generate the answer…")
+            if event["type"] == "progress":
+                # The backend advances through planning → cypher → querying → answering;
+                # reflect the live stage so the wait isn't one opaque label.
+                label = _PROGRESS_LABELS.get(event["phase"])
+                if label:
+                    status.update(label=label)
+            elif event["type"] == "metadata":
+                # Graph rows are back; the debug panel will render them once complete.
+                pass
             elif event["type"] == "token":
                 parts.append(event["text"])
                 # The first token replaces the status box in the same slot.

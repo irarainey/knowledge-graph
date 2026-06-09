@@ -15,10 +15,10 @@ def stream_answer(base_url: str, question: str, holder: dict[str, Any]) -> Itera
     """Yield streaming events from the backend `/ask` NDJSON endpoint.
 
     Yields small event dicts so the caller can both render answer text and reflect
-    the current phase: ``{"type": "metadata"}`` once the graph data is back (the
-    cypher-generation LLM call finished) and ``{"type": "token", "text": ...}`` as
-    the answer-generation LLM streams. Cypher/records, stats and any error are
-    stashed into ``holder``. Each NDJSON line is one complete JSON event.
+    the current phase: ``{"type": "progress", "phase": ...}`` as the backend advances
+    through its pipeline stages, ``{"type": "metadata"}`` once the graph data is back,
+    and ``{"type": "token", "text": ...}`` as the answer streams. Cypher/records, stats
+    and any error are stashed into ``holder``. Each NDJSON line is one complete JSON event.
     """
     timeout = (CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS)
     try:
@@ -37,7 +37,9 @@ def stream_answer(base_url: str, question: str, holder: dict[str, Any]) -> Itera
                 except json.JSONDecodeError:
                     continue
                 event_type = event.get("type")
-                if event_type == "metadata":
+                if event_type == "progress":
+                    yield {"type": "progress", "phase": event.get("phase", "")}
+                elif event_type == "metadata":
                     holder["cypher"] = event.get("cypher_used", [])
                     holder["records"] = event.get("records", [])
                     yield {"type": "metadata"}
