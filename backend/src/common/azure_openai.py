@@ -1,9 +1,9 @@
 """Azure OpenAI configuration and client construction.
 
-Reusable across agents: builds both a neo4j-graphrag :class:`LLMInterface` (for
-text-to-Cypher retrieval) and a Microsoft Agent Framework
-:class:`OpenAIChatCompletionClient` (for answer generation) from a single
-:class:`AzureOpenAISettings`. Both builders apply the same endpoint handling.
+Builds a Microsoft Agent Framework :class:`OpenAIChatCompletionClient` (used by the
+knowledge-graph agent for both planning and answer generation) from a single
+:class:`AzureOpenAISettings`, handling both Azure AI Foundry / "v1" and classic Azure
+OpenAI endpoints.
 """
 
 from __future__ import annotations
@@ -12,8 +12,6 @@ import os
 from dataclasses import dataclass
 
 from agent_framework.openai import OpenAIChatCompletionClient
-from neo4j_graphrag.llm import AzureOpenAILLM, OpenAILLM
-from neo4j_graphrag.llm.base import LLMInterface
 
 from common.logging_config import get_logger
 
@@ -28,61 +26,28 @@ class AzureOpenAISettings:
     api_key: str
     deployment: str
     api_version: str
-    temperature: float | None = None
 
     @classmethod
     def from_env(cls) -> AzureOpenAISettings:
         missing = [v for v in ("AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_DEPLOYMENT") if not os.environ.get(v)]
         if missing:
             raise RuntimeError(f"Missing required environment variable(s): {', '.join(missing)}")
-        raw_temperature = os.environ.get("AZURE_OPENAI_TEMPERATURE")
         return cls(
             endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
             api_key=os.environ["AZURE_OPENAI_API_KEY"],
             deployment=os.environ["AZURE_OPENAI_DEPLOYMENT"],
             api_version=os.environ.get("AZURE_OPENAI_API_VERSION", DEFAULT_API_VERSION),
-            temperature=float(raw_temperature) if raw_temperature else None,
         )
 
 
-def build_llm(settings: AzureOpenAISettings) -> LLMInterface:
-    """Create a neo4j-graphrag LLM (text-to-Cypher generation) for the endpoint.
-
-    Azure AI Foundry / "v1" deployments expose an OpenAI-compatible surface at
-    ``<resource>/openai/v1`` and are reached with the plain OpenAI client via
-    ``base_url``. Classic Azure OpenAI resources use deployment routing via
-    ``azure_endpoint`` + ``api_version``.
-
-    When ``AZURE_OPENAI_TEMPERATURE`` is set it is forwarded as ``temperature`` so
-    Cypher generation can be pinned (e.g. ``0``) for more deterministic, reproducible
-    queries. It is opt-in and omitted by default because some models (e.g. certain
-    reasoning models) reject a non-default ``temperature``.
-    """
-    endpoint = settings.endpoint.rstrip("/")
-    model_params = {"temperature": settings.temperature} if settings.temperature is not None else None
-    if model_params is not None:
-        logger.debug("Pinning cypher-generation temperature to %s", settings.temperature)
-    if "/openai/v1" in endpoint:
-        logger.debug("Building OpenAI-compatible (v1) LLM for deployment '%s'", settings.deployment)
-        return OpenAILLM(model_name=settings.deployment, base_url=endpoint, api_key=settings.api_key, model_params=model_params)
-    logger.debug("Building classic Azure OpenAI LLM for deployment '%s' (api_version=%s)", settings.deployment, settings.api_version)
-    return AzureOpenAILLM(
-        model_name=settings.deployment,
-        azure_endpoint=endpoint,
-        api_version=settings.api_version,
-        api_key=settings.api_key,
-        model_params=model_params,
-    )
-
-
 def build_chat_client(settings: AzureOpenAISettings) -> OpenAIChatCompletionClient:
-    """Create a Microsoft Agent Framework chat client for answer generation.
+    """Create a Microsoft Agent Framework chat client for the agent.
 
-    Mirrors :func:`build_llm`'s endpoint handling: Azure AI Foundry / "v1"
-    deployments expose an OpenAI-compatible surface reached via ``base_url``;
-    classic Azure OpenAI resources use deployment routing via ``azure_endpoint``
-    + ``api_version``. Passing an explicit ``api_key`` (and ``azure_endpoint`` for
-    classic) forces Azure routing regardless of any ambient ``OPENAI_API_KEY``.
+    Azure AI Foundry / "v1" deployments expose an OpenAI-compatible surface reached via
+    ``base_url``; classic Azure OpenAI resources use deployment routing via
+    ``azure_endpoint`` + ``api_version``. Passing an explicit ``api_key`` (and
+    ``azure_endpoint`` for classic) forces Azure routing regardless of any ambient
+    ``OPENAI_API_KEY``.
     """
     endpoint = settings.endpoint.rstrip("/")
     if "/openai/v1" in endpoint:

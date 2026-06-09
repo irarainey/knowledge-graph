@@ -26,7 +26,6 @@ def _fmt_ms(value: Any) -> str:
 
 _STAGE_LABELS = {
     "agent_planning": "Agent planning (LLM)",
-    "cypher_generation": "Cypher generation (LLM)",
     "answer_generation": "Answer generation (LLM)",
 }
 
@@ -76,63 +75,66 @@ def render_debug(
     """Render the single per-request "Debug details" expander for an assistant turn.
 
     The contents flow in chronological workflow order so they read top-to-bottom like
-    the agent's run, surfacing every one of the three LLM calls a question makes:
-    (1) the agent's tool-planning turn (it decides to call the retrieval tool),
-    (2) the cypher-generation call inside that tool (its prompt carries the graph schema)
-    and the Cypher it produced, (3) running that Cypher against Neo4j, and (4) the
-    answer-generation turn (its request includes the retrieved rows as the tool result).
-    Each LLM request payload sits in a collapsed panel, followed by an overall summary of
-    tokens and timings at the bottom.
+    the agent's run, surfacing the **two** LLM calls a question makes:
+    (1) the agent's tool-planning turn — it emits a typed query intent (no Cypher is
+    written by the LLM); (2) the backend deterministically builds and runs that query
+    against Neo4j after validating it against the acting identity's policy (no LLM
+    involved), showing the Cypher it built and the rows returned; (3) the answer-generation
+    turn (its request includes the retrieved rows as the tool result). Each LLM request
+    payload sits in a collapsed panel, followed by an overall summary of tokens and timings.
     """
     stats = stats or {}
     calls = stats.get("calls") or []
     tokens = stats.get("tokens") or {}
     durations = stats.get("durations_ms") or {}
     planning_calls = [c for c in calls if c.get("stage") == "agent_planning"]
-    cypher_calls = [c for c in calls if c.get("stage") == "cypher_generation"]
     answer_calls = [c for c in calls if c.get("stage") == "answer_generation"]
 
     if not (stats or cyphers or records):
         return
 
     with st.expander("Debug details"):
-        # Step 1 — The agent's tool-planning turn: it decides to call the retrieval tool.
-        st.markdown("**1 · Agent selects the retrieval tool** &nbsp;`LLM`")
+        # Who the backend answered as, and under which policy version — the authorization
+        # trust boundary resolved this server-side from the selected identity.
+        principal = stats.get("principal")
+        if principal:
+            st.markdown(
+                f"**Acting as:** {principal.get('displayName', principal.get('id'))} "
+                f"&nbsp;·&nbsp; role `{principal.get('role', '—')}` "
+                f"&nbsp;·&nbsp; clearance `{principal.get('clearance', '—')}` "
+                f"&nbsp;·&nbsp; policy `{principal.get('policyVersion', '—')}`"
+            )
+
+        # Step 1 — The agent's tool-planning turn: it emits a typed query intent.
+        st.markdown("**1 · Agent describes what to fetch** &nbsp;`LLM`")
         if planning_calls:
             for call in planning_calls:
                 st.caption(_call_meta(call))
                 request = call.get("request") or []
                 if request:
-                    st.html(_payload_details("Prompt sent to the LLM (the agent decides which tool to call)", request))
+                    st.html(_payload_details("Prompt sent to the LLM (the agent emits a typed query intent)", request))
         else:
             st.caption("No telemetry was reported for this step.")
 
-        # Step 2 — Cypher generation inside the tool (prompt carries the graph schema).
-        st.markdown("**2 · Generate the Cypher query** &nbsp;`LLM`")
-        if cypher_calls:
-            for call in cypher_calls:
-                st.caption(_call_meta(call))
-                request = call.get("request") or []
-                if request:
-                    st.html(_payload_details("Prompt sent to the LLM (includes the graph schema)", request))
-        else:
-            st.caption("No telemetry was reported for this step.")
+        # Step 2 — The backend deterministically builds and runs the query (no LLM).
+        st.markdown("**2 · Build and run the query** &nbsp;`Neo4j`")
+        st.caption(
+            "The backend validates the intent against the acting identity's policy, then builds parameterised, "
+            "read-only Cypher deterministically (no LLM) and runs it."
+        )
         if cyphers:
             for cypher in cyphers:
                 st.code(cypher, language="cypher")
         else:
-            st.caption("No Cypher was generated.")
-
-        # Step 3 — Run the Cypher against Neo4j.
-        st.markdown("**3 · Query the graph database** &nbsp;`Neo4j`")
+            st.caption("No query was built (the request may have been refused by policy).")
         st.caption(f"⏱ {_fmt_ms(durations.get('graph_query'))} ms · {_fmt_int(stats.get('record_count') or len(records))} rows")
         if records:
             st.dataframe(records, use_container_width=True, hide_index=True)
         else:
             st.caption("No rows were retrieved.")
 
-        # Step 4 — The agent writes the answer; its request includes the tool-result rows.
-        st.markdown("**4 · Generate the answer from the retrieved data** &nbsp;`LLM`")
+        # Step 3 — The agent writes the answer; its request includes the tool-result rows.
+        st.markdown("**3 · Generate the answer from the retrieved data** &nbsp;`LLM`")
         if answer_calls:
             for call in answer_calls:
                 st.caption(_call_meta(call))
@@ -167,12 +169,29 @@ def render_debug(
             st.markdown("**Tokens**")
             st.markdown(_md_table(["Call", "Prompt", "Completion", "Total"], token_rows))
 
-            # Timings in workflow order: planning → cypher generation → graph query →
-            # answer generation → total.
+            # Timings in workflow order: planning → graph query (build + run) → answer
+            # generation → total.
             timing_rows = [["Agent planning (LLM)", _fmt_ms(call.get("duration_ms"))] for call in planning_calls]
-            timing_rows += [["Cypher generation (LLM)", _fmt_ms(call.get("duration_ms"))] for call in cypher_calls]
-            timing_rows.append(["Graph query", _fmt_ms(durations.get("graph_query"))])
+            timing_rows.append(["Build and run the query", _fmt_ms(durations.get("graph_query"))])
             timing_rows += [["Answer generation (LLM)", _fmt_ms(call.get("duration_ms"))] for call in answer_calls]
             timing_rows.append(["**Total**", _fmt_ms(durations.get("total"))])
             st.markdown("**Timings (ms)**")
             st.markdown(_md_table(["Step", "ms"], timing_rows))
+
+        # Audit — the per-request record written to the kg.audit trail.
+        audit = stats.get("audit")
+        if audit:
+            st.markdown("**Audit**")
+            st.markdown(
+                f"**Outcome:** `{audit.get('outcome', '—')}` &nbsp;·&nbsp; "
+                f"**Recorded:** `{audit.get('timestamp', '—')}` &nbsp;·&nbsp; "
+                f"**Schema:** `{audit.get('schemaFingerprint', '—')}` &nbsp;·&nbsp; "
+                f"**Policy:** `{audit.get('policyVersion', '—')}`"
+            )
+            denied = audit.get("denied") or []
+            if denied:
+                st.markdown("**Query-safety denials:**")
+                for reason in denied:
+                    st.markdown(f"- 🚫 {reason}")
+            else:
+                st.caption("No query-safety denials for this request.")

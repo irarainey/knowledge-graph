@@ -4,9 +4,11 @@ Endpoints:
 
 * ``POST /query`` runs an arbitrary Cypher query (with optional parameters) and
   returns the resulting records.
-* ``POST /ask`` answers a natural-language question by letting an LLM agent
-  write read-only Cypher against the graph (text-to-Cypher GraphRAG), streaming the
-  answer back as newline-delimited JSON events.
+* ``POST /ask`` answers a natural-language question with a Microsoft Agent Framework
+  agent: the agent emits a typed query *intent* that the backend validates against the
+  caller's access policy and turns into a parameterised, read-only Cypher query
+  deterministically (no text-to-Cypher), streaming the answer back as newline-delimited
+  JSON events.
 
 Connection and model details come from the environment / ``backend/.env``.
 """
@@ -24,11 +26,12 @@ from fastapi.responses import StreamingResponse
 from neo4j.exceptions import Neo4jError
 
 from agents import AzureOpenAISettings, KnowledgeGraphAgent
+from authz import PolicyError, PolicyStore, Principal
 from common import config
 from common.env import load_env
 from common.logging_config import get_logger, setup_logging
 from common.observability import setup as setup_observability
-from models import AskRequest, QueryRequest, QueryResponse
+from models import AskRequest, QueryRequest, QueryResponse, UsersResponse
 from neo4j_client import Neo4jClient, Neo4jSettings
 
 # Load the environment first so LOG_LEVEL (and every other setting) is resolved from
@@ -51,10 +54,18 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.neo4j = client
     logger.info("Neo4j connectivity verified")
 
+    # The access policy is the authorization trust boundary: load and validate it at
+    # startup so the service fails fast if it is missing or malformed (fail closed).
+    try:
+        app.state.policy = PolicyStore.load()
+    except PolicyError:
+        logger.exception("Access policy failed to load; refusing to start (fail closed)")
+        raise
+
     # The agent is optional: /query works without Azure OpenAI credentials. It owns
     # a dedicated synchronous Neo4j driver (neo4j-graphrag is sync-only).
     try:
-        app.state.agent = KnowledgeGraphAgent.from_settings(AzureOpenAISettings.from_env(), neo4j_settings)
+        app.state.agent = KnowledgeGraphAgent.from_settings(AzureOpenAISettings.from_env(), neo4j_settings, app.state.policy)
         logger.info("Knowledge-graph agent initialised; /ask endpoint enabled")
     except RuntimeError as exc:
         app.state.agent = None
@@ -97,6 +108,11 @@ def _get_agent(request: Request) -> KnowledgeGraphAgent:
     return agent  # type: ignore[no-any-return]
 
 
+def _get_policy(request: Request) -> PolicyStore:
+    """Return the access policy store created during app startup."""
+    return request.app.state.policy  # type: ignore[no-any-return]
+
+
 @app.post("/query", response_model=QueryResponse)
 async def run_query(payload: QueryRequest, client: Annotated[Neo4jClient, Depends(_get_client)]) -> QueryResponse:
     logger.info("POST /query (database=%s)", payload.database or "default")
@@ -111,18 +127,38 @@ async def run_query(payload: QueryRequest, client: Annotated[Neo4jClient, Depend
     return QueryResponse(columns=columns, records=records, count=len(records))
 
 
+@app.get("/users", response_model=UsersResponse)
+async def users(policy: Annotated[PolicyStore, Depends(_get_policy)]) -> UsersResponse:
+    """List the identities a user may act as, so the chat UI can offer an identity selector.
+
+    These come straight from the external access policy, so the set of selectable users is
+    policy-driven (no hard-coded list in the frontend).
+    """
+    return UsersResponse(version=policy.version, users=policy.list_identities())
+
+
 @app.post("/ask")
-async def ask(payload: AskRequest, agent: Annotated[KnowledgeGraphAgent, Depends(_get_agent)]) -> StreamingResponse:
+async def ask(
+    payload: AskRequest,
+    agent: Annotated[KnowledgeGraphAgent, Depends(_get_agent)],
+    policy: Annotated[PolicyStore, Depends(_get_policy)],
+) -> StreamingResponse:
     """Stream the answer as newline-delimited JSON events (metadata, tokens, done).
 
     The 503-when-unconfigured check happens in ``_get_agent`` before the response
     starts. Any failure after streaming begins is reported as an in-band event
     (``{"type": "error"}``) rather than an HTTP status, since headers are already sent.
+
+    The selected ``user`` is resolved here, at the trust boundary, into a
+    :class:`~authz.Principal` against the access policy (default-deny for unknown ids).
+    The principal is threaded into the agent so the acting identity and the policy version
+    are recorded with the answer.
     """
-    logger.info("POST /ask: %s", payload.question)
+    principal: Principal = policy.resolve_principal(payload.user)
+    logger.info("POST /ask (acting as %s, clearance=%s): %s", principal.id, principal.clearance, payload.question)
 
     async def event_generator() -> AsyncIterator[bytes]:
-        async for event in agent.ask(payload.question):
+        async for event in agent.ask(payload.question, principal=principal):
             yield (json.dumps(event) + "\n").encode("utf-8")
 
     return StreamingResponse(event_generator(), media_type="application/x-ndjson")

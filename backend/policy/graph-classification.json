@@ -1,0 +1,9 @@
+{
+  "version": "2026-06-09.1",
+  "description": "In-graph classification overlay applied to Neo4j nodes at import time. This is security metadata OWNED BY THE BACKEND (not the shared graph export the Vue renderer reads), versioned with the access policy. The importer SETs `classification` and `securityLabels` on each listed node; nodes not listed are left without a `classification` and are treated as unclassified at query time (the query builder injects `(n.classification IS NULL OR n.classification IN $allowed)`, where $allowed always includes the lowest clearance level). The access policy's clearance gates which classifications a principal can see, so classified rows never participate in execution for unauthorised identities.",
+  "defaultClassification": "unclassified",
+  "nodes": {
+    "flight005": { "classification": "secret", "securityLabels": ["military"] },
+    "flight010": { "classification": "secret", "securityLabels": ["military"] }
+  }
+}

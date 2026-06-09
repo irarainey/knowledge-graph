@@ -40,6 +40,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from agents import AzureOpenAISettings, KnowledgeGraphAgent
+from authz import PolicyStore, Principal
 from common.config import ENV_LOG_LEVEL, LOG_LEVEL_DEFAULT
 from common.env import load_env
 from common.logging_config import get_logger, setup_logging
@@ -324,7 +325,7 @@ def load_ground_truth(path: Path) -> list[GoldQuestion]:
     return questions
 
 
-async def _drive_agent(agent: KnowledgeGraphAgent, question: str) -> dict[str, Any]:
+async def _drive_agent(agent: KnowledgeGraphAgent, question: str, principal: Principal) -> dict[str, Any]:
     """Consume the agent's streamed events into the pieces the metrics need."""
     answer_parts: list[str] = []
     cypher_used: list[str] = []
@@ -332,7 +333,7 @@ async def _drive_agent(agent: KnowledgeGraphAgent, question: str) -> dict[str, A
     stats: dict[str, Any] = {}
     error: str | None = None
 
-    async for event in agent.ask(question):
+    async for event in agent.ask(question, principal=principal):
         kind = event.get("type")
         if kind == "metadata":
             cypher_used = event.get("cypher_used", [])
@@ -358,6 +359,7 @@ async def evaluate_question(
     client: Neo4jClient,
     question: GoldQuestion,
     *,
+    principal: Principal,
     f1_threshold: float,
     round_digits: int = DEFAULT_ROUND_DIGITS,
 ) -> dict[str, Any]:
@@ -365,7 +367,7 @@ async def evaluate_question(
     logger.info("Evaluating '%s': %s", question.id, question.question)
 
     _, gold_records = await client.run_query(question.gold_cypher)
-    outcome = await _drive_agent(agent, question.question)
+    outcome = await _drive_agent(agent, question.question, principal)
     answer_text = _normalize_whitespace(outcome["answer"])
 
     retrieval = retrieval_metrics(outcome["records"], gold_records, answer_key=question.answer_key, ndigits=round_digits)
@@ -523,11 +525,23 @@ async def run(args: argparse.Namespace) -> int:
     neo4j_settings = Neo4jSettings.from_env()
     client = Neo4jClient(neo4j_settings)
     await client.verify_connectivity()
-    agent = KnowledgeGraphAgent.from_settings(AzureOpenAISettings.from_env(), neo4j_settings)
+    policy = PolicyStore.load()
+    # Evaluate against the gold Cypher (which sees the whole graph), so drive the agent as
+    # the configured identity — defaulting to the most-privileged one so authorization does
+    # not mask retrieval-quality regressions. Use ``--user`` to evaluate a scoped identity.
+    if args.user is not None:
+        principal = policy.resolve_principal(args.user)
+    else:
+        most_privileged = max(policy.list_identities(), key=lambda identity: policy.clearance_rank(identity.clearance))
+        principal = policy.resolve_principal(most_privileged.id)
+    logger.info("Driving the pipeline as identity '%s' (clearance=%s)", principal.id, principal.clearance)
+    agent = KnowledgeGraphAgent.from_settings(AzureOpenAISettings.from_env(), neo4j_settings, policy)
 
     try:
         results = [
-            await evaluate_question(agent, client, question, f1_threshold=args.f1_threshold, round_digits=args.round_digits)
+            await evaluate_question(
+                agent, client, question, principal=principal, f1_threshold=args.f1_threshold, round_digits=args.round_digits
+            )
             for question in questions
         ]
     finally:
@@ -558,6 +572,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--tag", default=None, help="Only evaluate questions carrying this tag")
     parser.add_argument("--question-id", action="append", default=None, help="Only evaluate this question id (repeatable)")
     parser.add_argument("--env-file", type=Path, default=None, help="Path to a .env file with Neo4j/Azure OpenAI settings")
+    parser.add_argument(
+        "--user",
+        default=None,
+        help="Identity to drive the pipeline as (defaults to the policy's most-privileged identity)",
+    )
     return parser.parse_args(argv)
 
 

@@ -8,5 +8,6 @@ from __future__ import annotations
 
 from models.ask import AskRequest
 from models.query import QueryRequest, QueryResponse
+from models.users import UsersResponse
 
-__all__ = ["AskRequest", "QueryRequest", "QueryResponse"]
+__all__ = ["AskRequest", "QueryRequest", "QueryResponse", "UsersResponse"]

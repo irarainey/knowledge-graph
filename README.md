@@ -27,10 +27,10 @@ There are two front ends, both under [`frontend/`](frontend):
                   ┌───────────────┐    ┌───────┴───────┐
                   │  Streamlit UI │    │   Backend     │
                   │  chat  :8501  │──▶ │  FastAPI:8080 │
-                  └───────────────┘    │  text2cypher  │
+                  └───────────────┘    │  typed-intent │
                    POST /ask           │  + MAF Agent  │
                        (NDJSON)        └───────┬───────┘
-                                              │ cypher-gen + answer-gen
+                                              │ planning + answer-gen
                                               ▼
                                        ┌───────────────┐
                                        │ Azure OpenAI  │
@@ -51,10 +51,13 @@ links out to the Vue renderer and the Neo4j browser, opening each in a new tab.)
   Runs on <http://localhost:8501>. Sidebar buttons open the Vue graph renderer and the
   Neo4j browser in a new tab.
 - **Backend** — Python FastAPI service. A single **Microsoft Agent Framework** agent
-  (backed by Azure OpenAI) is given one tool that retrieves from Neo4j with
-  **text-to-Cypher** (Neo4j's `neo4j-graphrag` package); the agent is forced to retrieve
-  before answering from the rows. A deterministic relevance guardrail (no extra LLM call)
-  rejects off-topic questions up front. Uses uv. Runs on <http://localhost:8080>.
+  (backed by Azure OpenAI) is given one **typed** tool: it emits a structured *query
+  intent* (entity, fields, filters, optional aggregate) rather than writing Cypher. The
+  backend validates that intent against the acting identity's access policy and
+  **deterministically builds and runs** a parameterised, read-only Cypher query, so
+  authorization is enforced outside the LLM. The agent is forced to retrieve before
+  answering from the rows. A deterministic relevance guardrail (no extra LLM call) rejects
+  off-topic questions up front. Uses uv. Runs on <http://localhost:8080>.
 - **Neo4j** — Graph database running as a Docker container, storing the aircraft's nodes
   and relationships.
 
@@ -62,9 +65,11 @@ links out to the Vue renderer and the Neo4j browser, opening each in a new tab.)
 
 A question asked in the Streamlit UI is first screened by a deterministic relevance
 guardrail (no LLM call), then handled by a single **Microsoft Agent Framework** agent that
-is forced to retrieve via its text-to-Cypher tool before generating the answer. The
-retrieval and answer steps are surfaced, in order, in the UI's per-answer **Debug
-details** panel.
+is forced to retrieve via its typed query tool before generating the answer. Because the
+LLM emits a structured intent and the backend turns it into Cypher deterministically, a
+question makes **two** LLM calls — agent planning and answer generation — with **no
+cypher-generation LLM call**. The steps are surfaced, in order, in the UI's per-answer
+**Debug details** panel.
 
 ```
 User ─ question ─▶ Streamlit UI ─ POST /ask ─▶ Backend
@@ -73,14 +78,14 @@ User ─ question ─▶ Streamlit UI ─ POST /ask ─▶ Backend
    ▼
 Step 0 · Relevance guardrail (no LLM)
          Backend ──(off-topic? → fixed refusal)──▶ Streamlit UI   [on-topic: continue]
-Step 1 · Agent is forced to call its retrieval tool
-         (inside the tool) Backend ──(schema + examples + question)──▶ Azure OpenAI
-Step 2 · LLM returns a Cypher query
-         Azure OpenAI ──(Cypher)──▶ Backend
-Step 3 · Query the graph database
-         Backend ──(EXPLAIN read-only, then run Cypher)──▶ Neo4j ──(rows)──▶ Backend
+Step 1 · Agent is forced to call its typed query tool  [LLM call 1: planning]
+         Backend ──(policy-scoped catalog + question)──▶ Azure OpenAI
+         Azure OpenAI ──(structured query intent)──▶ Backend
+Step 2 · Backend builds and runs the query (no LLM)
+         Backend ──(validate intent vs policy → build parameterised, read-only Cypher
+                    with a clearance filter → run)──▶ Neo4j ──(rows)──▶ Backend
          Backend ──(metadata event: cypher_used, records)──▶ Streamlit UI
-Step 4 · Agent generates the answer from the retrieved rows
+Step 3 · Agent generates the answer from the retrieved rows  [LLM call 2: answer]
          Backend ──(rows as tool result)──▶ Azure OpenAI
          Azure OpenAI ──(answer tokens)──▶ Backend ──(token events)──▶ Streamlit UI
 Finally  Backend ──(stats event: tokens, durations)──▶ Streamlit UI ─▶ Debug details
@@ -88,9 +93,9 @@ Finally  Backend ──(stats event: tokens, durations)──▶ Streamlit UI �
 ```
 
 While this runs, the backend emits `progress` events at each pipeline boundary and the
-Streamlit status indicator tracks them — *Selecting the retrieval tool…* →
-*Generating the Cypher query…* → *Querying the graph database…* → *Generating the
-answer…* — then clears so the answer sits at the top with the Debug details panel below it.
+Streamlit status indicator tracks them — *Deciding what to fetch…* → *Building the
+query…* → *Querying the graph database…* → *Generating the answer…* — then clears so the
+answer sits at the top with the Debug details panel below it.
 
 ## Getting Started
 
@@ -198,13 +203,15 @@ interactive docs.
 ## Asking questions in natural language
 
 The backend answers natural-language questions with a single **Microsoft Agent Framework**
-agent that is given one retrieval tool and forced to use it before answering. The tool wraps
-Neo4j's [`neo4j-graphrag`](https://neo4j.com/docs/neo4j-graphrag-python/current/) package for
-**text-to-Cypher** retrieval — it reads the live graph schema, has the LLM write a read-only
-Cypher query, and runs it to fetch context — and the agent then generates the answer from
-those rows. A deterministic relevance guardrail (no extra LLM call) rejects off-topic
-questions before any retrieval. Set the `AZURE_OPENAI_*` variables in `backend/.env` (see
-`backend/.env.example`) to enable it.
+agent that is given one **typed** retrieval tool and forced to use it before answering.
+Rather than writing Cypher, the agent emits a structured *query intent* (entity, fields,
+filters, optional aggregate); the backend validates that intent against the acting
+identity's access policy and **deterministically builds and runs** a parameterised,
+read-only Cypher query, then the agent generates the answer from those rows. Because the
+LLM never writes Cypher, a question makes **two** LLM calls (planning + answer), and
+authorization is enforced outside the model. A deterministic relevance guardrail (no extra
+LLM call) rejects off-topic questions before any retrieval. Set the `AZURE_OPENAI_*`
+variables in `backend/.env` (see `backend/.env.example`) to enable it.
 
 > Optional: set `LOG_LEVEL` (default `INFO`; use `DEBUG` for per-step pipeline detail)
 > and `APPLICATIONINSIGHTS_CONNECTION_STRING` (to export OpenTelemetry traces, metrics
@@ -227,7 +234,7 @@ then a final `done` event.
 {"type": "token", "text": "Since "}
 {"type": "token", "text": "2026-05-25"}
 ...
-{"type": "stats", "model": "gpt-5.4", "llm_calls": 3, "tokens": {"prompt": 10944, "completion": 106, "total": 11050}, ...}
+{"type": "stats", "model": "gpt-5.4", "llm_calls": 2, "tokens": {"prompt": 10944, "completion": 106, "total": 11050}, ...}
 {"type": "done"}
 ```
 
@@ -235,6 +242,38 @@ The generated queries run in a read transaction, so they can never modify the gr
 The Streamlit UI consumes this endpoint to stream answers live. See
 [backend/README.md](backend/README.md#post-ask) for configuration and the full
 event table.
+
+### Identity, access policy and authorization
+
+Each question can name an **identity** (`user`) it is asked as. The backend resolves it
+**server-side** — the authorization trust boundary — against an external, versioned access
+policy ([`backend/policy/access-policy.json`](backend/policy/access-policy.json)) into a
+principal (role, clearance, policy version) and attributes the answer to it; an unknown
+or omitted id falls back to the least-privilege default (default-deny). `GET /users` lists
+the selectable identities, and the chat UI's sidebar offers an **“Ask as”** selector
+(switching identity starts a new conversation).
+
+Authorization is **enforced in the backend, outside the LLM**, and is two-dimensional:
+role-based **capability grants** (which entities, which sensitivity categories of field,
+and whether aggregates are allowed) plus **clearance** (compared against each node's
+in-graph `classification`, so whole classified rows stay hidden — even from a `count`).
+Rather than let the model write Cypher, the agent emits a typed *query intent* that the
+backend validates against the principal's policy and turns into a parameterised, read-only
+query deterministically. Because the PoC runs on **Neo4j Community Edition** (no native
+access control), the application is the sole enforcement boundary; the
+[backend README](backend/README.md#authorization-model) documents the full model and the
+Enterprise alternatives.
+
+Every query is also **bounded and audited**: the Cypher is checked against a
+deterministic safety filter (no writes, procedures, `LOAD CSV`, database switching or
+schema/admin namespaces) and bounded by a per-statement timeout (`QUERY_TIMEOUT_SECONDS`)
+and a row cap (`QUERY_ROW_CAP`); every answered, refused or failed request writes one
+record to a `kg.audit` trail (also surfaced in the chat UI's debug panel) attributing it
+to an identity, policy version and schema fingerprint.
+
+```bash
+curl http://localhost:8080/users
+```
 
 ## Evaluating answer quality
 

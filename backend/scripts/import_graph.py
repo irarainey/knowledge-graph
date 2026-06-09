@@ -38,6 +38,10 @@ logger = get_logger(__name__)
 # Repo layout: <repo>/backend/scripts/import_graph.py -> <repo>/data/knowledge-graph.json
 DEFAULT_JSON_PATH = Path(__file__).resolve().parents[2] / "data" / "knowledge-graph.json"
 
+# Backend-owned classification overlay applied after the graph is imported. It lives with
+# the access policy (security metadata), not in the shared graph export.
+DEFAULT_CLASSIFICATION_PATH = Path(__file__).resolve().parents[1] / "policy" / "graph-classification.json"
+
 # Cypher cannot parametrise labels or relationship types, so they are interpolated
 # into the query string. Restricting them to a strict identifier pattern prevents
 # Cypher injection via crafted names in the source JSON.
@@ -80,6 +84,24 @@ def load_graph(path: Path) -> dict[str, Any]:
     if "nodes" not in data:
         raise ValueError(f"{path} does not look like a graph export (missing 'nodes' key)")
     return data
+
+
+def load_classification(path: Path) -> dict[str, dict[str, Any]]:
+    """Load the classification overlay (node id -> {classification, securityLabels}).
+
+    Returns an empty mapping if the overlay file is absent, so import still works without
+    one. Each entry's ``classification`` is applied as an in-graph node property the query
+    builder gates against the principal's clearance.
+    """
+    if not path.exists():
+        logger.warning("No classification overlay at %s; importing without classifications.", path)
+        return {}
+    with path.open(encoding="utf-8") as fh:
+        data: dict[str, Any] = json.load(fh)
+    nodes = data.get("nodes", {})
+    if not isinstance(nodes, dict):
+        raise ValueError(f"{path} classification overlay 'nodes' must be an object of id -> attributes")
+    return nodes
 
 
 @dataclass
@@ -127,6 +149,30 @@ class GraphImporter:
                 self._write_relationship(session, rel)
         return len(nodes), len(relationships)
 
+    def apply_classification(self, classification: dict[str, dict[str, Any]]) -> int:
+        """Set `classification`/`securityLabels` on the listed nodes; return how many matched.
+
+        Matched on node ``id``. Unlisted nodes are left without a classification and are
+        treated as ``unclassified`` at query time, so this overlay only needs to name the
+        sensitive nodes.
+        """
+        if not classification:
+            return 0
+        applied = 0
+        with self._driver.session(database=self._database) as session:
+            for node_id, attrs in classification.items():
+                props = {
+                    "classification": attrs.get("classification"),
+                    "securityLabels": attrs.get("securityLabels", []),
+                }
+                summary = session.run(
+                    "MATCH (n {id: $id}) SET n.classification = $classification, n.securityLabels = $securityLabels",
+                    id=node_id,
+                    **props,
+                ).consume()
+                applied += summary.counters.properties_set > 0
+        return applied
+
     @staticmethod
     def _write_node(session: Session, node: dict[str, Any]) -> None:
         query = build_node_query(node.get("labels", []))
@@ -142,6 +188,12 @@ class GraphImporter:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Import knowledge-graph JSON into Neo4j.")
     parser.add_argument("--file", type=Path, default=DEFAULT_JSON_PATH, help="Path to the graph JSON export")
+    parser.add_argument(
+        "--classification",
+        type=Path,
+        default=DEFAULT_CLASSIFICATION_PATH,
+        help="Path to the classification overlay applied after import",
+    )
     parser.add_argument("--clear", action="store_true", help="Delete all existing data before importing")
     parser.add_argument("--env-file", type=Path, default=None, help="Path to a .env file with Neo4j settings")
     return parser.parse_args(argv)
@@ -154,16 +206,21 @@ def main(argv: list[str] | None = None) -> int:
 
     config = Neo4jConfig.from_env()
     graph = load_graph(args.file)
+    classification = load_classification(args.classification)
 
     logger.info("Connecting to Neo4j at %s (database: %s)...", config.uri, config.database)
     driver = GraphDatabase.driver(config.uri, auth=(config.user, config.password))
     try:
         driver.verify_connectivity()
-        node_count, rel_count = GraphImporter(driver, config.database).import_graph(graph, clear=args.clear)
+        importer = GraphImporter(driver, config.database)
+        node_count, rel_count = importer.import_graph(graph, clear=args.clear)
+        classified = importer.apply_classification(classification)
     finally:
         driver.close()
 
     logger.info("Imported %d nodes and %d relationships from %s.", node_count, rel_count, args.file)
+    if classification:
+        logger.info("Applied classification to %d of %d listed node(s).", classified, len(classification))
     return 0
 
 

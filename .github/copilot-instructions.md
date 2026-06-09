@@ -12,7 +12,7 @@ This is a knowledge graph PoC with four components:
 
 - **Graph renderer** (`frontend/graph-renderer/`) — Vue 3 / TypeScript SPA using pnpm. Renders the knowledge graph from the static `data/knowledge-graph.json` export (no backend calls).
 - **Chat UI** (`frontend/chat-ui/`) — Python chat front end using uv. Streams natural-language answers from the backend's `/ask` endpoint with a per-answer debug panel.
-- **Backend** (`backend/`) — Python FastAPI service using uv. Retrieves from Neo4j with text-to-Cypher (`neo4j-graphrag`), then generates answers with a Microsoft Agent Framework agent backed by Azure OpenAI.
+- **Backend** (`backend/`) — Python FastAPI service using uv. A Microsoft Agent Framework agent backed by Azure OpenAI answers questions: it emits a typed query intent that the backend validates against the caller's access policy and turns into a parameterised, read-only Cypher query deterministically (no text-to-Cypher), then generates the answer from the retrieved rows.
 - **Neo4j** — Graph database running as a Docker container. Stores knowledge graph nodes and relationships with Cypher queries.
 
 ## Backend

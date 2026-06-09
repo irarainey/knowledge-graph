@@ -10,8 +10,32 @@ import requests
 
 from config import CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS
 
+# Used when the backend can't be reached for the identity list, so the UI still renders
+# with a single least-privilege identity rather than an empty selector.
+_FALLBACK_USERS: list[dict[str, Any]] = [{"id": "public", "displayName": "Public (least privilege)"}]
 
-def stream_answer(base_url: str, question: str, holder: dict[str, Any]) -> Iterator[dict[str, Any]]:
+
+def fetch_users(base_url: str) -> tuple[list[dict[str, Any]], bool]:
+    """Return ``(identities, ok)`` from the backend's ``/users`` endpoint.
+
+    The list is policy-driven (defined in the backend's access policy), so the UI never
+    hard-codes it. ``ok`` is ``True`` only when the backend was reached and returned a
+    usable list; on failure it returns the single least-privilege fallback with
+    ``ok=False`` so the caller can render the page now but retry on the next run rather
+    than caching the degraded list for the whole session.
+    """
+    try:
+        response = requests.get(f"{base_url}/users", timeout=(CONNECT_TIMEOUT_SECONDS, CONNECT_TIMEOUT_SECONDS))
+        response.raise_for_status()
+        users = response.json().get("users") or []
+    except (requests.RequestException, ValueError):
+        return list(_FALLBACK_USERS), False
+    if not users:
+        return list(_FALLBACK_USERS), False
+    return users, True
+
+
+def stream_answer(base_url: str, question: str, holder: dict[str, Any], user: str | None = None) -> Iterator[dict[str, Any]]:
     """Yield streaming events from the backend `/ask` NDJSON endpoint.
 
     Yields small event dicts so the caller can both render answer text and reflect
@@ -19,10 +43,14 @@ def stream_answer(base_url: str, question: str, holder: dict[str, Any]) -> Itera
     through its pipeline stages, ``{"type": "metadata"}`` once the graph data is back,
     and ``{"type": "token", "text": ...}`` as the answer streams. Cypher/records, stats
     and any error are stashed into ``holder``. Each NDJSON line is one complete JSON event.
+
+    ``user`` is the id of the selected identity; the backend resolves it to a principal
+    and answers within that identity's authorization.
     """
     timeout = (CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS)
+    payload = {"question": question, "user": user}
     try:
-        with requests.post(f"{base_url}/ask", json={"question": question}, stream=True, timeout=timeout) as response:
+        with requests.post(f"{base_url}/ask", json=payload, stream=True, timeout=timeout) as response:
             if response.status_code == 503:
                 holder["error"] = "The /ask endpoint is disabled because the backend has no Azure OpenAI credentials configured."
                 return

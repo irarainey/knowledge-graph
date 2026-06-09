@@ -26,17 +26,17 @@ from typing import Any
 
 import streamlit as st
 
-from backend_client import stream_answer
+from backend_client import fetch_users, stream_answer
 from config import BACKEND_URL, EXAMPLE_QUESTIONS, FRONTEND_URL, NEO4J_BROWSER_URL
 from debug_panel import render_debug
 from styles import PAGE_CSS
 
 # Human-readable status labels for each backend pipeline ``progress`` phase, shown in
 # the "thinking" status box so it reflects the stage actually in flight. Mirrors the
-# four steps in the debug panel: tool-planning → cypher → graph query → answer.
+# steps in the debug panel: tool-planning → build query → run query → answer.
 _PROGRESS_LABELS = {
-    "planning": "Selecting the retrieval tool…",
-    "cypher": "Generating the Cypher query…",
+    "planning": "Deciding what to fetch…",
+    "cypher": "Building the query…",
     "querying": "Querying the graph database…",
     "answering": "Generating the answer…",
 }
@@ -58,12 +58,12 @@ def render_message(message: dict[str, Any]) -> None:
         render_debug(message.get("stats"), message.get("cypher") or [], message.get("records") or [])
 
 
-def handle_question(base_url: str, question: str) -> None:
+def handle_question(base_url: str, question: str, user: str | None) -> None:
     """Render the question and stream the answer live, then store both in history.
 
     Rendering happens inline *after* the history loop has already run, and we do not
     call ``st.rerun()`` — so the live turn renders exactly once now, and once from
-    history on subsequent runs.
+    history on subsequent runs. ``user`` is the selected identity the backend answers as.
     """
     st.session_state.messages.append({"role": "user", "content": question})
     with st.chat_message("user"):
@@ -79,7 +79,7 @@ def handle_question(base_url: str, question: str) -> None:
         message_placeholder = st.empty()
         status = message_placeholder.status(_PROGRESS_LABELS["planning"], expanded=False)
         parts: list[str] = []
-        for event in stream_answer(base_url, question, holder):
+        for event in stream_answer(base_url, question, holder, user=user):
             if event["type"] == "progress":
                 # The backend advances through planning → cypher → querying → answering;
                 # reflect the live stage so the wait isn't one opaque label.
@@ -112,6 +112,43 @@ def handle_question(base_url: str, question: str) -> None:
     st.session_state.messages.append(assistant_message)
 
 
+def _on_user_change() -> None:
+    """Reset the conversation when the acting identity changes.
+
+    The chat history is part of the model's context, so carrying it across an identity
+    switch could leak data the new identity isn't authorized to see (the previous answers
+    were generated for a different principal). Clearing it makes each identity start fresh.
+    """
+    st.session_state.messages = []
+    st.session_state.pop("pending_question", None)
+
+
+def _render_identity_selector(base_url: str) -> str:
+    """Render the 'Ask as' identity selector and return the selected user id."""
+    users = st.session_state.get("users")
+    if users is None:
+        # Only cache a successful fetch; a transient backend outage must not lock the
+        # session to the least-privilege fallback. On failure we render the fallback now
+        # but leave the cache empty so the next rerun retries.
+        users, ok = fetch_users(base_url)
+        if ok:
+            st.session_state.users = users
+
+    ids = [user["id"] for user in users]
+    labels = {user["id"]: user.get("displayName", user["id"]) for user in users}
+    st.caption("Ask as")
+    selected = st.selectbox(
+        "Ask as",
+        options=ids,
+        format_func=lambda user_id: labels.get(user_id, user_id),
+        key="user_id",
+        on_change=_on_user_change,
+        label_visibility="collapsed",
+        help="The identity the backend answers as. Switching identities starts a new conversation.",
+    )
+    return selected
+
+
 def main() -> None:
     st.set_page_config(page_title="Cessna 172S Skyhawk — Ask", page_icon="✈️", layout="centered")
     st.markdown(PAGE_CSS, unsafe_allow_html=True)
@@ -120,6 +157,8 @@ def main() -> None:
         st.session_state.messages = []
 
     with st.sidebar:
+        user_id = _render_identity_selector(BACKEND_URL)
+
         if st.button("New conversation", use_container_width=True):
             st.session_state.messages = []
             st.rerun()
@@ -155,7 +194,7 @@ def main() -> None:
     typed = st.chat_input("Ask a question about the aircraft…")
     question = pending or typed
     if question:
-        handle_question(BACKEND_URL, question)
+        handle_question(BACKEND_URL, question, user_id)
 
 
 if __name__ == "__main__":

@@ -53,12 +53,29 @@ uv run poe import-graph --clear    # delete everything first, then import
 The import upserts by default — nodes are matched on their `id` property and
 relationships on the (start node, type, end node) triple — so re-running is safe.
 Because upsert only adds and overwrites, use `--clear` after removing or renaming
-nodes/relationships to get a clean reload.
+nodes/relationships to get a clean reload. Labels and relationship types cannot be
+parameterised in Cypher, so they are identifier-sanitised and interpolated; all other
+values are passed as parameters. The import uses plain Cypher only (no APOC), so it works
+against a stock Community container.
+
+**Classification overlay.** Node sensitivity is *not* carried in the shared
+`data/knowledge-graph.json` export (which also feeds the public Vue renderer). Instead it
+is a **backend-owned overlay**, [`policy/graph-classification.json`](policy/graph-classification.json),
+applied as a second pass after the graph is imported: it sets a `classification` property
+(and `securityLabels`) on the listed node ids, which the row-level clearance filter then
+gates against (see [Authorization model](#authorization-model)). Keeping it beside the
+access policy — separate from the graph data — means *who-may-see-what* and *what-is-sensitive*
+are both versioned independently of the graph itself. Override its location with
+`--classification`; nodes not listed are imported **without** a classification (and so,
+in this PoC, are treated as unclassified — see the
+[Community Edition trade-offs](#neo4j-community-edition-trade-offs-and-enterprise-alternatives)
+for why existence constraints would harden this).
 
 Additional flags:
 
 - `--file <path>` — import a different JSON export (defaults to `data/knowledge-graph.json`).
 - `--env-file <path>` — load Neo4j settings from a specific `.env` file.
+- `--classification <path>` — use a different classification overlay (defaults to `policy/graph-classification.json`).
 
 A convenience wrapper, `scripts/import-data.sh`, runs the same command from any
 directory and forwards these arguments.
@@ -115,26 +132,37 @@ curl -X POST http://localhost:8080/query \
 }
 ```
 
-> ⚠️ The endpoint executes any Cypher it is given (including writes/deletes). It is
-> intended for trusted, local PoC use — do not expose it publicly without adding
-> authentication and query restrictions.
+> ⚠️ **This endpoint bypasses the authorization trust boundary entirely.** It executes any
+> Cypher it is given (including writes/deletes) against the raw graph — **no policy, no
+> clearance filter, no redaction**. It exists as a developer/debug escape hatch for the
+> PoC; the authorization model in this document applies only to the natural-language
+> [`/ask`](#post-ask) path. Do not expose `/query` publicly without adding authentication
+> and query restrictions (or removing it).
 
-## Natural-language questions (agentic MAF + text-to-Cypher tool)
+## Natural-language questions (agentic MAF + structured-intent query tool)
 
 `src/agents/knowledge_graph_agent.py` answers natural-language questions over the graph
 with a single [**Microsoft Agent Framework**](https://github.com/microsoft/agent-framework)
-`Agent` that owns orchestration and is given **one tool**, `search_knowledge_graph`. The
-tool wraps Neo4j's [`neo4j-graphrag`](https://neo4j.com/docs/neo4j-graphrag-python/current/)
-package in a **text-to-Cypher** pattern: a `Text2CypherRetriever` asks the LLM to write a
-Cypher query from the question and the live graph schema, validates that it is **read-only**
-(via `EXPLAIN`), and runs it. The agent is **forced** to call this tool on its first turn,
-then writes the final answer from the rows it gets back.
+`Agent` that owns orchestration and is given **one typed tool**, `query_knowledge_graph`.
+The agent does **not** write Cypher. Instead it emits a structured *query intent* — an
+entity (node label), the fields to return, optional filters, and an optional aggregate.
+The backend validates that intent against the acting identity's access policy and
+**deterministically builds and runs** a parameterised, read-only Cypher query
+(`src/authz/query_builder.py`). The agent is **forced** to call this tool on its first
+turn, then writes the final answer from the rows it gets back.
+
+Putting query construction in the backend — not the LLM — is the authorization
+**enforcement** boundary. Unauthorised entities, fields and aggregates are
+rejected before execution, and a row-level **clearance filter** is always injected so
+classified nodes never participate in a query (not even in a `count` or existence check)
+for an under-cleared identity. The agent's instructions and tool surface are scoped per
+request to only the entities and fields the identity may see, so unauthorised field
+*names* never reach the model. Read-only execution is additionally guaranteed by
+`assert_safe_cypher` (`common/query_safety.py`), so the model can never modify the graph.
 
 Forcing the tool preserves the grounding guarantee of a deterministic retrieve→generate
-pipeline (the agent only ever answers from rows it actually retrieved) while moving
-orchestration into native MAF, making it straightforward to add further tools later.
-Read-only execution is enforced by `neo4j-graphrag` itself, so the model can never modify
-the graph even if it generates a write.
+pipeline (the agent only ever answers from rows it actually retrieved) while keeping
+orchestration in native MAF, making it straightforward to add further tools later.
 
 Before any retrieval or LLM call, a **deterministic relevance guardrail** (`common/guardrails.py`,
 **no extra LLM call**) rejects off-topic questions. Off-topic questions return a fixed
@@ -147,7 +175,7 @@ against a stock Neo4j Community container. The schema is read once at startup �
 ### How it works
 
 A request to `/ask` flows through the relevance guardrail, then a single MAF agent that
-is forced to retrieve once via its tool before answering:
+is forced to retrieve once via its typed tool before answering:
 
 ```
 question
@@ -159,35 +187,36 @@ question
 │ empty metadata, zero LLM usage. On-topic → continue.                         │
 └──────────────────────────────────┬──────────────────────────────────────────┘
                                     ▼
-┌──────────────────────────────── MAF Agent ──────────────────────────────────┐
-│ Turn 1 — LLM call #1 (tool-planning): forced to call search_knowledge_graph. │
-│   ┌──────────────────── Text2CypherRetriever (tool) ───────────────────────┐ │
-│   │ LLM call #2 (cypher generation): build a prompt from schema + few-shot  │ │
-│   │ examples; the LLM writes a Cypher query; EXPLAIN rejects it unless       │ │
-│   │ read-only; run it (READ routing); return the rows as JSON to the agent. │ │
+┌──────────────────────────────── MAF Agent (scoped per identity) ────────────┐
+│ Turn 1 — LLM call #1 (planning): forced to call query_knowledge_graph; the   │
+│   model emits a typed intent (entity, fields, filters, optional aggregate).  │
+│   ┌──────────────── Backend query builder (NO LLM) ────────────────────────┐ │
+│   │ Validate intent vs policy (entity/field/aggregate gates) → build a       │ │
+│   │ parameterised, read-only Cypher query with an injected clearance filter  │ │
+│   │ → assert_safe_cypher → run (READ routing) → redact → rows as JSON.       │ │
 │   └─────────────────────────────────────────────────────────────────────────┘ │
-│ Turn 2 — LLM call #3 (answer): tool choice auto; the agent writes the final  │
+│ Turn 2 — LLM call #2 (answer): tool choice auto; the agent writes the final  │
 │ answer from the rows (delivered to the model as the tool-result message).    │
 └──────────────────────────────────┬──────────────────────────────────────────┘
                                     ▼
               NDJSON stream { metadata, token…, stats, done }
 ```
 
-A single on-topic question therefore makes **three** LLM calls — the agent's
-tool-planning turn, the cypher-generation call inside the tool, and the answer turn — all
-surfaced individually in the `stats` event (see [`POST /ask`](#post-ask)).
+A single on-topic question therefore makes **two** LLM calls — the agent's planning turn
+and the answer turn — both surfaced individually in the `stats` event (see
+[`POST /ask`](#post-ask)). There is **no cypher-generation LLM call**: turning the intent
+into Cypher is deterministic.
 
 Step by step, in `src/agents/knowledge_graph_agent.py`:
 
 1. **Startup (`KnowledgeGraphAgent.from_settings`).** The agent opens its own
-   **synchronous** Neo4j driver (the `neo4j-graphrag` retrievers are sync-only,
-   separate from the async driver that backs `/query`), builds the retrieval LLM
-   client (`build_llm`) and the Microsoft Agent Framework chat client
-   (`build_chat_client`), introspects the schema once (`fetch_schema_text`), builds the
-   guardrail vocabulary from that schema (`build_relevance_vocabulary`), and wires up a
-   `Text2CypherRetriever` exposed as the `search_knowledge_graph` tool on a MAF `Agent`.
-   The agent's `default_options` pin the tool choice to `required` so retrieval is forced
-   on the first turn.
+   **synchronous** Neo4j driver (separate from the async driver that backs `/query`),
+   builds the Microsoft Agent Framework chat client (`build_chat_client`), introspects the
+   schema once (`fetch_schema_text`) to fingerprint it (for audit drift detection) and to
+   build the guardrail vocabulary (`build_relevance_vocabulary`), and receives the
+   `PolicyStore` so the query builder can enforce authorization. Query safety
+   (`_install_query_safety`) wraps the driver so every statement is re-validated read-only
+   with a per-statement timeout.
 
 2. **Relevance guardrail (`common/guardrails.py`).** When a question arrives, it is first
    checked against a vocabulary derived from the live schema (label/relationship/property
@@ -197,62 +226,52 @@ Step by step, in `src/agents/knowledge_graph_agent.py`:
    empty `metadata` and zero token usage. This is a relevance gate, **not** a
    prompt-injection defence.
 
-3. **Schema introspection (`fetch_schema_text`).** Read-only Cypher queries collect
-   node labels with their properties, the relationship types that connect labels, and
-   relationship properties (no APOC). Each property is rendered with an inferred **type
-   and example value** (e.g. `Flight: date (str, e.g. "2026-05-20")`) so the LLM can
-   see, for instance, that dates are ISO strings that need casting. Generic
-   super-labels shared across many node types (e.g. `System`, `Component`,
-   `FlightPhase`) are trimmed to property names only to keep the prompt focused.
+3. **Per-request scoped agent (`_build_maf_agent`).** The MAF `Agent` is built for each
+   request so its system instructions embed `PolicyStore.describe_surface(principal)` — a
+   compact catalogue of *only* the entities and fields the acting identity may see — and
+   its tool is bound (via closure) to that principal. The agent's `default_options` pin the
+   tool choice to `required` so retrieval is forced on the first turn.
 
-4. **Cypher generation (inside the tool).** The forced `search_knowledge_graph` tool runs
-   the retriever, which fills its `CYPHER_GENERATION_PROMPT` — a domain-tuned prompt —
-   with the schema, the few-shot `DEFAULT_EXAMPLES` (question → Cypher pairs), and the
-   question, then asks the LLM for a single Cypher query. The prompt encodes the rules
-   that make queries actually return data: cast ISO-string dates with `date()` on both
-   sides, inline literals (never use `$parameters`, which the retriever does not supply),
-   traverse the `Aircraft → System → Component → Part` hierarchy in full for
-   component/part questions (but query `:Flight` directly for flight/hours/date
-   questions), use `coalesce()`/`IS NOT NULL` for nullable numerics, never invent
-   property names, and aggregate for count/sum/total questions.
+4. **Structured intent + deterministic query build (`authz/query_builder.py`).** The
+   forced `query_knowledge_graph` tool receives the model's typed intent and calls
+   `build_query`, which enforces, in order: an **entity gate** (the entity must be granted),
+   a **field gate** (every projected *and* filtered field must be visible to the
+   principal), an **aggregate gate** (aggregates need an explicit grant and a visible target
+   field), and an always-injected **row-level clearance filter**
+   (`n.classification IS NULL OR n.classification IN $__authz_classifications`). Values are
+   always parameterised; labels/fields come only from the controlled catalogue and are
+   identifier-validated before interpolation. A denied intent records an audit denial and
+   returns a refusal string the agent relays — it never raises a 500.
 
-5. **Read-only enforcement.** Before executing, the retriever runs `EXPLAIN` on the
-   generated query and refuses anything Neo4j does not classify as read-only. The
-   query then executes with READ routing. This is a database-level guarantee — the
-   model cannot mutate the graph even if it emits `CREATE`/`DELETE`/`SET`.
+5. **Read-only enforcement.** The built query is re-checked by `assert_safe_cypher`
+   (rejecting writes, `CALL`, multiple statements, restricted namespaces) and executed with
+   READ routing under the query-safety timeout. This is defence-in-depth on top of the
+   builder only ever emitting `MATCH … RETURN`.
 
-6. **Row formatting (`record_to_item`).** Each returned record is converted to a
-   JSON-serialisable dict (via `to_jsonable`, which unpacks nodes/relationships into
-   property maps) by the retriever's `result_formatter` (`record_to_item` in
-   `common/retrieval.py`). The JSON is returned from the tool as the agent's context; the
-   structured dict is also stashed so the API can return the raw `records`. If retrieval
-   raises (e.g. `Text2CypherRetrievalError`) or returns no rows, the tool returns a
-   graceful message instead and the agent still answers (with empty `metadata`).
+6. **Redaction (`redact_records`).** Returned rows are stripped to the projected fields as
+   a safety net, so even an unexpected key (e.g. `classification` itself) never reaches the
+   answer LLM. Rows are capped (`QUERY_ROW_CAP`). If execution fails or returns no rows, the
+   tool returns a graceful message and the agent still answers (with empty `metadata`).
 
-7. **Answer generation.** Once MAF resets the forced tool choice to `auto` after the
-   first iteration, the agent makes its second turn (LLM call #3) and writes the answer
-   from the tool's rows. Its system prompt
-   (`AGENT_SYSTEM_PROMPT`) instructs it to always call the tool, answer **only** from the
-   retrieved rows, say so when the data has no answer, report numbers **exactly** (no
-   rounding/reformatting), and reply in **plain text** (no markdown/formatting).
+7. **Answer generation.** Once MAF resets the forced tool choice to `auto` after the first
+   iteration, the agent makes its second turn (LLM call #2) and writes the answer from the
+   tool's rows. Its system prompt (`STRUCTURED_AGENT_SYSTEM_PROMPT`) instructs it to always
+   call the tool, choose only entities/fields from the scoped catalogue, answer **only**
+   from the retrieved rows, say so when the data has no answer (or the request was refused
+   by policy), report numbers **exactly**, and reply in **plain text**.
 
-8. **Response assembly (`ask`).** The synchronous retrieval inside the tool runs in a
-   worker thread (`asyncio.to_thread`) so the FastAPI event loop stays responsive; the
-   shared sync driver is thread-safe for concurrent queries. The retrieved Cypher and
-   rows are captured via a per-request `retrieval_sink` and emitted up front as a
-   `metadata` event, then the MAF agent is streamed natively
-   (`self._agent.run(..., stream=True)`) so answer tokens are forwarded as they arrive,
-   followed by a `stats` and a `done` event. A `_MafTurnRecorder` chat middleware records
-   each of the agent's two LLM turns (planning + answer) individually — MAF otherwise
-   aggregates their token usage — so the `stats` event can report all three calls
-   separately. If a generation/network error occurs, `/ask` **degrades gracefully** — it
-   emits an in-band `error` event instead of returning a 500.
+8. **Response assembly (`ask`).** The synchronous query inside the tool runs in a worker
+   thread (`asyncio.to_thread`) so the FastAPI event loop stays responsive. The built Cypher
+   and rows are captured via a per-request `retrieval_sink` and emitted up front as a
+   `metadata` event, then the MAF agent is streamed natively (`request_agent.run(...,
+   stream=True)`) so answer tokens are forwarded as they arrive, followed by a `stats` and a
+   `done` event. A `_MafTurnRecorder` chat middleware records each of the agent's two LLM
+   turns (planning + answer) individually — MAF otherwise aggregates their token usage — so
+   the `stats` event can report both calls separately. If a generation/network error occurs,
+   `/ask` **degrades gracefully** — it emits an in-band `error` event instead of a 500.
 
-All **three** LLM calls (the agent's tool-planning turn, cypher generation inside the
-tool, and the agent's answer turn) target the same Azure OpenAI deployment: cypher
-generation uses the `neo4j-graphrag` LLM client and the agent's two turns use the
-Microsoft Agent Framework chat client. Built-in rate-limit handling
-(retry with exponential backoff) is provided by `neo4j-graphrag` for the retrieval call.
+Both LLM calls (planning and answer) target the same Azure OpenAI deployment via the
+Microsoft Agent Framework chat client.
 
 ### Configuration
 
@@ -266,7 +285,6 @@ are present.
 | `AZURE_OPENAI_API_KEY` | `<key>` | API key. |
 | `AZURE_OPENAI_DEPLOYMENT` | `gpt-5.4` | Deployment (model) name. |
 | `AZURE_OPENAI_API_VERSION` | `2024-10-21` | API version (used only for classic, non-`/openai/v1` endpoints). |
-| `AZURE_OPENAI_TEMPERATURE` | `0` | Optional. Temperature for text-to-Cypher generation; pin to `0` for more deterministic, reproducible queries. Omitted when unset — leave unset for models that reject a non-default temperature. |
 
 ### `POST /ask`
 
@@ -275,6 +293,7 @@ The question pipeline streams the answer as the LLM generates it. The request bo
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `question` | string | yes | A natural-language question about the graph. |
+| `user` | string | no | Id of the identity asking (see [`POST /users`](#get-users)). Resolved server-side into a principal against the access policy; an unknown or omitted id falls back to the least-privilege default identity (default-deny). |
 
 The response is `application/x-ndjson` — a stream of newline-delimited JSON events,
 one object per line:
@@ -285,29 +304,36 @@ one object per line:
 | `metadata` | `{ "type": "metadata", "cypher_used": [...], "records": [...] }` | Once, after retrieval, before any tokens. |
 | `token` | `{ "type": "token", "text": "..." }` | Repeated, as answer tokens arrive. |
 | `error` | `{ "type": "error", "message": "..." }` | Only on failure (in-band, since headers are already sent). |
-| `stats` | `{ "type": "stats", "model": ..., "llm_calls": N, "tokens": {...}, "calls": [...], "durations_ms": {...}, "cypher_count": N, "record_count": N }` | Once, just before `done` — debug/telemetry for the request. |
+| `stats` | `{ "type": "stats", "model": ..., "principal": {...}, "llm_calls": N, "tokens": {...}, "calls": [...], "durations_ms": {...}, "cypher_count": N, "record_count": N, "audit": {...} }` | Once, just before `done` — debug/telemetry for the request. |
 | `done` | `{ "type": "done" }` | Always last. |
 
-The `stats` event reports debug telemetry for the request: the model, the number of
-LLM calls (agent tool-planning + cypher-generation + answer-generation = 3 for an
-on-topic question), aggregated token usage with a
-per-call breakdown, and timings. Each entry in `calls` carries its own `duration_ms`,
-and `durations_ms` reports `retrieval`, `graph_query` (the Neo4j execution, i.e.
-retrieval minus the cypher-generation LLM call), `generation` and `total`. Token and
-duration fields per call let the UI show how long each LLM call and the graph query
-took. The agent's planning and answer tokens are captured per-turn by the
-`_MafTurnRecorder` middleware (MAF's response otherwise aggregates them); cypher-generation
-tokens and timing are captured by wrapping the retriever's internal `llm.invoke` call.
-Token fields are `null` when usage is not reported.
+The `stats` event reports debug telemetry for the request: the model, the acting
+`principal` (the resolved identity — `id`, `displayName`, `role`, `clearance`,
+`clearanceRank` and the `policyVersion` it was resolved under — so every answer is
+attributable to who asked it and under which policy), the number of
+LLM calls (agent planning + answer-generation = 2 for an on-topic question — there is no
+cypher-generation LLM call because the query is built deterministically), aggregated token
+usage with a per-call breakdown, and timings. Each entry in `calls` carries its own
+`duration_ms`, and `durations_ms` reports `retrieval`, `graph_query` (the tool's
+build-and-run time), `generation` and `total`. Token and duration fields per call let the
+UI show how long each LLM call and the graph query took. The agent's planning and answer
+tokens are captured per-turn by the `_MafTurnRecorder` middleware (MAF's response otherwise
+aggregates them). Token fields are `null` when usage is not reported.
+
+The `stats` event also carries an `audit` object — the per-request record written to
+the audit trail (see [Query safety and audit](#query-safety-and-audit)): `outcome`
+(`answered` / `refused_off_topic` / `error`), `timestamp`, the principal fields,
+`policyVersion`, `schemaFingerprint`, the `cypher` run, `recordCount`, `llmCalls`,
+any `denied` constructs (authorization or query-safety denials), and `durationMs`.
 
 The `progress` events let the client surface the pipeline stage currently in flight.
-The cypher-generation and graph-query steps run inside the forced tool and emit no
-answer tokens, so without these events the UI would stall on one label for seconds.
-Each stage calls a per-request progress callback at its boundary (`planning` up front,
-then `cypher`, `querying` and `answering`); `ask` merges those onto the response stream
-alongside the answer tokens (the cypher recorder runs in a worker thread, so its
-progress is marshalled back onto the event loop). The phases mirror the four steps in
-the chat UI's debug panel.
+The query-build and graph-query steps run inside the forced tool and emit no answer
+tokens, so without these events the UI would stall on one label for seconds. Each stage
+calls a per-request progress callback at its boundary (`planning` up front, then `cypher`
+for the deterministic build, `querying` and `answering`); `ask` merges those onto the
+response stream alongside the answer tokens (the query runs in a worker thread, so its
+progress is marshalled back onto the event loop). The phases mirror the steps in the chat
+UI's debug panel.
 
 Because retrieval runs first, the client receives the Cypher and rows up front and can
 render the answer progressively. The retrieval step runs in a worker thread while
@@ -323,7 +349,7 @@ a `token` carrying a fixed refusal message, a zero-usage `stats` event with
 ```bash
 curl -N -X POST http://localhost:8080/ask \
   -H 'Content-Type: application/json' \
-  -d '{"question": "How many flying hours has the engine had since 2026-05-25?"}'
+  -d '{"question": "How many flying hours has the engine had since 2026-05-25?", "user": "maintenance_engineer"}'
 ```
 
 ```
@@ -335,12 +361,173 @@ curl -N -X POST http://localhost:8080/ask \
 {"type": "token", "text": "Since "}
 {"type": "token", "text": "2026-05-25"}
 ...
-{"type": "stats", "model": "gpt-5.4", "llm_calls": 3, "tokens": {"prompt": 10944, "completion": 106, "total": 11050}, "calls": [{"stage": "agent_planning", "prompt": 277, "completion": 39, "total": 316, "duration_ms": 720.3}, {"stage": "cypher_generation", "prompt": 10390, "completion": 28, "total": 10418, "duration_ms": 1850.4}, {"stage": "answer_generation", "prompt": 277, "completion": 39, "total": 316, "duration_ms": 1269.9}], "durations_ms": {"retrieval": 1859.5, "graph_query": 9.1, "generation": 1269.9, "total": 3849.8}, "cypher_count": 1, "record_count": 6}
+{"type": "stats", "model": "gpt-5.4", "principal": {"id": "maintenance_engineer", "displayName": "Maintenance Engineer", "role": "maintenance", "clearance": "unclassified", "clearanceRank": 0, "policyVersion": "2026-06-09.2"}, "llm_calls": 2, "tokens": {"prompt": 1494, "completion": 78, "total": 1572}, "calls": [{"stage": "agent_planning", "prompt": 940, "completion": 39, "total": 979, "duration_ms": 720.3}, {"stage": "answer_generation", "prompt": 554, "completion": 39, "total": 593, "duration_ms": 1269.9}], "durations_ms": {"retrieval": 11.4, "graph_query": 11.4, "generation": 1269.9, "total": 2001.6}, "cypher_count": 1, "record_count": 6, "audit": {"timestamp": "2026-06-09T12:00:00.000+00:00", "outcome": "answered", "user": "maintenance_engineer", "role": "maintenance", "clearance": "unclassified", "policyVersion": "2026-06-09.2", "schemaFingerprint": "a1b2c3d4e5f6", "question": "How many flying hours...", "cypher": ["MATCH (n:`Flight`) WHERE (n.classification IS NULL OR n.classification IN $__authz_classifications) RETURN sum(n.`flightTime_hours`) AS result"], "recordCount": 6, "llmCalls": 2, "denied": [], "durationMs": 2001.6}}
 {"type": "done"}
 ```
 
 The [`frontend/chat-ui`](../frontend/chat-ui) project consumes this endpoint to stream answers
 into a chat interface.
+
+### `GET /users`
+
+Lists the selectable identities, so the chat UI can offer an identity selector without
+hard-coding the list (it is policy-driven). Returns the access policy version and the
+identities defined in it:
+
+```bash
+curl http://localhost:8080/users
+```
+
+```json
+{
+  "version": "2026-06-09.1",
+  "users": [
+    {"id": "public", "displayName": "Public (least privilege)", "role": "public", "clearance": "unclassified", "description": "..."},
+    {"id": "maintenance_engineer", "displayName": "Maintenance Engineer", "role": "maintenance", "clearance": "unclassified", "description": "..."},
+    {"id": "restricted_ops", "displayName": "Restricted Operations", "role": "operations", "clearance": "secret", "description": "..."}
+  ]
+}
+```
+
+## Authorization model
+
+> **PoC scope.** This is an *application-level* authorization layer built to demonstrate
+> the idea — not enterprise ABAC. It runs against stock **Neo4j Community Edition**, which
+> has no in-database access control, so the backend is the *only* enforcement boundary. See
+> [Neo4j Community Edition: trade-offs](#neo4j-community-edition-trade-offs-and-enterprise-alternatives)
+> for what a production deployment on Enterprise could push into the database itself.
+
+The backend is the **authorization trust boundary**: the LLM is treated as untrusted, and
+the question is *default-deny* — an identity sees nothing it has not been explicitly
+granted. Authorization is **two-dimensional**, and both dimensions are checked before any
+data is read:
+
+1. **Capability grants (role-based, coarse).** What *kinds* of thing an identity may query:
+   which **entities** (node labels), which **sensitivity categories** of field, and whether
+   it may run **aggregates**. These come from the identity's role in the policy.
+2. **Clearance (row-level, fine).** A clearance level (`unclassified` → `official` →
+   `secret`) compared against each node's own in-graph `classification` property, so whole
+   *rows* (e.g. a classified military flight) can be hidden even within an entity the
+   identity may otherwise query.
+
+### The policy is data, not code
+
+The access policy lives in [`policy/access-policy.json`](policy/access-policy.json)
+(override with `ACCESS_POLICY_PATH`). It is **versioned separately** from the graph data
+and the ontology, so *who may see what* can change without re-importing the graph, and
+every answer records the `policyVersion` it was resolved under. It is loaded and validated
+at startup; an invalid or missing policy **fails the service closed**. Its four parts:
+
+| Key | What it defines |
+|---|---|
+| `clearanceLevels` | The ordered clearance ladder (`unclassified` < `official` < `secret`). |
+| `sensitivityCategories` | The field-sensitivity labels (`basic`, `duration`, `route`, `maintenance`, `performance`). |
+| `catalog` | The **curated, queryable surface**: every entity, each field on it, and the one sensitivity category that field belongs to. *A field absent from the catalog is queryable by no one* (default-deny). |
+| `identities` | The selectable identities, each with a `role`, a `clearance`, the `categories` and `entities` it is granted, and whether it `allowAggregates`. |
+
+The three demo identities make the two dimensions concrete:
+
+| Identity | Clearance | Entities | Categories | Aggregates | Cannot see |
+|---|---|---|---|---|---|
+| `public` | unclassified | Aircraft, Specification, Aerodrome | `basic` | ❌ | maintenance, durations, routes, classified flights |
+| `maintenance_engineer` | unclassified | + System, Component, Document, Flight | + duration, maintenance, performance | ✅ | flight **routes**, **classified** flights |
+| `restricted_ops` | secret | + Aerodrome | + route | ✅ | — (sees everything, incl. classified flights) |
+
+So a maintenance engineer can ask for *total flight time* (a `duration` field, aggregated),
+but a question about *where the aircraft flew* (a `route` field) is refused, and a flight
+`count` silently **excludes** classified flights they aren't cleared for.
+
+### How an identity becomes a `Principal`
+
+A request names an identity (`user` on `/ask`); the backend resolves it **server-side** —
+never trusting the client beyond the choice of id — via `PolicyStore.resolve_principal`
+into a `Principal` carrying the role, clearance, granted categories/entities, the set of
+classifications the clearance permits, and the policy version. An unknown or omitted `user`
+resolves to the policy's least-privilege `defaultIdentity` (`public`), not to broad access.
+
+> **Not authentication.** This is identity *selection* for the PoC (a UI dropdown). In a
+> real deployment the id would arrive in a verified token (e.g. an OIDC claim), not from the
+> client. The enforcement mechanics below would be unchanged.
+
+### Where it is enforced
+
+Enforcement happens entirely in the backend, in two places, both outside the LLM:
+
+- **Per-request surface scoping.** The agent is rebuilt per request so its system
+  instructions and tool surface expose **only** the entities and fields the principal may
+  see (`PolicyStore.describe_surface`). Unauthorised field *names* never reach the model, so
+  it cannot even *ask* for them. The principal is bound to the tool by closure — it is never
+  a tool argument, so the model can neither see nor spoof it.
+- **The structured-intent query builder** ([`src/authz/query_builder.py`](src/authz/query_builder.py)).
+  Every typed intent passes, in order: an **entity gate** → a **field gate** (every
+  projected *and* filtered field must be visible) → an **aggregate gate** → an
+  always-injected **row-level clearance filter**
+  (`n.classification IS NULL OR n.classification IN $__authz_classifications`). Because the
+  filter is injected *before* aggregation, classified rows never participate in a query —
+  not even in a `count` or existence check. Values are always parameterised; labels and
+  field names come only from the controlled catalogue and are identifier-validated. A denied
+  intent records an audit denial and returns a refusal string (never a 500). Returned rows
+  are then **redacted** to the projected fields as a final defence-in-depth net.
+
+The full request-time mechanics — guardrail, the two LLM turns, the gate order and the
+redaction net — are documented step-by-step under
+[Natural-language questions → How it works](#how-it-works). The code lives in
+[`src/authz/`](src/authz/): `models.py` (the policy/`Principal` models), `store.py`
+(`PolicyStore`) and `query_builder.py` (the enforcement layer).
+
+## Query safety and audit
+
+The backend builds every query deterministically from a validated intent, and bounds and
+records each one as part of the same trust boundary.
+
+- **Query safety** — [`src/common/query_safety.py`](src/common/query_safety.py).
+  `assert_safe_cypher` is defence-in-depth on top of the query builder only ever emitting
+  read-only `MATCH … RETURN`: it deterministically rejects empty input, multiple statements,
+  write clauses, procedure calls (`CALL`), `LOAD CSV`, database switching (`USE`) and
+  schema/admin namespaces (`db.`/`dbms.`/`apoc.`/`gds.`/`cdc.`/`sys.`). String and backtick
+  literals are stripped first, so a value that merely *spells* a keyword cannot trip it. The
+  agent's own Neo4j driver is wrapped so the check runs before any query executes; a denial
+  degrades gracefully (no rows) and is recorded for audit. Each query is also bounded by a
+  per-statement **timeout** (`QUERY_TIMEOUT_SECONDS`, default `10`) and a post-fetch **row
+  cap** (`QUERY_ROW_CAP`, default `1000`) that limits how much data reaches the answer step.
+  The same function is reused by the structured-intent query builder, so query safety has a
+  single home.
+- **Audit trail** — [`src/common/audit.py`](src/common/audit.py). Every answered, refused or
+  failed request produces one `AuditRecord` written to a dedicated `kg.audit` logger (so it
+  can be routed/retained independently, and is exported to Application Insights when
+  telemetry is configured) and embedded as `stats.audit` for the debug panel. It records who
+  asked (principal + `policyVersion`), the `schemaFingerprint` shown to the LLM, the question,
+  the Cypher run, the record count, the LLM-call count, any query-safety `denied` constructs,
+  the `outcome` and the duration — making every answer attributable to an identity and a
+  policy version.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `ACCESS_POLICY_PATH` | `policy/access-policy.json` | Location of the versioned access policy. |
+| `QUERY_TIMEOUT_SECONDS` | `10` | Per-statement Neo4j timeout. |
+| `QUERY_ROW_CAP` | `1000` | Max rows passed from retrieval to the answer step. |
+
+## Neo4j Community Edition: trade-offs and Enterprise alternatives
+
+This PoC runs against **stock Neo4j Community Edition** (`neo4j:latest`, started by
+[`scripts/start-database.sh`](../scripts/start-database.sh)). Community has a single user
+and **no in-database access control of any kind**. Several design decisions here exist
+specifically to work around that — and would be implemented differently, often more
+robustly, on **Neo4j Enterprise Edition**. They are called out honestly so a reviewer can
+see where the PoC simulates something the database could enforce natively.
+
+| Decision in this PoC | Why (Community limitation) | Enterprise alternative |
+|---|---|---|
+| Authorization lives entirely in the **application** (policy store + structured-intent query builder + injected clearance filter + redaction). | Community has **no RBAC** and **no label / relationship / property-level security** — you cannot express "this role can't read this property" in the database. | Native **fine-grained access control**: `GRANT`/`DENY TRAVERSE`/`READ`/`MATCH` on labels, relationship types and **properties** (sub-graph + property-level security). Much of the clearance/category gating could be enforced *inside the database* as a second hard boundary, so an application bug alone could not leak data. |
+| Everything is one database; identity is selected, not authenticated. | Community supports a **single user database** and only basic auth. | Multiple databases, plus native users/roles — identity and tenancy can be modelled in the DBMS. |
+| A *future* federation story would need application-level stitching of separate graphs. | Community has **no composite databases / Fabric**. | **Composite databases (Fabric)** federate and shard queries across multiple databases natively. |
+| `classification` is a plain node property, and a **missing** `classification` is treated as *unclassified / visible to all* (`IS NULL OR …`). Integrity relies on the import data being correct. | Community supports only **uniqueness** constraints — not **existence** or **node-key** constraints — so you cannot force every node to carry a `classification`. | **Property existence constraints** (`REQUIRE n.classification IS NOT NULL`) guarantee the property is always present, so the policy could safely **default-deny** an unclassified node instead of defaulting to visible. |
+
+The honest framing: the application-layer approach is portable and keeps the policy
+external and inspectable, but on Community it is the **only** boundary — a bug in the query
+builder is a data leak. On Enterprise you would keep the structured-intent layer (for the
+typed surface, auditability and answer grounding) *and* back it with in-database privileges
+so the database independently refuses unauthorised reads.
 
 ## Evaluation
 
@@ -349,6 +536,20 @@ pipeline against a pre-baked ground-truth file — **no LLM-as-judge**. It drive
 in-process `KnowledgeGraphAgent` (the same code path the API uses), so it needs the
 same Neo4j and Azure OpenAI settings in `backend/.env`, and the graph must already be
 imported.
+
+The point is a **repeatable, judge-free signal**: every metric is computed by comparing
+the agent's retrieved rows and answer text against hand-written gold data with plain set
+arithmetic and string matching, so a run is cheap, deterministic given the data, and
+diffable across code changes (the [dashboard](#dashboard) trends them over time). By
+default it drives the pipeline as the **most-privileged identity** so retrieval quality is
+measured without authorization capping the results; pass `--user <id>` to evaluate as a
+specific identity instead. Authorization *enforcement* itself is verified separately by the
+adversarial unit tests (`tests/test_query_builder.py`, `tests/test_knowledge_graph_agent.py`),
+not by this harness.
+
+> **PoC caveat.** The ground-truth set is small and hand-curated, the answer metrics are
+> substring-based (not semantic), and runs cost real Azure OpenAI tokens. It is a
+> development feedback tool, not a statistically rigorous benchmark.
 
 ```bash
 uv run poe evaluate                                   # eval/ground_truth.json -> eval/results/eval-<timestamp>.json
@@ -387,14 +588,14 @@ agent to get its generated Cypher, retrieved rows and streamed answer (from the
 - **Retrieval — value-based (primary)**: precision, recall, **F1**, Jaccard and
   exact-match comparing the *set of cell values* the agent retrieved against the gold
   rows, **ignoring column names** and **tolerating float formatting** (rounded to
-  `--round-digits`, default `3`). This is the realistic measure: text-to-Cypher is
-  non-deterministic and aliases columns, reorders results and rounds differently
-  run-to-run, so comparing whole rows verbatim would punish correct answers. A wrong
-  *value* (e.g. weight in lb instead of kg) still counts as a miss. A question *passes*
-  when its value F1 ≥ `--f1-threshold` (default `0.5`).
+  `--round-digits`, default `3`). This is the realistic measure: the agent's structured
+  intent aliases columns, reorders results and rounds differently run-to-run, so comparing
+  whole rows verbatim would punish correct answers. A wrong *value* (e.g. weight in lb
+  instead of kg) still counts as a miss. A question *passes* when its value F1 ≥
+  `--f1-threshold` (default `0.5`).
 - **Retrieval — strict (secondary diagnostic)**: `strict_exact_match` / `strict_f1`
   compare whole rows verbatim (column names, every column, exact formatting). Reported
-  for insight into how much the generated Cypher's *shape* drifts from the gold; not used
+  for insight into how much the built query's *shape* drifts from the gold; not used
   for pass/fail.
 - **Answer** (string-matched, no judge): **coverage** — fraction of
   `expected_answer_values` present in the answer text; **groundedness** — fraction of
@@ -437,7 +638,7 @@ verbosity:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `LOG_LEVEL` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`). `DEBUG` adds per-step pipeline detail (schema fetch, cypher generation, retrieval, generation, query execution). |
+| `LOG_LEVEL` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`). `DEBUG` adds per-step pipeline detail (schema fetch, guardrail decision, structured-intent build, query execution, answer generation). |
 
 Noisy third-party libraries (`neo4j`, `openai`, `httpx`, `opentelemetry`, `azure.*`)
 are pinned to `WARNING` so the application's own logs stay readable, even at `DEBUG`.
@@ -452,15 +653,14 @@ instrumentation when a connection string is present:
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | `InstrumentationKey=...;IngestionEndpoint=...` | Azure Application Insights connection string. When unset, telemetry is silently skipped — no Azure resources are needed for local development. |
 
 Each `/ask` request appears as one App Insights *operation* (the FastAPI request span,
-auto-instrumented by `configure_azure_monitor`). The LLM calls in the retrieve →
+auto-instrumented by `configure_azure_monitor`). The LLM calls in the plan → build →
 generate pipeline are traced as `gen_ai` child spans under it:
 
-- **The agent's tool-planning and answer turns** are traced automatically by the
+- **The agent's planning and answer turns** are traced automatically by the
   Microsoft Agent Framework's instrumentation (they run through the MAF chat client).
-- **Cypher generation** runs through `neo4j-graphrag`'s own OpenAI client, which the
-  MAF instrumentation does not see, so it is traced with an explicit `gen_ai` span
-  emitted from the agent's `invoke` wrapper (`_install_usage_recorder`). Without this,
-  only the agent's own calls would be visible.
+
+There is no separate cypher-generation LLM call to trace — the query is built
+deterministically from the agent's structured intent.
 
 ## Running with the UIs
 
@@ -473,8 +673,9 @@ Vue frontend). In VS Code, press **F5** and choose **“Launch All (Backend + St
 
 - **Python 3.13+** with **FastAPI** and **uvicorn**
 - **Neo4j** for graph storage and Cypher queries
-- **neo4j-graphrag** (text-to-Cypher retrieval) + **Microsoft Agent Framework**
-  (answer generation), both backed by **Azure OpenAI**
+- **Microsoft Agent Framework** (agentic planning + answer generation) backed by
+  **Azure OpenAI**; queries are built deterministically from the agent's structured intent
+  (no text-to-Cypher).
 - **uv** for dependency management, **poethepoet** for task running
 - **ruff** for linting/formatting, **mypy** for type checking, **pytest** for tests
 - **Azure Application Insights** (via **azure-monitor-opentelemetry**) for optional telemetry

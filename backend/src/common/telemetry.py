@@ -2,8 +2,7 @@
 
 Reusable across agents to surface per-call token counts and durations in debug
 output. Token usage is normalized into a uniform ``{prompt, completion, total}``
-dict regardless of the source (neo4j-graphrag ``LLMUsage`` or Microsoft Agent
-Framework ``UsageDetails``).
+dict from the Microsoft Agent Framework ``UsageDetails`` shape.
 """
 
 from __future__ import annotations
@@ -23,17 +22,6 @@ def elapsed_ms(start: float) -> float:
     return round((time.perf_counter() - start) * 1000, 1)
 
 
-def normalize_llm_usage(usage: Any) -> dict[str, int | None]:
-    """Normalize a neo4j-graphrag ``LLMUsage`` into a plain token dict."""
-    if usage is None:
-        return empty_usage()
-    return {
-        "prompt": getattr(usage, "request_tokens", None),
-        "completion": getattr(usage, "response_tokens", None),
-        "total": getattr(usage, "total_tokens", None),
-    }
-
-
 def normalize_maf_usage(usage: Any) -> dict[str, int | None]:
     """Normalize a Microsoft Agent Framework ``UsageDetails`` into a plain token dict.
 
@@ -48,16 +36,6 @@ def normalize_maf_usage(usage: Any) -> dict[str, int | None]:
         "completion": usage.get("output_token_count"),
         "total": usage.get("total_token_count"),
     }
-
-
-def build_llm_messages(system: str | None, user: Any) -> list[dict[str, str]]:
-    """Build a ``[{role, content}]`` request representation for debug telemetry."""
-    request: list[dict[str, str]] = []
-    if system:
-        request.append({"role": "system", "content": str(system)})
-    if user is not None:
-        request.append({"role": "user", "content": str(user)})
-    return request
 
 
 def serialize_maf_messages(messages: Any) -> list[dict[str, str]]:
@@ -95,36 +73,28 @@ def serialize_maf_messages(messages: Any) -> list[dict[str, str]]:
     return serialized
 
 
-# Per-request sink for token usage from LLM calls that don't otherwise surface it
-# (e.g. neo4j-graphrag's internal cypher-generation ``llm.invoke``). A recorder
-# appends normalized usage here when a sink is active. ``asyncio.to_thread`` copies
-# the calling context into the worker thread, and because the value is a shared
-# mutable list, appends made inside the thread are visible to the request task
-# afterwards. Each request binds its own list, so concurrent requests stay isolated.
-usage_sink: ContextVar[list[dict[str, Any]] | None] = ContextVar("llm_usage_sink", default=None)
-
 # Per-request sink for the knowledge-graph retrieval tool's output. When the MAF
-# agent invokes the ``search_knowledge_graph`` tool mid-run, the tool appends its
-# generated Cypher, rows and timing here so the request task can emit the
+# agent invokes the ``query_knowledge_graph`` tool mid-run, the tool appends its
+# built Cypher, rows and timing here so the request task can emit the
 # ``metadata`` event and ``stats`` timings without re-running retrieval. Bound per
-# request (like :data:`usage_sink`) so concurrent requests stay isolated.
+# request so concurrent requests stay isolated.
 retrieval_sink: ContextVar[list[dict[str, Any]] | None] = ContextVar("kg_retrieval_sink", default=None)
 
 # Per-request sink for the MAF agent's per-turn LLM calls. A ``ChatMiddleware`` fires
-# once per agent turn (tool-planning, then answer generation) and appends each turn's
+# once per agent turn (planning, then answer generation) and appends each turn's
 # stage, normalized usage, duration and request messages here. This is needed because
 # MAF aggregates ``usage_details`` across all turns of a run, which would otherwise
 # collapse the distinct planning and answer LLM calls into a single figure. Bound per
-# request (like :data:`usage_sink`) so concurrent requests stay isolated.
+# request so concurrent requests stay isolated.
 maf_call_sink: ContextVar[list[dict[str, Any]] | None] = ContextVar("kg_maf_call_sink", default=None)
 
 # Per-request callback used to surface live pipeline phase changes to the streaming
-# ``/ask`` response. The agent's pipeline (tool-planning, cypher generation, graph
-# query, answer generation) runs largely opaque to the client until the answer
-# streams, so each stage calls :func:`emit_progress` at its boundary. ``ask`` binds a
-# thread-safe callback here that enqueues a ``progress`` event onto the response
-# stream, letting the UI status reflect the stage actually in flight. Bound per
-# request (like :data:`usage_sink`) so concurrent requests stay isolated.
+# ``/ask`` response. The agent's pipeline (planning, query build/run, answer
+# generation) runs largely opaque to the client until the answer streams, so each
+# stage calls :func:`emit_progress` at its boundary. ``ask`` binds a thread-safe
+# callback here that enqueues a ``progress`` event onto the response stream, letting
+# the UI status reflect the stage actually in flight. Bound per request so concurrent
+# requests stay isolated.
 progress_sink: ContextVar[Any] = ContextVar("kg_progress_sink", default=None)
 
 
@@ -132,10 +102,25 @@ def emit_progress(phase: str) -> None:
     """Report a pipeline ``phase`` change to the active request's progress callback.
 
     No-op when no callback is bound (e.g. off-line evaluation or tests). The bound
-    callback must be safe to call from worker threads — cypher generation runs via
+    callback must be safe to call from worker threads — the query build/run executes via
     ``asyncio.to_thread`` — which :func:`KnowledgeGraphAgent.ask` guarantees by routing
     through ``loop.call_soon_threadsafe``.
     """
     callback = progress_sink.get()
     if callback is not None:
         callback(phase)
+
+
+# Per-request sink for query-safety denials. When the driver's safety wrapper refuses a
+# Cypher statement (a disallowed construct), it appends the reason here so the request
+# can record it in the audit trail and surface it in the debug panel. Bound per request
+# so concurrent requests stay isolated; appended to from a worker thread (the query runs
+# via ``asyncio.to_thread``) but only read after the run.
+safety_sink: ContextVar[list[str] | None] = ContextVar("kg_safety_sink", default=None)
+
+
+def emit_safety_denied(reason: str) -> None:
+    """Record a query-safety denial for the active request, if a sink is bound."""
+    sink = safety_sink.get()
+    if sink is not None:
+        sink.append(reason)

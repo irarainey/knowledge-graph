@@ -2,7 +2,7 @@
 
 A chat-style Streamlit front end for the Knowledge Graph **`/ask`** endpoint, titled
 for the modelled aircraft (**Cessna 172S Skyhawk — G-ECHO**). Type a natural-language
-question and the backend retrieves from the graph (text-to-Cypher) and generates the
+question and the backend plans a typed query over the graph, runs it, and generates the
 answer with a Microsoft Agent Framework agent, **streamed token-by-token**. Each answer
 also shows the Cypher it ran and the graph rows it retrieved.
 
@@ -62,24 +62,38 @@ The chat UI needs no secrets of its own; Azure OpenAI credentials live in `backe
 
 - Chat-style history of questions and answers.
 - **Live token streaming** with a "thinking" status indicator that reflects the
-  current pipeline phase from the backend's `progress` events: *Selecting the retrieval
-  tool…* → *Generating the Cypher query…* → *Querying the graph database…* →
-  *Generating the answer…*, then it clears so the answer sits at the top.
+  current pipeline phase from the backend's `progress` events: *Deciding what to fetch…*
+  → *Building the query…* → *Querying the graph database…* → *Generating the answer…*,
+  then it clears so the answer sits at the top.
 - A single **Debug details** expander per answer, laid out as the request **workflow**
   in chronological order so it reads top-to-bottom like the steps the agent ran:
-  1. **Agent selects the retrieval tool** — the agent's tool-planning LLM turn, with
-     timing/tokens and the request in a collapsible panel (collapsed by default).
-  2. **Generate the Cypher query** — the cypher-generation LLM call inside the tool; shows
-     the Cypher the LLM produced.
-  3. **Query the graph database** — the graph-query duration and the retrieved rows.
-  4. **Generate the answer from the retrieved data** — the agent's answer LLM turn, with
+  1. **Agent planning** — the agent's planning LLM turn, where it decides what to fetch
+     and emits a typed query intent, with timing/tokens and the request in a collapsible
+     panel (collapsed by default).
+  2. **Build and run the query** — the query is built deterministically from the intent
+     (no LLM call) and run against Neo4j; shows the Cypher and the graph-query duration
+     and the retrieved rows.
+  3. **Generate the answer from the retrieved data** — the agent's answer LLM turn, with
      the answer prompt (system instructions + your question) in a collapsible panel; the
      retrieved rows are supplied to the model separately as the tool result.
 
-  A **Summary** at the bottom lists the model, LLM-call count (**3** for an on-topic
-  question: tool-planning + cypher-generation + answer), a token table
+  A **Summary** at the bottom lists the model, LLM-call count (**2** for an on-topic
+  question: planning + answer — the query is built deterministically with no LLM call), a
+  token table
   (prompt/completion/total per call) and a timings table. All telemetry comes from a
-  `stats` event the backend emits on the stream.
+  `stats` event the backend emits on the stream. The panel also shows **who the answer
+  was generated for** — the acting identity, its role and clearance, and the access
+  policy version — taken from the `stats` event's `principal`, and an **Audit** slice
+  (outcome, timestamp, schema fingerprint, policy version, and any authorization or
+  query-safety denials)
+  from the `stats` event's `audit` record.
+- An **“Ask as” identity selector** in the sidebar, populated from the backend's
+  `GET /users` (so it is policy-driven, not hard-coded). The chosen identity is sent with
+  each question; the backend resolves it into a principal and attributes the answer to it.
+  Switching identity **starts a new conversation**, because the chat history is part of the
+  model's context and must not carry across an identity change. If the backend is
+  unreachable, the selector falls back to a single least-privilege identity so the page
+  still loads.
 - Sidebar with a **New conversation** button, one-click **example questions**, and
   shortcut buttons to **open the graph renderer** (Vue app) and **open the Neo4j
   browser** in a new tab.

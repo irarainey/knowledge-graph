@@ -1,0 +1,145 @@
+{
+  "version": "2026-06-09.2",
+  "description": "External, versioned access policy for the knowledge-graph PoC and the authorization trust boundary's source of truth. Kept OUTSIDE the graph and versioned separately from both the data and the ontology. Authorization is two-dimensional: role-based capability grants (which sensitivity CATEGORIES of fields, which ENTITIES, and whether aggregates are allowed) plus CLEARANCE (gated against each node's in-graph `classification` for row-level visibility). The `catalog` is the curated, queryable surface the structured-intent query builder validates typed queries against; a field absent from the catalog is queryable by no one (default-deny).",
+  "clearanceLevels": ["unclassified", "official", "secret"],
+  "sensitivityCategories": ["basic", "duration", "route", "maintenance", "performance"],
+  "defaultIdentity": "public",
+  "catalog": {
+    "Aircraft": {
+      "description": "The aircraft (airframe) the knowledge graph describes.",
+      "fields": {
+        "name": "basic",
+        "registration": "basic",
+        "manufacturer": "basic",
+        "model": "basic",
+        "engineCount": "basic",
+        "mtow_kg": "basic"
+      }
+    },
+    "Specification": {
+      "description": "Published performance specifications and limits for the aircraft type.",
+      "fields": {
+        "name": "basic",
+        "seats": "basic",
+        "maxCruiseSpeed_kt": "performance",
+        "maxRange_nm": "performance",
+        "serviceCeiling_ft": "performance",
+        "maxTakeoffWeight_lb": "performance",
+        "maxLandingWeight_lb": "performance",
+        "usableFuel_gal": "performance",
+        "cruiseFuelBurn_gph": "performance",
+        "maxEndurance_hours": "performance",
+        "vne_kt": "performance",
+        "vno_kt": "performance",
+        "vs_kt": "performance",
+        "vs0_kt": "performance",
+        "vx_kt": "performance",
+        "vy_kt": "performance",
+        "vr_kt": "performance"
+      }
+    },
+    "Aerodrome": {
+      "description": "An aerodrome (airport) that appears in the network the aircraft operates in.",
+      "fields": {
+        "name": "basic",
+        "icao": "basic",
+        "iata": "basic",
+        "elevation_ft": "route",
+        "latitude": "route",
+        "longitude": "route"
+      }
+    },
+    "System": {
+      "description": "A major aircraft system (e.g. airframe, electrical, powerplant).",
+      "fields": {
+        "name": "basic",
+        "voltage_v": "performance"
+      }
+    },
+    "Component": {
+      "description": "A maintainable component or part fitted to the aircraft.",
+      "fields": {
+        "name": "basic",
+        "type": "basic",
+        "manufacturer": "basic",
+        "model": "basic",
+        "partNumber": "maintenance",
+        "function": "basic",
+        "location": "basic",
+        "position": "basic",
+        "material": "basic",
+        "totalTime_hours": "maintenance",
+        "count": "maintenance",
+        "quantity": "maintenance",
+        "note": "maintenance",
+        "source": "maintenance",
+        "power_hp": "performance",
+        "ratedHorsepower": "performance",
+        "output_amps": "performance",
+        "voltage_v": "performance",
+        "capacity_gal": "performance",
+        "fuelCapacity_litres": "performance"
+      }
+    },
+    "Document": {
+      "description": "A maintenance or reference document (manual, AD, service bulletin).",
+      "fields": {
+        "name": "basic",
+        "revision": "maintenance",
+        "system": "maintenance"
+      }
+    },
+    "Flight": {
+      "description": "A flight flown by the aircraft. Duration fields are maintenance-relevant; route fields (departure/destination/distance/altitude) are restricted; whole classified (e.g. military) flights are gated by clearance.",
+      "fields": {
+        "name": "basic",
+        "date": "basic",
+        "callsign": "basic",
+        "flightRules": "basic",
+        "squawk": "basic",
+        "blockTime_minutes": "duration",
+        "flightTime_hours": "duration",
+        "departureTime": "duration",
+        "arrivalTime": "duration",
+        "offBlockTime": "duration",
+        "onBlockTime": "duration",
+        "departureAerodrome": "route",
+        "destinationAerodrome": "route",
+        "distance_nm": "route",
+        "cruiseAltitude_ft": "route"
+      }
+    }
+  },
+  "identities": [
+    {
+      "id": "public",
+      "displayName": "Public (least privilege)",
+      "role": "public",
+      "clearance": "unclassified",
+      "categories": ["basic"],
+      "entities": ["Aircraft", "Specification", "Aerodrome"],
+      "allowAggregates": false,
+      "description": "Default identity for unknown or unselected users. Least privilege: basic reference data about the aircraft, its published specifications, and aerodromes. No maintenance history, no flight durations, no flight routes, no aggregates. Unrecognised user ids resolve to this identity (default-deny)."
+    },
+    {
+      "id": "maintenance_engineer",
+      "displayName": "Maintenance Engineer",
+      "role": "maintenance",
+      "clearance": "unclassified",
+      "categories": ["basic", "duration", "maintenance", "performance"],
+      "entities": ["Aircraft", "Specification", "System", "Component", "Document", "Flight"],
+      "allowAggregates": true,
+      "description": "Maintains the airframe, engine and components. Cleared to see flight durations and maintenance history (components, documents, performance), and to run aggregates, but NOT flight routes (departure/destination/distance) and NOT classified flights."
+    },
+    {
+      "id": "restricted_ops",
+      "displayName": "Restricted Operations",
+      "role": "operations",
+      "clearance": "secret",
+      "categories": ["basic", "duration", "route", "maintenance", "performance"],
+      "entities": ["Aircraft", "Specification", "System", "Component", "Document", "Flight", "Aerodrome"],
+      "allowAggregates": true,
+      "description": "Operations role cleared to the highest level. May see everything maintenance can, PLUS flight routes, aerodrome coordinates, and classified (e.g. military) flights that other identities cannot see at all."
+    }
+  ]
+}
