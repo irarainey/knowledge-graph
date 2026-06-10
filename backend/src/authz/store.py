@@ -67,6 +67,13 @@ class PolicyStore:
             for category in identity.categories:
                 if category not in categories:
                     raise PolicyError(f"Identity {identity.id!r} grants unknown category {category!r}.")
+            for category in identity.clearanceGatedCategories:
+                if category not in categories:
+                    raise PolicyError(f"Identity {identity.id!r} clearance-gates unknown category {category!r}.")
+                if category in identity.categories:
+                    # A category is either a full grant or a clearance-gated grant, never both
+                    # (the gating would be meaningless if the category were also fully granted).
+                    raise PolicyError(f"Identity {identity.id!r} grants category {category!r} both fully and clearance-gated.")
             for entity in identity.entities:
                 if entity not in policy.catalog:
                     raise PolicyError(f"Identity {identity.id!r} grants unknown entity {entity!r}.")
@@ -114,6 +121,7 @@ class PolicyStore:
             clearance=identity.clearance,
             clearanceRank=self._rank[identity.clearance],
             categories=frozenset(identity.categories),
+            gatedCategories=frozenset(identity.clearanceGatedCategories),
             entities=frozenset(identity.entities),
             allowAggregates=identity.allowAggregates,
             policyVersion=self._policy.version,
@@ -143,18 +151,45 @@ class PolicyStore:
         return catalog.fields.get(field)
 
     def is_field_visible(self, principal: Principal, entity: str, field: str) -> bool:
-        """True if ``principal`` may see ``entity.field`` (entity granted + category granted)."""
+        """True if ``principal`` may see ``entity.field`` (entity granted + category granted).
+
+        A clearance-gated category counts as visible: the field *name* is permitted and the
+        field may be projected/filtered/aggregated; its *values* are redacted per-row by the
+        query builder on rows above the principal's clearance.
+        """
         if entity not in principal.entities:
             return False
         category = self.field_category(entity, field)
-        return category is not None and category in principal.categories
+        return category is not None and (category in principal.categories or category in principal.gatedCategories)
+
+    def is_field_clearance_gated(self, principal: Principal, entity: str, field: str) -> bool:
+        """True if ``entity.field`` is a clearance-gated field for ``principal``.
+
+        Clearance-gated fields are visible (the name is granted) but their values must be
+        redacted on rows whose classification is above the principal's clearance, rather than
+        the whole row being hidden.
+        """
+        category = self.field_category(entity, field)
+        return category is not None and category in principal.gatedCategories
+
+    def has_gated_categories(self, principal: Principal) -> bool:
+        """True if the principal has any clearance-gated category.
+
+        Such a principal sees classified rows (redacted) instead of having them hidden, so the
+        builder applies field-level redaction rather than the whole-row classification filter.
+        """
+        return bool(principal.gatedCategories)
 
     def visible_fields(self, principal: Principal, entity: str) -> list[str]:
-        """All catalog fields of ``entity`` visible to ``principal`` (in catalog order)."""
+        """All catalog fields of ``entity`` visible to ``principal`` (in catalog order).
+
+        Includes clearance-gated fields: their names are visible (values redacted per-row).
+        """
         catalog = self._policy.catalog.get(entity)
         if catalog is None or entity not in principal.entities:
             return []
-        return [field for field, category in catalog.fields.items() if category in principal.categories]
+        grantable = principal.categories | principal.gatedCategories
+        return [field for field, category in catalog.fields.items() if category in grantable]
 
     def visible_entities(self, principal: Principal) -> list[str]:
         """Catalog entities ``principal`` may query that also have at least one visible field."""

@@ -1,6 +1,6 @@
 {
-  "version": "2026-06-09.2",
-  "description": "External, versioned access policy for the knowledge-graph PoC and the authorization trust boundary's source of truth. Kept OUTSIDE the graph and versioned separately from both the data and the ontology. Authorization is two-dimensional: role-based capability grants (which sensitivity CATEGORIES of fields, which ENTITIES, and whether aggregates are allowed) plus CLEARANCE (gated against each node's in-graph `classification` for row-level visibility). The `catalog` is the curated, queryable surface the structured-intent query builder validates typed queries against; a field absent from the catalog is queryable by no one (default-deny).",
+  "version": "2026-06-10.1",
+  "description": "External, versioned access policy for the knowledge-graph PoC and the authorization trust boundary's source of truth. Kept OUTSIDE the graph and versioned separately from both the data and the ontology. Authorization is two-dimensional: role-based capability grants (which sensitivity CATEGORIES of fields, which ENTITIES, and whether aggregates are allowed) plus CLEARANCE (gated against each node's in-graph `classification` for row-level visibility). An identity may optionally mark categories as `clearanceGatedCategories`: those fields are redacted per-row on classified rows above its clearance instead of the whole row being hidden, so the row stays visible (and counts in aggregates) while the gated fields are protected. The `catalog` is the curated, queryable surface the structured-intent query builder validates typed queries against; a field absent from the catalog is queryable by no one (default-deny).",
   "clearanceLevels": ["unclassified", "official", "secret"],
   "sensitivityCategories": ["basic", "duration", "route", "maintenance", "performance"],
   "defaultIdentity": "public",
@@ -127,9 +127,10 @@
       "role": "maintenance",
       "clearance": "unclassified",
       "categories": ["basic", "duration", "maintenance", "performance"],
+      "clearanceGatedCategories": ["route"],
       "entities": ["Aircraft", "Specification", "System", "Component", "Document", "Flight"],
       "allowAggregates": true,
-      "description": "Maintains the airframe, engine and components. Cleared to see flight durations and maintenance history (components, documents, performance), and to run aggregates, but NOT flight routes (departure/destination/distance) and NOT classified flights."
+      "description": "Maintains the airframe, engine and components. Sees flight durations, maintenance history (components, documents, performance) and the routes of ordinary flights, and may run aggregates. Classified (e.g. military) flights stay visible as records and count toward totals such as flying hours, but their route (departure/destination/distance/altitude) is redacted."
     },
     {
       "id": "restricted_ops",

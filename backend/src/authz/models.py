@@ -15,7 +15,10 @@ Authorization has two independent dimensions:
   ``duration`` vs ``route``). Needed because two identities can share a clearance yet have
   different need-to-know (maintenance and public are both ``unclassified``).
 * **Clearance (row-level)** — *which rows* an identity may see, gated against each node's
-  in-graph ``classification`` (e.g. classified military flights are ``secret``).
+  in-graph ``classification`` (e.g. classified military flights are ``secret``). An identity
+  may instead mark a category as *clearance-gated* (see ``clearanceGatedCategories``): the
+  row stays visible but that category's fields are redacted on rows above its clearance, so
+  e.g. maintenance can see a classified flight existed and count its hours without its route.
 
 Property names are camelCase to mirror the JSON policy file (the repo allows ``N815`` for
 Pydantic models matching JSON, see ``pyproject.toml``).
@@ -41,6 +44,15 @@ class Identity(BaseModel):
     categories: list[str] = Field(default_factory=list, description="Sensitivity categories of fields this identity may see.")
     entities: list[str] = Field(default_factory=list, description="Catalog entities this identity may query.")
     allowAggregates: bool = Field(default=False, description="Whether this identity may run aggregate queries (count/avg/…).")
+    clearanceGatedCategories: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Categories this identity may see, but whose fields are REDACTED (returned null) on rows whose classification "
+            "is above the identity's clearance — instead of hiding the whole row. Lets maintenance see that a classified "
+            "(e.g. military) flight exists and have its duration count in totals, while its route stays hidden. Default-empty: "
+            "classification hides the whole row (the standard behaviour) unless a category is listed here."
+        ),
+    )
     description: str = Field(default="", description="What this identity is allowed to see (informational).")
 
 
@@ -93,6 +105,13 @@ class Principal(BaseModel):
     clearance: str
     clearanceRank: int = Field(description="Index of `clearance` in the policy's ordered clearanceLevels.")
     categories: frozenset[str] = Field(default_factory=frozenset, description="Sensitivity categories this principal may see.")
+    gatedCategories: frozenset[str] = Field(
+        default_factory=frozenset,
+        description=(
+            "Categories the principal may see but which are redacted (nulled) on rows above its clearance, while the row "
+            "itself stays visible. A field in one of these categories is a clearance-gated field for this principal."
+        ),
+    )
     entities: frozenset[str] = Field(default_factory=frozenset, description="Catalog entities this principal may query.")
     allowAggregates: bool = Field(default=False, description="Whether this principal may run aggregate queries.")
     policyVersion: str = Field(description="Version of the policy this principal was resolved under.")

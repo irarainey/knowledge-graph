@@ -15,9 +15,18 @@ participates in execution. Enforcement is layered and deterministic, all outside
    so filters are gated too.
 3. **Aggregate gate** — aggregates require an explicit grant and a visible target field;
    this closes the COUNT/AVG/existence inference channel structurally.
-4. **Row-level classification filter** — a clearance filter is injected into the ``WHERE``
-   clause so classified nodes (e.g. military flights) never participate in the query for an
-   under-cleared principal — not even in an aggregate or an existence check.
+4. **Row-level classification filter** — by default a clearance filter is injected into the
+   ``WHERE`` clause so classified nodes (e.g. military flights) never participate in the query
+   for an under-cleared principal — not even in an aggregate or an existence check.
+5. **Clearance-gated categories (opt-in per identity)** — an identity may instead mark a
+   category as clearance-gated: classified rows then stay visible but that category's fields
+   are protected field-by-field rather than the whole row being hidden. The gated fields are
+   nulled on out-of-clearance rows in the projection, gated-field filters cannot match those
+   rows, and gated-field aggregates exclude them — while non-gated fields and counts still see
+   the rows. This lets e.g. maintenance see that a classified flight existed and include its
+   hours in totals without ever exposing its route. It is a deliberate, auditable relaxation
+   (it reopens an existence/aggregate inference channel for the gated rows), so it is off by
+   default and granted only to identities whose need-to-know requires it.
 
 Values are always parameterised; labels and field names (which Cypher cannot parameterise)
 are taken only from the controlled catalog and additionally validated against a strict
@@ -163,8 +172,10 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
     """Validate ``intent`` against policy and build parameterised, read-only Cypher.
 
     Raises :class:`AuthorizationError` if the entity, any field, any filter field, or the
-    aggregate is not permitted for ``principal``. The returned query always carries a
-    clearance filter so classified rows cannot participate in execution.
+    aggregate is not permitted for ``principal``. By default the returned query carries a
+    clearance filter so classified rows cannot participate in execution; for a principal with
+    clearance-gated categories that whole-row filter is replaced by per-field redaction (see
+    the module docstring) so such rows stay visible with only the gated fields protected.
 
     Temporal filtering is applied here too, deterministically (never by the LLM), in two
     distinct flavours:
@@ -187,12 +198,30 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
 
     parameters: dict[str, FilterValue | list[str] | int] = {}
 
-    # --- WHERE: row-level classification filter (always) + caller filters ---------------
-    # Classified nodes never participate in execution for an under-cleared principal — not
-    # even inside an aggregate or existence check.
+    # --- Row-level classification handling ----------------------------------------------
+    # By default classified nodes never participate in execution for an under-cleared
+    # principal (a whole-row filter) — not even inside an aggregate or existence check.
+    #
+    # A principal with *clearance-gated* categories is the deliberate exception: such rows
+    # stay visible but the gated-category fields are redacted per-row (so e.g. maintenance
+    # sees that a classified flight existed and counts its hours, without its route). For
+    # those principals the whole-row filter is omitted and protection is applied field-by-
+    # field instead: the gated fields are nulled on out-of-clearance rows in the projection,
+    # gated-field filters cannot match classified rows, and gated-field aggregates exclude
+    # them. Non-gated fields (and counts) still see classified rows, which is what lets the
+    # true totals (e.g. flying hours) include classified flights.
     allowed = store.allowed_classifications(principal)
-    parameters[_PARAM_CLASSIFICATIONS] = allowed
-    where = [f"(n.classification IS NULL OR n.classification IN ${_PARAM_CLASSIFICATIONS})"]
+    has_gated = store.has_gated_categories(principal)
+    classification_used = False
+
+    def classification_predicate() -> str:
+        nonlocal classification_used
+        classification_used = True
+        return f"(n.classification IS NULL OR n.classification IN ${_PARAM_CLASSIFICATIONS})"
+
+    where: list[str] = []
+    if not has_gated:
+        where.append(classification_predicate())
 
     # --- WHERE: temporal version filter (only for versioned entities) -------------------
     versioned = entity in VERSIONED_ENTITIES
@@ -218,9 +247,13 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
         field = _safe_identifier(flt.field, "field")
         param = f"p{index}"
         parameters[param] = flt.value
-        where.append(f"n.`{field}` {flt.op.value} ${param}")
-
-    where_clause = " AND ".join(where)
+        predicate = f"n.`{field}` {flt.op.value} ${param}"
+        # A filter on a clearance-gated field must not let classified rows be discovered by
+        # their protected values (e.g. finding a military flight by its destination), so it
+        # only matches rows within the principal's clearance.
+        if has_gated and store.is_field_clearance_gated(principal, entity, flt.field):
+            predicate = f"({classification_predicate()} AND {predicate})"
+        where.append(predicate)
 
     # --- RETURN: aggregate (gated) or projected fields ----------------------------------
     if intent.aggregate is not None:
@@ -230,6 +263,10 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
         if agg.field is not None:
             _require_visible(store, principal, entity, agg.field)
             field = _safe_identifier(agg.field, "field")
+            # Aggregating a clearance-gated field must exclude rows above clearance so the
+            # protected values (e.g. military routes/distance) never contribute to the result.
+            if has_gated and store.is_field_clearance_gated(principal, entity, agg.field):
+                where.append(classification_predicate())
             return_clause = f"{agg.func.value}(n.`{field}`) AS result"
         elif agg.func is AggregateFunc.COUNT:
             return_clause = "count(n) AS result"
@@ -247,7 +284,16 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
             projection = store.visible_fields(principal, entity)
         if not projection:
             raise AuthorizationError(f"No visible fields on '{entity}' for this identity.")
-        return_clause = ", ".join(f"n.`{_safe_identifier(f, 'field')}` AS `{f}`" for f in projection)
+        projected_terms: list[str] = []
+        for f in projection:
+            safe = _safe_identifier(f, "field")
+            # Redact clearance-gated fields on rows above the principal's clearance (the row
+            # stays visible, the protected value becomes null).
+            if has_gated and store.is_field_clearance_gated(principal, entity, f):
+                projected_terms.append(f"CASE WHEN {classification_predicate()} THEN n.`{safe}` ELSE null END AS `{f}`")
+            else:
+                projected_terms.append(f"n.`{safe}` AS `{f}`")
+        return_clause = ", ".join(projected_terms)
         returned_fields = projection
         aggregated = False
         cap = row_cap()
@@ -255,7 +301,12 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
         parameters[_PARAM_LIMIT] = limit
         limit_clause = f" LIMIT ${_PARAM_LIMIT}"
 
-    cypher = f"MATCH (n:`{label}`) WHERE {where_clause} RETURN {return_clause}{limit_clause}"
+    if classification_used:
+        parameters[_PARAM_CLASSIFICATIONS] = allowed
+
+    where_clause = " AND ".join(where)
+    match_where = f" WHERE {where_clause}" if where_clause else ""
+    cypher = f"MATCH (n:`{label}`){match_where} RETURN {return_clause}{limit_clause}"
     # Defence-in-depth: the builder only emits read-only MATCH/RETURN, but re-check anyway.
     assert_safe_cypher(cypher)
     return BuiltQuery(

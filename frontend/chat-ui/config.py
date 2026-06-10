@@ -42,8 +42,8 @@ CONNECT_TIMEOUT_SECONDS = 10
 READ_TIMEOUT_SECONDS = 180
 
 EXAMPLE_QUESTIONS = [
-    "How many flying hours has the engine had since 2026-05-25?",
-    "How much ground distance has the front tyre covered between 2026-05-01 and 2026-05-31?",
+    "How many flying hours has the engine had since 2025-01-01?",
+    "How much ground distance has the front tyre covered between 2025-01-01 and 2026-05-31?",
     "Which aerodromes has the aircraft flown to?",
     "What components make up the fuel system?",
 ]

@@ -21,7 +21,9 @@ empty to return all available fields for that entity.
 STARTS WITH, ENDS WITH) and a value.
 - aggregate: optionally compute count/avg/sum/min/max over the rows (with a field, except \
 for count); only use this when the question asks for a total, average, count, etc.
-- limit: optional maximum number of rows.
+- limit: optional maximum number of rows. Only set this when the user explicitly asks to \
+cap the results (e.g. "the first 5", "top 3", "any one example"). Otherwise omit it so \
+that every matching row is returned and the answer reflects the complete result set.
 
 Always call the tool to fetch data before answering; never answer from prior knowledge. \
 Base your answer solely on the rows it returns. Only use entities and fields that appear \
