@@ -605,10 +605,14 @@ class KnowledgeGraphAgent:
             maf_call_sink.reset(maf_call_token)
             safety_sink.reset(safety_token)
 
-        # Defensive: emit metadata even if the agent produced no tool call or text.
-        if not metadata_emitted:
-            cyphers, records = aggregate_retrieval()
-            yield {"type": "metadata", "cypher_used": cyphers, "records": records}
+        # Emit an authoritative metadata event now the run is complete: the early event
+        # (above) is emitted as soon as the first retrieval returns, so it only carries that
+        # first query. The agent may issue further tool calls afterwards (e.g. resolving
+        # aerodrome codes to names), so re-emit with the full aggregate. The chat UI renders
+        # the debug panel after the stream ends and overwrites its holder on each metadata
+        # event, so this final, complete set is what the panel shows.
+        cyphers, records = aggregate_retrieval()
+        yield {"type": "metadata", "cypher_used": cyphers, "records": records}
 
         cypher_used, records = aggregate_retrieval()
         retrieval_ms = round(sum(entry["duration_ms"] for entry in retrievals), 1)

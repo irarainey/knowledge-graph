@@ -1,5 +1,5 @@
 {
-  "version": "2026-06-10.1",
+  "version": "2026-06-10.4",
   "description": "External, versioned access policy for the knowledge-graph PoC and the authorization trust boundary's source of truth. Kept OUTSIDE the graph and versioned separately from both the data and the ontology. Authorization is two-dimensional: role-based capability grants (which sensitivity CATEGORIES of fields, which ENTITIES, and whether aggregates are allowed) plus CLEARANCE (gated against each node's in-graph `classification` for row-level visibility). An identity may optionally mark categories as `clearanceGatedCategories`: those fields are redacted per-row on classified rows above its clearance instead of the whole row being hidden, so the row stays visible (and counts in aggregates) while the gated fields are protected. The `catalog` is the curated, queryable surface the structured-intent query builder validates typed queries against; a field absent from the catalog is queryable by no one (default-deny).",
   "clearanceLevels": ["unclassified", "official", "secret"],
   "sensitivityCategories": ["basic", "duration", "route", "maintenance", "performance"],
@@ -39,7 +39,7 @@
       }
     },
     "Aerodrome": {
-      "description": "An aerodrome (airport) that appears in the network the aircraft operates in.",
+      "description": "Reference catalogue of every aerodrome (airport) that appears in the network the aircraft operates in. This is NOT a record of where this aircraft has flown — listing aerodromes here says nothing about which the aircraft departed from or flew to (that is route data, held only on Flight). `icao` is its ICAO code (e.g. EGGD); a Flight's departureAerodrome/destinationAerodrome hold these codes, so map a flight aerodrome code to a name by matching it to an Aerodrome's `icao`.",
       "fields": {
         "name": "basic",
         "icao": "basic",
@@ -90,7 +90,7 @@
       }
     },
     "Flight": {
-      "description": "A flight flown by the aircraft. Duration fields are maintenance-relevant; route fields (departure/destination/distance/altitude) are restricted; whole classified (e.g. military) flights are gated by clearance.",
+      "description": "A flight flown by the aircraft. Duration fields are maintenance-relevant; route fields (departure/destination/distance/altitude) are restricted; whole classified (e.g. military) flights are gated by clearance. departureAerodrome is the ICAO code the flight took off from; destinationAerodrome is the ICAO code it landed at — an aerodrome counts as one the aircraft 'flew to'/'landed at' only when it is some flight's destinationAerodrome, while 'departed from'/'took off from' means departureAerodrome.",
       "fields": {
         "name": "basic",
         "date": "basic",
@@ -128,7 +128,7 @@
       "clearance": "unclassified",
       "categories": ["basic", "duration", "maintenance", "performance"],
       "clearanceGatedCategories": ["route"],
-      "entities": ["Aircraft", "Specification", "System", "Component", "Document", "Flight"],
+      "entities": ["Aircraft", "Specification", "System", "Component", "Document", "Flight", "Aerodrome"],
       "allowAggregates": true,
       "description": "Maintains the airframe, engine and components. Sees flight durations, maintenance history (components, documents, performance) and the routes of ordinary flights, and may run aggregates. Classified (e.g. military) flights stay visible as records and count toward totals such as flying hours, but their route (departure/destination/distance/altitude) is redacted."
     },

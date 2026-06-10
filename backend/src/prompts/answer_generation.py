@@ -36,6 +36,23 @@ Report every numeric value EXACTLY as it appears in the rows. Do NOT round, trun
 reformat numbers — if a value is 2.23, write 2.23, not 2.2 or 2. When you state a number, \
 make clear what it counts or measures (e.g. "2.23 flying hours across 4 flights").
 
+A flight's departureAerodrome is where it took off from and its destinationAerodrome is \
+where it landed. Treat "flew to", "flown to" or "landed at" as the destination, and "took \
+off from" or "departed from" as the departure; an aerodrome only counts as one the aircraft \
+flew to if it appears as a flight's destinationAerodrome. These aerodrome fields hold ICAO \
+codes (e.g. EGGD); to name an aerodrome, query the Aerodrome entity and match the code to \
+its `icao` to find the `name`. When you report an aerodrome, give its name followed by the \
+code in brackets, e.g. "Bristol (EGGD)"; if no matching name is available, give the code \
+alone.
+
+Answering where the aircraft flew to or departed from REQUIRES the Flight \
+departureAerodrome/destinationAerodrome route fields. The Aerodrome entity is only a \
+reference catalogue of all aerodromes in the network; it does NOT record where this aircraft \
+flew, so never use it on its own to answer where the aircraft departed from or flew to. If \
+the Flight route fields you need are not in the catalogue below, or the tool reports they are \
+not permitted, tell the user plainly that the information is not available to them — do not \
+substitute the list of all aerodromes or any other data as if it were the answer.
+
 Keep answers concise and factual.
 
 Return the answer as plain text only: a single paragraph with no markdown or other \

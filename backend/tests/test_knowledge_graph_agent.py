@@ -120,6 +120,7 @@ class FakeResponseStream:
         error: Exception | None = None,
         tool_call: Any = None,
         intent: QueryIntent | None = None,
+        intents: list[QueryIntent] | None = None,
         question: str = "",
         instructions: str = "",
         planning_usage: dict[str, Any] | None = None,
@@ -128,7 +129,7 @@ class FakeResponseStream:
         self._final = final
         self._error = error
         self._tool_call = tool_call
-        self._intent = intent
+        self._intents = intents if intents is not None else ([intent] if intent is not None else [])
         self._question = question
         self._instructions = instructions
         self._planning_usage = planning_usage
@@ -145,8 +146,11 @@ class FakeResponseStream:
             self._tool_done = True
             # The agent's tool-planning turn happens first (it emits the typed intent).
             _record_maf_call("agent_planning", self._planning_usage, self._instructions, self._question)
-            # Then the tool runs: validate the intent against policy, build + run the query.
-            await self._tool_call(self._intent)
+            # Then the tool runs (possibly more than once): validate each intent against
+            # policy, build + run the query. Multiple calls mimic the agent issuing follow-up
+            # retrievals (e.g. resolving aerodrome codes to names) before answering.
+            for intent in self._intents:
+                await self._tool_call(intent)
         if self._error is not None:
             raise self._error
         try:
@@ -197,6 +201,7 @@ class FakeMafAgent:
         stream_error: Exception | None = None,
         planning_usage: dict[str, Any] | None = None,
         intent: QueryIntent | None = None,
+        intents: list[QueryIntent] | None = None,
     ) -> None:
         self._text = text
         self._usage = usage_details
@@ -204,6 +209,7 @@ class FakeMafAgent:
         self._stream_error = stream_error
         self._planning_usage = planning_usage
         self._intent = intent
+        self._intents = intents
         self.prompts: list[str] = []
         self.instructions: str = ""
         # Wired by the test to the agent's retrieval tool to simulate the forced call.
@@ -218,6 +224,7 @@ class FakeMafAgent:
             error=self._stream_error,
             tool_call=self.tool_call,
             intent=self._intent,
+            intents=self._intents,
             question=messages,
             instructions=self.instructions,
             planning_usage=self._planning_usage,
@@ -355,6 +362,31 @@ async def test_ask_emits_metadata_tokens_and_done() -> None:
     assert audit["question"] == "How many flights?"
     assert audit["schemaFingerprint"] == "testschemafp"
     assert audit["denied"] == []
+
+
+async def test_ask_final_metadata_aggregates_all_retrievals() -> None:
+    # When the agent issues several tool calls in one turn (e.g. first listing a flight's
+    # destination aerodrome codes, then resolving each code to a name), the final metadata
+    # event must carry EVERY query and row so the debug panel shows the complete picture —
+    # not just the first retrieval.
+    flight_intent = QueryIntent(entity="Flight", fields=["destinationAerodrome"])
+    aerodrome_intent = QueryIntent(entity="Aerodrome", fields=["name", "icao"])
+    maf = FakeMafAgent(stream_texts=["Bristol (EGGD)."], intents=[flight_intent, aerodrome_intent])
+    agent, driver, principal = _make_stream_agent(maf, records=[{"row": 1}])
+
+    events = [event async for event in agent.ask("which aerodromes did each flight reach?", principal=principal)]
+
+    metadata_events = [event for event in events if event["type"] == "metadata"]
+    # The final metadata event is authoritative: both queries and the rows from both runs.
+    final_metadata = metadata_events[-1]
+    assert len(final_metadata["cypher_used"]) == 2
+    assert len(final_metadata["records"]) == 2
+    assert len(driver.queries) == 2
+    # Stats agree with the aggregated metadata.
+    stats = next(event for event in events if event["type"] == "stats")
+    assert stats["cypher_count"] == 2
+    assert stats["record_count"] == 2
+    assert events[-1] == {"type": "done"}
 
 
 async def test_ask_handles_missing_usage() -> None:
