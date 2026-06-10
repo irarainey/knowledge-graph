@@ -244,8 +244,12 @@ Step by step, in `src/agents/knowledge_graph_agent.py`:
    `build_query`, which enforces, in order: an **entity gate** (the entity must be granted),
    a **field gate** (every projected *and* filtered field must be visible to the
    principal), an **aggregate gate** (aggregates need an explicit grant and a visible target
-   field), and an always-injected **row-level clearance filter**
-   (`n.classification IS NULL OR n.classification IN $__authz_classifications`). Values are
+   field), and (by default) an injected **row-level clearance filter**
+   (`n.classification IS NULL OR n.classification IN $__authz_classifications`). For an
+   identity with a **clearance-gated** category that whole-row filter is replaced by per-field
+   `CASE WHEN` redaction plus clearance guards on gated-field filters and aggregates, so
+   classified rows stay visible with only the gated fields nulled (see
+   [Clearance-gated categories](#clearance-gated-categories)). Values are
    always parameterised; labels/fields come only from the controlled catalogue and are
    identifier-validated before interpolation. A denied intent records an audit denial and
    returns a refusal string the agent relays — it never raises a 500.
@@ -255,10 +259,20 @@ Step by step, in `src/agents/knowledge_graph_agent.py`:
    READ routing under the query-safety timeout. This is defence-in-depth on top of the
    builder only ever emitting `MATCH … RETURN`.
 
-6. **Redaction (`redact_records`).** Returned rows are stripped to the projected fields as
-   a safety net, so even an unexpected key (e.g. `classification` itself) never reaches the
-   answer LLM. Rows are capped (`QUERY_ROW_CAP`). If execution fails or returns no rows, the
-   tool returns a graceful message and the agent still answers (with empty `metadata`).
+6. **Redaction (`redact_records`) and name enrichment.** Returned rows are stripped to the
+   projected fields as a safety net, so even an unexpected key (e.g. `classification` itself)
+   never reaches the answer LLM. For a clearance-gated category the gated fields were already
+   nulled per-row in the projection. After redaction, aerodrome **code** fields
+   (`departureAerodrome`/`destinationAerodrome`) are enriched in place with a sibling
+   `<field>Name` resolved from a cached ICAO→name map (`attach_aerodrome_names`), so the answer
+   model receives both code and name from the **single** retrieval — no extra LLM round-trip to
+   look names up. Because enrichment runs *after* redaction, a code already nulled on a
+   classified row yields a null name too (the redaction is inherited, never bypassed). (If the
+   model instead requests a synthetic `departureAerodromeName`/`destinationAerodromeName` field
+   in its intent, the builder canonicalises it back to the underlying code field so the query
+   builds rather than being denied; the name is still attached only here, after retrieval.)
+   Rows are capped (`QUERY_ROW_CAP`). If execution fails or returns no rows, the tool returns a
+   graceful message and the agent still answers (with empty `metadata`).
 
 7. **Answer generation.** Once MAF resets the forced tool choice to `auto` after the first
    iteration, the agent makes its second turn (LLM call #2) and writes the answer from the
@@ -375,7 +389,7 @@ curl -N -X POST http://localhost:8080/ask \
 {"type": "token", "text": "Since "}
 {"type": "token", "text": "2026-05-25"}
 ...
-{"type": "stats", "model": "gpt-5.4", "principal": {"id": "maintenance_engineer", "displayName": "Maintenance Engineer", "role": "maintenance", "clearance": "unclassified", "clearanceRank": 0, "policyVersion": "2026-06-09.2"}, "llm_calls": 2, "tokens": {"prompt": 1494, "completion": 78, "total": 1572}, "calls": [{"stage": "agent_planning", "prompt": 940, "completion": 39, "total": 979, "duration_ms": 720.3}, {"stage": "answer_generation", "prompt": 554, "completion": 39, "total": 593, "duration_ms": 1269.9}], "durations_ms": {"retrieval": 11.4, "graph_query": 11.4, "generation": 1269.9, "total": 2001.6}, "cypher_count": 1, "record_count": 6, "audit": {"timestamp": "2026-06-09T12:00:00.000+00:00", "outcome": "answered", "user": "maintenance_engineer", "role": "maintenance", "clearance": "unclassified", "policyVersion": "2026-06-09.2", "schemaFingerprint": "a1b2c3d4e5f6", "question": "How many flying hours...", "cypher": ["MATCH (n:`Flight`) WHERE (n.classification IS NULL OR n.classification IN $__authz_classifications) RETURN sum(n.`flightTime_hours`) AS result"], "recordCount": 6, "llmCalls": 2, "denied": [], "durationMs": 2001.6}}
+{"type": "stats", "model": "gpt-5.4", "principal": {"id": "maintenance_engineer", "displayName": "Maintenance Engineer", "role": "maintenance", "clearance": "unclassified", "clearanceRank": 0, "policyVersion": "2026-06-10.4"}, "llm_calls": 2, "tokens": {"prompt": 1494, "completion": 78, "total": 1572}, "calls": [{"stage": "agent_planning", "prompt": 940, "completion": 39, "total": 979, "duration_ms": 720.3}, {"stage": "answer_generation", "prompt": 554, "completion": 39, "total": 593, "duration_ms": 1269.9}], "durations_ms": {"retrieval": 11.4, "graph_query": 11.4, "generation": 1269.9, "total": 2001.6}, "cypher_count": 1, "record_count": 6, "audit": {"timestamp": "2026-06-09T12:00:00.000+00:00", "outcome": "answered", "user": "maintenance_engineer", "role": "maintenance", "clearance": "unclassified", "policyVersion": "2026-06-10.4", "schemaFingerprint": "a1b2c3d4e5f6", "question": "How many flying hours...", "cypher": ["MATCH (n:`Flight`) RETURN sum(n.`flightTime_hours`) AS result"], "recordCount": 6, "llmCalls": 2, "denied": [], "durationMs": 2001.6}}
 {"type": "done"}
 ```
 
@@ -394,7 +408,7 @@ curl http://localhost:8080/users
 
 ```json
 {
-  "version": "2026-06-09.1",
+  "version": "2026-06-10.4",
   "users": [
     {"id": "public", "displayName": "Public (least privilege)", "role": "public", "clearance": "unclassified", "description": "..."},
     {"id": "maintenance_engineer", "displayName": "Maintenance Engineer", "role": "maintenance", "clearance": "unclassified", "description": "..."},
@@ -422,7 +436,9 @@ data is read:
 2. **Clearance (row-level, fine).** A clearance level (`unclassified` → `official` →
    `secret`) compared against each node's own in-graph `classification` property, so whole
    *rows* (e.g. a classified military flight) can be hidden even within an entity the
-   identity may otherwise query.
+   identity may otherwise query. A category can optionally be **clearance-gated** so that
+   classified rows stay visible but the gated fields are protected field-by-field instead of
+   the whole row being hidden (see [Clearance-gated categories](#clearance-gated-categories)).
 
 ### The policy is data, not code
 
@@ -437,19 +453,36 @@ at startup; an invalid or missing policy **fails the service closed**. Its four 
 | `clearanceLevels` | The ordered clearance ladder (`unclassified` < `official` < `secret`). |
 | `sensitivityCategories` | The field-sensitivity labels (`basic`, `duration`, `route`, `maintenance`, `performance`). |
 | `catalog` | The **curated, queryable surface**: every entity, each field on it, and the one sensitivity category that field belongs to. *A field absent from the catalog is queryable by no one* (default-deny). |
-| `identities` | The selectable identities, each with a `role`, a `clearance`, the `categories` and `entities` it is granted, and whether it `allowAggregates`. |
+| `identities` | The selectable identities, each with a `role`, a `clearance`, the `categories` and `entities` it is granted, whether any of those categories are `clearanceGatedCategories` (see below), and whether it `allowAggregates`. |
 
 The three demo identities make the two dimensions concrete:
 
 | Identity | Clearance | Entities | Categories | Aggregates | Cannot see |
 |---|---|---|---|---|---|
 | `public` | unclassified | Aircraft, Specification, Aerodrome | `basic` | ❌ | maintenance, durations, routes, classified flights |
-| `maintenance_engineer` | unclassified | + System, Component, Document, Flight | + duration, maintenance, performance | ✅ | flight **routes**, **classified** flights |
-| `restricted_ops` | secret | + Aerodrome | + route | ✅ | — (sees everything, incl. classified flights) |
+| `maintenance_engineer` | unclassified | + System, Component, Document, Flight | + duration, maintenance, performance, **route (clearance-gated)** | ✅ | route details **on classified flights** |
+| `restricted_ops` | secret | (same entities) | + route (full) | ✅ | — (sees everything, incl. classified flights) |
 
-So a maintenance engineer can ask for *total flight time* (a `duration` field, aggregated),
-but a question about *where the aircraft flew* (a `route` field) is refused, and a flight
-`count` silently **excludes** classified flights they aren't cleared for.
+So a maintenance engineer can ask for *total flight time* (a `duration` field, aggregated)
+and *can* see where the aircraft flew — but only on **unclassified** flights: `route` is a
+**clearance-gated** category for that identity (see below), so route fields are nulled on the
+classified (military) flights it isn't cleared for, while a flying-hours total still counts
+those flights. `restricted_ops` holds `route` outright and sees route details on every flight.
+
+#### Clearance-gated categories
+
+A granted category is normally all-or-nothing per row: the row-level clearance filter hides a
+whole classified row, so its fields never appear (not even in a `count`). An identity can
+instead mark a category as **clearance-gated** (`clearanceGatedCategories`), a middle ground
+between the two dimensions: classified rows stay **visible**, but that category's fields are
+protected **field-by-field** rather than the whole row being hidden. For those rows the gated
+fields are nulled in the projection (a `CASE WHEN` on the row's clearance), gated-field filters
+cannot match them, and gated-field aggregates exclude them — while **non-gated** fields, plain
+`count`s, and aggregates over **non-gated** fields still include them. This is what lets
+`maintenance_engineer` total flying hours across *all* flights (including military ones) yet
+never learn where a classified flight went. Clearance-gating is a deliberate, auditable
+relaxation — it reopens an existence/inference channel for those rows — so it is **off by
+default** and granted per-identity only where need-to-know requires it.
 
 ### How an identity becomes a `Principal`
 
@@ -478,10 +511,13 @@ Enforcement happens entirely in the backend, in two places, both outside the LLM
   always-injected **row-level clearance filter**
   (`n.classification IS NULL OR n.classification IN $__authz_classifications`). Because the
   filter is injected *before* aggregation, classified rows never participate in a query —
-  not even in a `count` or existence check. Values are always parameterised; labels and
-  field names come only from the controlled catalogue and are identifier-validated. A denied
-  intent records an audit denial and returns a refusal string (never a 500). Returned rows
-  are then **redacted** to the projected fields as a final defence-in-depth net.
+  not even in a `count` or existence check. (For a **clearance-gated** category the whole-row
+  filter is replaced by per-field `CASE WHEN` redaction plus clearance guards on gated-field
+  filters and aggregates, so classified rows stay visible with only the gated fields nulled.)
+  Values are always parameterised; labels and field names come only from the controlled
+  catalogue and are identifier-validated. A denied intent records an audit denial and returns
+  a refusal string (never a 500). Returned rows are then **redacted** to the projected fields
+  as a final defence-in-depth net.
 
 The full request-time mechanics — guardrail, the two LLM turns, the gate order and the
 redaction net — are documented step-by-step under

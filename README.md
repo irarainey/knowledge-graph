@@ -256,7 +256,9 @@ the selectable identities, and the chat UI's sidebar offers an **“Ask as”** 
 Authorization is **enforced in the backend, outside the LLM**, and is two-dimensional:
 role-based **capability grants** (which entities, which sensitivity categories of field,
 and whether aggregates are allowed) plus **clearance** (compared against each node's
-in-graph `classification`, so whole classified rows stay hidden — even from a `count`).
+in-graph `classification`, so by default whole classified rows stay hidden — even from a
+`count` — unless a category is *clearance-gated* for that identity, in which case the row
+stays visible with only the gated fields nulled).
 Rather than let the model write Cypher, the agent emits a typed *query intent* that the
 backend validates against the principal's policy and turns into a parameterised, read-only
 query deterministically. Because the PoC runs on **Neo4j Community Edition** (no native

@@ -3,12 +3,18 @@
 Four areas: (1) classification & authorization, (2) versioning, (3) federation,
 (4) scalability / external storage. Researched industry approaches + rubber-ducked.
 
-> **Status (2026-06-09):** Phase 0 foundations are now in progress. The **identity** and
-> **external policy store** parts are implemented (see `backend/src/authz/`,
-> `backend/policy/access-policy.json`, the `/users` endpoint and the chat UI's identity
-> selector). The remaining Phase 0 items (audit log, query-safety limits) and Areas 1–4
-> below are not yet built. The authorization enforcement strategy is **decided: Option C
-> (structured-intent)** — see the decision section below.
+> **Status (2026-06-10):** Phase 0 foundations are **complete** — selected-user identity,
+> the **external policy store** (`backend/src/authz/`, `backend/policy/access-policy.json`,
+> `/users`, the chat UI identity selector), the **audit log** (`kg.audit`, surfaced in the
+> debug panel) and **query-safety limits** (read-only `assert_safe_cypher`, statement
+> timeout, row cap). **Area 1 (classification & authorization)** is also implemented via the
+> decided **Option C (structured-intent)** strategy: typed query intents, two-dimensional
+> capability + clearance enforcement in `query_builder.py`, **clearance-gated categories**
+> (e.g. `route` for the maintenance engineer — visible on unclassified flights, nulled on
+> classified ones), and post-retrieval redaction. **Area 2 (versioning)** — valid-time
+> `Specification` versions and event-dated `Flight` as-of queries plus ontology versioning —
+> is implemented. Areas 3–4 (federation, scalability) remain future work. See the decision
+> section below for the enforcement rationale.
 
 ## Hard constraints (shape every decision)
 - **Neo4j Community Edition**: NO native RBAC, NO label/property security, NO multiple
