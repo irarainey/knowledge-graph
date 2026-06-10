@@ -28,6 +28,27 @@ _NOISY_LIBRARIES = (
 )
 
 
+class _Drop404AccessFilter(logging.Filter):
+    """Drop ``uvicorn.access`` records for 404 responses.
+
+    When the service is exposed on a forwarded port it attracts automated discovery
+    scanners (e.g. Microsoft Defender for Endpoint probing for Log4Shell/Struts paths)
+    that hammer non-existent URLs. Those all return 404 and bury the real request log.
+    Uvicorn formats each access record with a positional 5-tuple of
+    ``(client_addr, method, path, http_version, status_code)``, so the status is read
+    from ``record.args[4]``; anything that doesn't match that shape is left untouched.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        if isinstance(args, tuple) and len(args) == 5:
+            try:
+                return int(str(args[4])) != 404
+            except (TypeError, ValueError):
+                return True
+        return True
+
+
 def setup_logging(level: str = "INFO") -> logging.Logger:
     """Initialise and return the application root logger.
 
@@ -52,6 +73,9 @@ def setup_logging(level: str = "INFO") -> logging.Logger:
 
     for name in _NOISY_LIBRARIES:
         logging.getLogger(name).setLevel(logging.WARNING)
+
+    # Silence 404-spam from port scanners so the access log stays readable.
+    logging.getLogger("uvicorn.access").addFilter(_Drop404AccessFilter())
 
     return logger
 
