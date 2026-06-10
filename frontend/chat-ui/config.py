@@ -35,7 +35,7 @@ BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8080").rstrip("/")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip("/")
 NEO4J_BROWSER_URL = _neo4j_browser_url()
 
-# The /ask call drives an LLM (text-to-Cypher + answer generation). Use a short
+# The /ask call drives an LLM (structured retrieval + answer generation). Use a short
 # connect timeout so an unreachable backend fails fast, and a long read timeout so
 # slow reasoning models have time to stream tokens.
 CONNECT_TIMEOUT_SECONDS = 10
@@ -46,4 +46,5 @@ EXAMPLE_QUESTIONS = [
     "How much ground distance has the front tyre covered between 2025-01-01 and 2026-05-31?",
     "Which aerodromes has the aircraft flown to?",
     "What components make up the fuel system?",
+    "What does the POH say about the never-exceed speed?",
 ]

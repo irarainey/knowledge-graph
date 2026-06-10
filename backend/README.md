@@ -150,25 +150,30 @@ curl -X POST http://localhost:8080/query \
 
 `src/agents/knowledge_graph_agent.py` answers natural-language questions over the graph
 with a single [**Microsoft Agent Framework**](https://github.com/microsoft/agent-framework)
-`Agent` that owns orchestration and is given **one typed tool**, `query_knowledge_graph`.
-The agent does **not** write Cypher. Instead it emits a structured *query intent* — an
-entity (node label), the fields to return, optional filters, and an optional aggregate.
-The backend validates that intent against the acting identity's access policy and
-**deterministically builds and runs** a parameterised, read-only Cypher query
-(`src/authz/query_builder.py`). The agent is **forced** to call this tool on its first
-turn, then writes the final answer from the rows it gets back.
+`Agent` that owns orchestration and is given **two typed tools**: `query_knowledge_graph`
+and `fetch_document_content`. For graph questions the agent does **not** write Cypher.
+Instead it emits a structured *query intent* — an entity (node label), the fields to return,
+optional filters, and an optional aggregate. The backend validates that intent against the
+acting identity's access policy and **deterministically builds and runs** a parameterised,
+read-only Cypher query (`src/authz/query_builder.py`). For questions about what a **document**
+says (the POH, a maintenance manual, an airworthiness directive…) the agent calls
+`fetch_document_content`, which returns an authorised, integrity-checked excerpt of a document
+body that lives **outside** the graph (see [External document storage](#external-document-storage-area-4)).
+The agent is **required** to call a tool on its first turn — it chooses which — then writes
+the final answer from what it gets back.
 
 Putting query construction in the backend — not the LLM — is the authorization
 **enforcement** boundary. Unauthorised entities, fields and aggregates are
 rejected before execution, and a row-level **clearance filter** is always injected so
 classified nodes never participate in a query (not even in a `count` or existence check)
-for an under-cleared identity. The agent's instructions and tool surface are scoped per
-request to only the entities and fields the identity may see, so unauthorised field
-*names* never reach the model. Read-only execution is additionally guaranteed by
+for an under-cleared identity. The same two-dimensional check (entity + sensitivity
+category + clearance) gates document bodies. The agent's instructions and tool surface are
+scoped per request to only the entities and fields the identity may see, so unauthorised
+field *names* never reach the model. Read-only execution is additionally guaranteed by
 `assert_safe_cypher` (`common/query_safety.py`), so the model can never modify the graph.
 
-Forcing the tool preserves the grounding guarantee of a deterministic retrieve→generate
-pipeline (the agent only ever answers from rows it actually retrieved) while keeping
+Forcing a tool call preserves the grounding guarantee of a deterministic retrieve→generate
+pipeline (the agent only ever answers from data it actually retrieved) while keeping
 orchestration in native MAF, making it straightforward to add further tools later.
 
 Before any retrieval or LLM call, a **deterministic relevance guardrail** (`common/guardrails.py`,
@@ -182,7 +187,9 @@ against a stock Neo4j Community container. The schema is read once at startup �
 ### How it works
 
 A request to `/ask` flows through the relevance guardrail, then a single MAF agent that
-is forced to retrieve once via its typed tool before answering:
+is required to call a tool once before answering — either the graph **query** tool (shown
+below) or the **document** tool (see
+[External document storage](#external-document-storage-area-4)):
 
 ```
 question
@@ -195,15 +202,16 @@ question
 └──────────────────────────────────┬──────────────────────────────────────────┘
                                     ▼
 ┌──────────────────────────────── MAF Agent (scoped per identity) ────────────┐
-│ Turn 1 — LLM call #1 (planning): forced to call query_knowledge_graph; the   │
-│   model emits a typed intent (entity, fields, filters, optional aggregate).  │
+│ Turn 1 — LLM call #1 (planning): required to call a tool; the model chooses  │
+│   query_knowledge_graph (a typed intent) or fetch_document_content (doc ref). │
 │   ┌──────────────── Backend query builder (NO LLM) ────────────────────────┐ │
 │   │ Validate intent vs policy (entity/field/aggregate gates) → build a       │ │
 │   │ parameterised, read-only Cypher query with an injected clearance filter  │ │
 │   │ → assert_safe_cypher → run (READ routing) → redact → rows as JSON.       │ │
 │   └─────────────────────────────────────────────────────────────────────────┘ │
+│   (a document question instead authorizes + fetches an excerpt — see below.)  │
 │ Turn 2 — LLM call #2 (answer): tool choice auto; the agent writes the final  │
-│ answer from the rows (delivered to the model as the tool-result message).    │
+│ answer from the rows / excerpt (delivered as the tool-result message).       │
 └──────────────────────────────────┬──────────────────────────────────────────┘
                                     ▼
               NDJSON stream { metadata, token…, stats, done }
@@ -294,6 +302,47 @@ Step by step, in `src/agents/knowledge_graph_agent.py`:
 Both LLM calls (planning and answer) target the same Azure OpenAI deployment via the
 Microsoft Agent Framework chat client.
 
+### External document storage (Area 4)
+
+Large document **bodies** are kept **out of the graph** so it scales as a metadata index
+rather than a blob store. Each `Document` node holds only metadata — `documentId`, `title`,
+`name`, `contentType`, `version`, optional `classification`, an opaque `storageRef`, and a
+`checksum` (`sha256:<hex>`). The body itself lives in a pluggable **document store**
+(`src/documents/store.py`):
+
+- `LocalFileDocumentStore` (default) reads `data/documents/<storageRef>.md`. The `storageRef`
+  is validated to a single path segment, so it can never traverse outside the store root.
+- `AzureBlobDocumentStore` is a documented production stub (managed-identity blob access);
+  it is not enabled in the PoC. `build_document_store()` always returns the local store today
+  (its directory comes from `DOCUMENT_STORE_PATH`); wiring in backend selection there is the
+  deliberate production step.
+
+The store is deliberately dumb — it only maps an opaque key to bytes and performs **no**
+authorization. The security boundary is the **access service** (`src/documents/access.py`),
+reached only through the `fetch_document_content` agent tool, which on every fetch:
+
+1. **Resolves** the model's free-text reference to exactly one document
+   (`match_document`: exact `documentId` → exact `title`/`name` → unique substring). An
+   ambiguous or unknown reference yields a generic refusal that does not disclose what exists.
+2. **Authorizes** it with the *same two dimensions as a graph query* (`authorize_document`):
+   the principal must be granted the `Document` entity **and** the `document` sensitivity
+   category, and the document's `classification` must be within the principal's clearance.
+   `public` has neither and is refused at the entity gate; `maintenance_engineer` and
+   `restricted_ops` may read document content.
+3. **Verifies integrity** — the fetched bytes are re-hashed and compared to the graph's
+   recorded `checksum`; a mismatch raises and the content is withheld.
+4. **Sanitises + excerpts** — the body is untrusted text (possible prompt injection), so it
+   is normalised, control-stripped, truncated to `DOCUMENT_EXCERPT_CHAR_CAP`, and handed to
+   the answer model wrapped in `<<<DOCUMENT CONTENT>>>` markers framed as reference **data**,
+   never instructions.
+
+The opaque `storageRef`/blob URI is **never** placed in a tool result, the metadata event, or
+the audit trail, so it cannot leak to the LLM. Document fetches are recorded on the same
+retrieval sink as graph queries (surfacing a `DOCUMENT FETCH: …` descriptor with provenance —
+id/title/version/char-count, **no** body or `storageRef` — in the debug panel) **and** on a
+dedicated audit logger, `kg.audit.document`, separate from the `kg.audit` graph trail, with an
+explicit outcome per access (`released`/`denied`/`integrity_error`/`store_error`).
+
 ### Configuration
 
 Set the Azure OpenAI variables in `backend/.env` (see `.env.example`). They are
@@ -306,6 +355,8 @@ are present.
 | `AZURE_OPENAI_API_KEY` | `<key>` | API key. |
 | `AZURE_OPENAI_DEPLOYMENT` | `gpt-5.4` | Deployment (model) name. |
 | `AZURE_OPENAI_API_VERSION` | `2024-10-21` | API version (used only for classic, non-`/openai/v1` endpoints). |
+| `DOCUMENT_STORE_PATH` | `../data/documents` | Directory the `LocalFileDocumentStore` reads document bodies from (relative paths resolve against the backend working directory). |
+| `DOCUMENT_EXCERPT_CHAR_CAP` | `8000` | Maximum characters of a document body handed to the answer model; longer bodies are truncated. |
 
 ### `POST /ask`
 
@@ -322,8 +373,8 @@ one object per line:
 
 | Event | Shape | When |
 | --- | --- | --- |
-| `progress` | `{ "type": "progress", "phase": "planning" \| "cypher" \| "querying" \| "answering" }` | Repeated, as the pipeline advances through its stages — so the client can show which step is in flight. Skipped for off-topic questions. |
-| `metadata` | `{ "type": "metadata", "cypher_used": [...], "records": [...] }` | Once, after retrieval, before any tokens. |
+| `progress` | `{ "type": "progress", "phase": "planning" \| "cypher" \| "querying" \| "document" \| "answering" }` | Repeated, as the pipeline advances through its stages — so the client can show which step is in flight. `cypher`/`querying` accompany a graph query; `document` replaces them when the agent fetches a document body instead. Skipped for off-topic questions. |
+| `metadata` | `{ "type": "metadata", "cypher_used": [...], "records": [...] }` | Once, after retrieval, before any tokens. For a document fetch `cypher_used` carries a `DOCUMENT FETCH: …` provenance descriptor (never the `storageRef`) and `records` carries the document's provenance metadata. |
 | `token` | `{ "type": "token", "text": "..." }` | Repeated, as answer tokens arrive. |
 | `error` | `{ "type": "error", "message": "..." }` | Only on failure (in-band, since headers are already sent). |
 | `stats` | `{ "type": "stats", "model": ..., "principal": {...}, "llm_calls": N, "tokens": {...}, "calls": [...], "durations_ms": {...}, "cypher_count": N, "record_count": N, "audit": {...}, "versioning": {...} }` | Once, just before `done` — debug/telemetry for the request. |
@@ -355,13 +406,13 @@ version selection **or** an event-date cutoff was actually injected) and the act
 `ontology_version`.
 
 The `progress` events let the client surface the pipeline stage currently in flight.
-The query-build and graph-query steps run inside the forced tool and emit no answer
-tokens, so without these events the UI would stall on one label for seconds. Each stage
-calls a per-request progress callback at its boundary (`planning` up front, then `cypher`
-for the deterministic build, `querying` and `answering`); `ask` merges those onto the
-response stream alongside the answer tokens (the query runs in a worker thread, so its
-progress is marshalled back onto the event loop). The phases mirror the steps in the chat
-UI's debug panel.
+The retrieval steps run inside the required tool and emit no answer tokens, so without these
+events the UI would stall on one label for seconds. Each stage calls a per-request progress
+callback at its boundary (`planning` up front, then either `cypher` for the deterministic
+build and `querying` for a graph query, or `document` for a document-body fetch, and finally
+`answering`); `ask` merges those onto the response stream alongside the answer tokens (the
+tool runs in a worker thread, so its progress is marshalled back onto the event loop). The
+phases mirror the steps in the chat UI's debug panel.
 
 Because retrieval runs first, the client receives the Cypher and rows up front and can
 render the answer progressively. The retrieval step runs in a worker thread while
@@ -389,12 +440,35 @@ curl -N -X POST http://localhost:8080/ask \
 {"type": "token", "text": "Since "}
 {"type": "token", "text": "2026-05-25"}
 ...
-{"type": "stats", "model": "gpt-5.4", "principal": {"id": "maintenance_engineer", "displayName": "Maintenance Engineer", "role": "maintenance", "clearance": "unclassified", "clearanceRank": 0, "policyVersion": "2026-06-10.4"}, "llm_calls": 2, "tokens": {"prompt": 1494, "completion": 78, "total": 1572}, "calls": [{"stage": "agent_planning", "prompt": 940, "completion": 39, "total": 979, "duration_ms": 720.3}, {"stage": "answer_generation", "prompt": 554, "completion": 39, "total": 593, "duration_ms": 1269.9}], "durations_ms": {"retrieval": 11.4, "graph_query": 11.4, "generation": 1269.9, "total": 2001.6}, "cypher_count": 1, "record_count": 6, "audit": {"timestamp": "2026-06-09T12:00:00.000+00:00", "outcome": "answered", "user": "maintenance_engineer", "role": "maintenance", "clearance": "unclassified", "policyVersion": "2026-06-10.4", "schemaFingerprint": "a1b2c3d4e5f6", "question": "How many flying hours...", "cypher": ["MATCH (n:`Flight`) RETURN sum(n.`flightTime_hours`) AS result"], "recordCount": 6, "llmCalls": 2, "denied": [], "durationMs": 2001.6}}
+{"type": "stats", "model": "gpt-5.4", "principal": {"id": "maintenance_engineer", "displayName": "Maintenance Engineer", "role": "maintenance", "clearance": "unclassified", "clearanceRank": 0, "policyVersion": "2026-06-10.5"}, "llm_calls": 2, "tokens": {"prompt": 1494, "completion": 78, "total": 1572}, "calls": [{"stage": "agent_planning", "prompt": 940, "completion": 39, "total": 979, "duration_ms": 720.3}, {"stage": "answer_generation", "prompt": 554, "completion": 39, "total": 593, "duration_ms": 1269.9}], "durations_ms": {"retrieval": 11.4, "graph_query": 11.4, "generation": 1269.9, "total": 2001.6}, "cypher_count": 1, "record_count": 6, "audit": {"timestamp": "2026-06-09T12:00:00.000+00:00", "outcome": "answered", "user": "maintenance_engineer", "role": "maintenance", "clearance": "unclassified", "policyVersion": "2026-06-10.5", "schemaFingerprint": "a1b2c3d4e5f6", "question": "How many flying hours...", "cypher": ["MATCH (n:`Flight`) RETURN sum(n.`flightTime_hours`) AS result"], "recordCount": 6, "llmCalls": 2, "denied": [], "durationMs": 2001.6}}
 {"type": "done"}
 ```
 
-The [`frontend/chat-ui`](../frontend/chat-ui) project consumes this endpoint to stream answers
-into a chat interface.
+For a **document** question the same endpoint instead drives the `fetch_document_content`
+tool — note the `document` progress phase and the `DOCUMENT FETCH` provenance descriptor in
+place of a Cypher query (the opaque `storageRef` is never surfaced):
+
+```bash
+curl -N -X POST http://localhost:8080/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"question": "What does the POH say about the never-exceed speed?", "user": "maintenance_engineer"}'
+```
+
+```
+{"type": "progress", "phase": "planning"}
+{"type": "progress", "phase": "document"}
+{"type": "progress", "phase": "answering"}
+{"type": "metadata", "cypher_used": ["DOCUMENT FETCH: DOC-0001 \"Pilot's Operating Handbook — C172S\" v3 (1010 chars, checksum verified)"], "records": [{"documentId": "DOC-0001", "title": "Pilot's Operating Handbook — C172S", "version": 3, "contentType": "text/markdown", "charCount": 1010, "truncated": false}]}
+{"type": "token", "text": "The POH "}
+{"type": "token", "text": "states the never-exceed speed (Vne) is 163 KIAS."}
+...
+{"type": "stats", "model": "gpt-5.4", "principal": {"id": "maintenance_engineer", ...}, "llm_calls": 2, "cypher_count": 1, "record_count": 1, "audit": {"outcome": "answered", "cypher": ["DOCUMENT FETCH: DOC-0001 \"Pilot's Operating Handbook — C172S\" v3 (1010 chars, checksum verified)"], ...}, "versioning": {...}}
+{"type": "done"}
+```
+
+A `public` identity asking the same question is **refused** at the entity gate (it holds
+neither the `Document` entity nor the `document` category), and the refusal is recorded on
+the `kg.audit.document` trail.
 
 ### `GET /users`
 
@@ -408,7 +482,7 @@ curl http://localhost:8080/users
 
 ```json
 {
-  "version": "2026-06-10.4",
+  "version": "2026-06-10.5",
   "users": [
     {"id": "public", "displayName": "Public (least privilege)", "role": "public", "clearance": "unclassified", "description": "..."},
     {"id": "maintenance_engineer", "displayName": "Maintenance Engineer", "role": "maintenance", "clearance": "unclassified", "description": "..."},
@@ -451,7 +525,7 @@ at startup; an invalid or missing policy **fails the service closed**. Its four 
 | Key | What it defines |
 |---|---|
 | `clearanceLevels` | The ordered clearance ladder (`unclassified` < `official` < `secret`). |
-| `sensitivityCategories` | The field-sensitivity labels (`basic`, `duration`, `route`, `maintenance`, `performance`). |
+| `sensitivityCategories` | The field-sensitivity labels (`basic`, `duration`, `route`, `maintenance`, `performance`) plus `document`, the capability that gates reading an externalised document **body**. |
 | `catalog` | The **curated, queryable surface**: every entity, each field on it, and the one sensitivity category that field belongs to. *A field absent from the catalog is queryable by no one* (default-deny). |
 | `identities` | The selectable identities, each with a `role`, a `clearance`, the `categories` and `entities` it is granted, whether any of those categories are `clearanceGatedCategories` (see below), and whether it `allowAggregates`. |
 
@@ -459,15 +533,18 @@ The three demo identities make the two dimensions concrete:
 
 | Identity | Clearance | Entities | Categories | Aggregates | Cannot see |
 |---|---|---|---|---|---|
-| `public` | unclassified | Aircraft, Specification, Aerodrome | `basic` | ❌ | maintenance, durations, routes, classified flights |
-| `maintenance_engineer` | unclassified | + System, Component, Document, Flight | + duration, maintenance, performance, **route (clearance-gated)** | ✅ | route details **on classified flights** |
-| `restricted_ops` | secret | (same entities) | + route (full) | ✅ | — (sees everything, incl. classified flights) |
+| `public` | unclassified | Aircraft, Specification, Aerodrome | `basic` | ❌ | maintenance, durations, routes, classified flights, document content |
+| `maintenance_engineer` | unclassified | + System, Component, Document, Flight | + duration, maintenance, performance, **document**, **route (clearance-gated)** | ✅ | route details **on classified flights** |
+| `restricted_ops` | secret | (same entities) | + route (full) (incl. **document**) | ✅ | — (sees everything, incl. classified flights) |
 
 So a maintenance engineer can ask for *total flight time* (a `duration` field, aggregated)
 and *can* see where the aircraft flew — but only on **unclassified** flights: `route` is a
 **clearance-gated** category for that identity (see below), so route fields are nulled on the
 classified (military) flights it isn't cleared for, while a flying-hours total still counts
-those flights. `restricted_ops` holds `route` outright and sees route details on every flight.
+those flights. It also holds the `document` category, so it may read document **bodies** via
+`fetch_document_content` (the POH, manuals, ADs); `public` holds neither the `Document` entity
+nor the `document` category, so document content is refused at the entity gate.
+`restricted_ops` holds `route` outright and sees route details on every flight.
 
 #### Clearance-gated categories
 
@@ -662,6 +739,13 @@ records each one as part of the same trust boundary.
   the Cypher run, the record count, the LLM-call count, any query-safety `denied` constructs,
   the `outcome` and the duration — making every answer attributable to an identity and a
   policy version.
+- **Document-access audit** — externalised document-body fetches are additionally recorded on
+  a dedicated `kg.audit.document` logger (separate from the `kg.audit` graph trail), one line
+  per access with an explicit `outcome` (`released`/`denied`/`integrity_error`/`store_error`),
+  the principal, the requested reference and the resolved `documentId`/`version`/char-count —
+  never the opaque `storageRef`. Document fetches also appear in the debug panel as a
+  `DOCUMENT FETCH: …` provenance descriptor. See
+  [External document storage](#external-document-storage-area-4).
 
 | Variable | Default | Purpose |
 |---|---|---|

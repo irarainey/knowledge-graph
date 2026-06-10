@@ -1,9 +1,10 @@
 """Streamlit chat UI for the Knowledge Graph natural-language `/ask` endpoint.
 
 This is a thin client: it sends a question to the FastAPI backend's ``POST /ask``
-endpoint and renders the streamed answer along with the Cypher the agent ran and the
-graph rows it retrieved. It holds no business logic — all retrieval and reasoning happen
-in the backend (see ``backend/src/agents/knowledge_graph_agent.py``).
+endpoint and renders the streamed answer along with the retrieval provenance — the Cypher
+the agent ran (for graph questions) or a document-fetch descriptor (for document questions)
+and the records it retrieved. It holds no business logic — all retrieval and reasoning
+happen in the backend (see ``backend/src/agents/knowledge_graph_agent.py``).
 
 The supporting pieces live in sibling modules: configuration in ``config``, the
 streaming HTTP client in ``backend_client``, the debug-panel rendering in
@@ -33,11 +34,12 @@ from styles import PAGE_CSS
 
 # Human-readable status labels for each backend pipeline ``progress`` phase, shown in
 # the "thinking" status box so it reflects the stage actually in flight. Mirrors the
-# steps in the debug panel: tool-planning → build query → run query → answer.
+# steps in the debug panel: tool-planning → build query → run query (or fetch document) → answer.
 _PROGRESS_LABELS = {
     "planning": "Deciding what to fetch…",
     "cypher": "Building the query…",
     "querying": "Querying the graph database…",
+    "document": "Fetching document content…",
     "answering": "Generating the answer…",
 }
 

@@ -22,3 +22,17 @@ ENV_QUERY_TIMEOUT_SECONDS = "QUERY_TIMEOUT_SECONDS"
 QUERY_TIMEOUT_SECONDS_DEFAULT = 10.0
 ENV_QUERY_ROW_CAP = "QUERY_ROW_CAP"
 QUERY_ROW_CAP_DEFAULT = 1000
+
+# External document content store (Area 4 — scalability). Document *bodies* live outside the
+# graph; the graph holds only metadata (the index). The local store reads content files from
+# this directory, keyed by each Document node's opaque `storageRef`. An Azure Blob backend is
+# provided as a documented stub for production. Tunable via the environment.
+ENV_DOCUMENT_STORE_PATH = "DOCUMENT_STORE_PATH"
+# Default: the repo's seeded content directory (backend/ -> repo root -> data/documents).
+DOCUMENT_STORE_PATH_DEFAULT = "../data/documents"
+
+# Maximum number of characters of document body returned to the answer model per fetch, so a
+# large externalised document cannot blow the context window. The returned excerpt is truncated
+# to this length (a note is appended when truncation occurs).
+ENV_DOCUMENT_EXCERPT_CHAR_CAP = "DOCUMENT_EXCERPT_CHAR_CAP"
+DOCUMENT_EXCERPT_CHAR_CAP_DEFAULT = 8000

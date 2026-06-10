@@ -51,13 +51,14 @@ links out to the Vue renderer and the Neo4j browser, opening each in a new tab.)
   Runs on <http://localhost:8501>. Sidebar buttons open the Vue graph renderer and the
   Neo4j browser in a new tab.
 - **Backend** — Python FastAPI service. A single **Microsoft Agent Framework** agent
-  (backed by Azure OpenAI) is given one **typed** tool: it emits a structured *query
-  intent* (entity, fields, filters, optional aggregate) rather than writing Cypher. The
-  backend validates that intent against the acting identity's access policy and
-  **deterministically builds and runs** a parameterised, read-only Cypher query, so
-  authorization is enforced outside the LLM. The agent is forced to retrieve before
-  answering from the rows. A deterministic relevance guardrail (no extra LLM call) rejects
-  off-topic questions up front. Uses uv. Runs on <http://localhost:8080>.
+  (backed by Azure OpenAI) is given two **typed** tools and is required to call one before
+  answering: `query_knowledge_graph` (it emits a structured *query intent* — entity, fields,
+  filters, optional aggregate — rather than writing Cypher; the backend validates it against
+  the acting identity's access policy and **deterministically builds and runs** a
+  parameterised, read-only Cypher query) and `fetch_document_content` (returns an authorised,
+  checksum-verified excerpt of a **document body** held outside the graph). Authorization is
+  enforced outside the LLM for both. A deterministic relevance guardrail (no extra LLM call)
+  rejects off-topic questions up front. Uses uv. Runs on <http://localhost:8080>.
 - **Neo4j** — Graph database running as a Docker container, storing the aircraft's nodes
   and relationships.
 
@@ -65,11 +66,12 @@ links out to the Vue renderer and the Neo4j browser, opening each in a new tab.)
 
 A question asked in the Streamlit UI is first screened by a deterministic relevance
 guardrail (no LLM call), then handled by a single **Microsoft Agent Framework** agent that
-is forced to retrieve via its typed query tool before generating the answer. Because the
-LLM emits a structured intent and the backend turns it into Cypher deterministically, a
-question makes **two** LLM calls — agent planning and answer generation — with **no
-cypher-generation LLM call**. The steps are surfaced, in order, in the UI's per-answer
-**Debug details** panel.
+is required to call a tool before answering. The agent chooses between two typed tools — a
+graph **query** tool (the LLM emits a structured intent and the backend turns it into Cypher
+deterministically) and a **document** tool (fetch an authorised excerpt of a document body
+stored outside the graph). Either way a question makes **two** LLM calls — agent planning
+and answer generation — with **no cypher-generation LLM call**. The steps are surfaced, in
+order, in the UI's per-answer **Debug details** panel.
 
 ```
 User ─ question ─▶ Streamlit UI ─ POST /ask ─▶ Backend
@@ -78,15 +80,17 @@ User ─ question ─▶ Streamlit UI ─ POST /ask ─▶ Backend
    ▼
 Step 0 · Relevance guardrail (no LLM)
          Backend ──(off-topic? → fixed refusal)──▶ Streamlit UI   [on-topic: continue]
-Step 1 · Agent is forced to call its typed query tool  [LLM call 1: planning]
+Step 1 · Agent is required to call a tool; it picks one  [LLM call 1: planning]
          Backend ──(policy-scoped catalog + question)──▶ Azure OpenAI
-         Azure OpenAI ──(structured query intent)──▶ Backend
-Step 2 · Backend builds and runs the query (no LLM)
-         Backend ──(validate intent vs policy → build parameterised, read-only Cypher
-                    with a clearance filter → run)──▶ Neo4j ──(rows)──▶ Backend
-         Backend ──(metadata event: cypher_used, records)──▶ Streamlit UI
-Step 3 · Agent generates the answer from the retrieved rows  [LLM call 2: answer]
-         Backend ──(rows as tool result)──▶ Azure OpenAI
+         Azure OpenAI ──(query intent  OR  document reference)──▶ Backend
+Step 2 · Backend retrieves (no LLM)
+         · query tool:    validate intent vs policy → build parameterised, read-only Cypher
+                          with a clearance filter → run ──▶ Neo4j ──(rows)──▶ Backend
+         · document tool: authorize (entity + document category + clearance) → fetch from the
+                          document store → verify checksum → sanitise/excerpt ──▶ Backend
+         Backend ──(metadata event: cypher_used / DOCUMENT FETCH descriptor, records)──▶ Streamlit UI
+Step 3 · Agent generates the answer from the retrieved rows / excerpt  [LLM call 2: answer]
+         Backend ──(retrieved data as tool result)──▶ Azure OpenAI
          Azure OpenAI ──(answer tokens)──▶ Backend ──(token events)──▶ Streamlit UI
 Finally  Backend ──(stats event: tokens, durations)──▶ Streamlit UI ─▶ Debug details
          Backend ──(done event)──▶ Streamlit UI
@@ -224,6 +228,15 @@ curl -N -X POST http://localhost:8080/ask \
   -d '{"question": "How many flying hours has the engine had since 2026-05-25?"}'
 ```
 
+To read a **document** body instead of graph data, ask an identity that holds the `document`
+capability (e.g. the maintenance engineer); the agent uses its `fetch_document_content` tool:
+
+```bash
+curl -N -X POST http://localhost:8080/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"question": "What does the POH say about the never-exceed speed?", "user": "maintenance_engineer"}'
+```
+
 `POST /ask` returns the answer as a stream of newline-delimited JSON (NDJSON)
 events so it can be rendered token-by-token: one `metadata` event (the Cypher and rows),
 many `token` events, a `stats` event (debug telemetry — tokens and per-step durations),
@@ -272,6 +285,14 @@ schema/admin namespaces) and bounded by a per-statement timeout (`QUERY_TIMEOUT_
 and a row cap (`QUERY_ROW_CAP`); every answered, refused or failed request writes one
 record to a `kg.audit` trail (also surfaced in the chat UI's debug panel) attributing it
 to an identity, policy version and schema fingerprint.
+
+Large **document bodies** are kept **out of the graph** (it stays a metadata index): each
+`Document` node holds only metadata and an opaque `storageRef`, while the content lives in a
+pluggable document store (local filesystem by default; an Azure Blob backend is stubbed).
+Bodies are reachable **only** through the `/ask` agent flow via a second typed tool
+(`fetch_document_content`), under the **same** authorization (Document entity + a `document`
+capability + clearance) and with a checksum-integrity check; the `storageRef`/URI is never
+shown to the LLM, and document access is recorded on a separate `kg.audit.document` trail.
 
 ```bash
 curl http://localhost:8080/users

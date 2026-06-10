@@ -95,3 +95,18 @@ def row_cap() -> int:
         return max(int(raw), 1)
     except ValueError:
         return config.QUERY_ROW_CAP_DEFAULT
+
+
+def document_excerpt_char_cap() -> int:
+    """Maximum characters of an externalised document body returned to the answer model.
+
+    Bounds the context an externalised (potentially large) document can consume, the same way
+    :func:`row_cap` bounds rows. Tunable via ``DOCUMENT_EXCERPT_CHAR_CAP``.
+    """
+    raw = os.getenv(config.ENV_DOCUMENT_EXCERPT_CHAR_CAP)
+    if raw is None:
+        return config.DOCUMENT_EXCERPT_CHAR_CAP_DEFAULT
+    try:
+        return max(int(raw), 1)
+    except ValueError:
+        return config.DOCUMENT_EXCERPT_CHAR_CAP_DEFAULT

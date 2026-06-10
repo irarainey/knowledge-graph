@@ -1,8 +1,8 @@
 {
-  "version": "2026-06-10.4",
+  "version": "2026-06-10.5",
   "description": "External, versioned access policy for the knowledge-graph PoC and the authorization trust boundary's source of truth. Kept OUTSIDE the graph and versioned separately from both the data and the ontology. Authorization is two-dimensional: role-based capability grants (which sensitivity CATEGORIES of fields, which ENTITIES, and whether aggregates are allowed) plus CLEARANCE (gated against each node's in-graph `classification` for row-level visibility). An identity may optionally mark categories as `clearanceGatedCategories`: those fields are redacted per-row on classified rows above its clearance instead of the whole row being hidden, so the row stays visible (and counts in aggregates) while the gated fields are protected. The `catalog` is the curated, queryable surface the structured-intent query builder validates typed queries against; a field absent from the catalog is queryable by no one (default-deny).",
   "clearanceLevels": ["unclassified", "official", "secret"],
-  "sensitivityCategories": ["basic", "duration", "route", "maintenance", "performance"],
+  "sensitivityCategories": ["basic", "duration", "route", "maintenance", "performance", "document"],
   "defaultIdentity": "public",
   "catalog": {
     "Aircraft": {
@@ -82,9 +82,13 @@
       }
     },
     "Document": {
-      "description": "A maintenance or reference document (manual, AD, service bulletin).",
+      "description": "A maintenance or reference document (manual, AD, service bulletin). Only metadata lives in the graph (it acts as the index): the document body is stored externally and fetched backend-side via the document tool, NOT through a graph query. Reading the body requires the `document` sensitivity category; an identity without it can still see a document exists and its title/version but not its text. The body is never a graph field, so it is absent from this catalog by design.",
       "fields": {
         "name": "basic",
+        "documentId": "basic",
+        "title": "basic",
+        "contentType": "basic",
+        "version": "basic",
         "revision": "maintenance",
         "system": "maintenance"
       }
@@ -126,7 +130,7 @@
       "displayName": "Maintenance Engineer",
       "role": "maintenance",
       "clearance": "unclassified",
-      "categories": ["basic", "duration", "maintenance", "performance"],
+      "categories": ["basic", "duration", "maintenance", "performance", "document"],
       "clearanceGatedCategories": ["route"],
       "entities": ["Aircraft", "Specification", "System", "Component", "Document", "Flight", "Aerodrome"],
       "allowAggregates": true,
@@ -137,7 +141,7 @@
       "displayName": "Restricted Operations",
       "role": "operations",
       "clearance": "secret",
-      "categories": ["basic", "duration", "route", "maintenance", "performance"],
+      "categories": ["basic", "duration", "route", "maintenance", "performance", "document"],
       "entities": ["Aircraft", "Specification", "System", "Component", "Document", "Flight", "Aerodrome"],
       "allowAggregates": true,
       "description": "Operations role cleared to the highest level. May see everything maintenance can, PLUS flight routes, aerodrome coordinates, and classified (e.g. military) flights that other identities cannot see at all."

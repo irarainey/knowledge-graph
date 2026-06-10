@@ -320,7 +320,7 @@
         "Flap"
       ],
       "properties": {
-        "name": "Flaps (0\u201330\u00b0)",
+        "name": "Flaps (0–30°)",
         "type": "single-slotted, electric",
         "settings_deg": "0/10/20/30"
       }
@@ -540,7 +540,13 @@
         "POH"
       ],
       "properties": {
-        "name": "POH \u2014 C172S"
+        "name": "POH — C172S",
+        "documentId": "DOC-0001",
+        "title": "Pilot's Operating Handbook — C172S",
+        "contentType": "text/markdown",
+        "version": 3,
+        "storageRef": "poh",
+        "checksum": "sha256:2adb84c2604efed2cf29081fc6d825ac3fa7a5adf11bb1b13035bf8c1d603f48"
       }
     },
     {
@@ -550,7 +556,13 @@
         "MaintenanceManual"
       ],
       "properties": {
-        "name": "Maintenance Manual"
+        "name": "Maintenance Manual",
+        "documentId": "DOC-0002",
+        "title": "Maintenance Manual — C172S",
+        "contentType": "text/markdown",
+        "version": 2,
+        "storageRef": "maintManual",
+        "checksum": "sha256:e5ab612562eaf30a7e4746463f4ceceb06c71e29224a01700aa49fbe06e943de"
       }
     },
     {
@@ -560,7 +572,13 @@
         "TypeCertificate"
       ],
       "properties": {
-        "name": "Type Certificate"
+        "name": "Type Certificate",
+        "documentId": "DOC-0003",
+        "title": "Type Certificate Data Sheet — C172 Series",
+        "contentType": "text/markdown",
+        "version": 1,
+        "storageRef": "typeCert",
+        "checksum": "sha256:a7dab17b7dcb11fa426d027bc19ac297dabd1bba7e17898df46432200073b366"
       }
     },
     {
@@ -570,7 +588,13 @@
         "AirworthinessDirective"
       ],
       "properties": {
-        "name": "Airworthiness Dir."
+        "name": "Airworthiness Dir.",
+        "documentId": "DOC-0004",
+        "title": "Airworthiness Directive — Seat Rail Inspection",
+        "contentType": "text/markdown",
+        "version": 1,
+        "storageRef": "ad",
+        "checksum": "sha256:555da73914cecc6af1492dd97b5f6a78123c898a5786f806c30b01a0d92a4a1d"
       }
     },
     {
@@ -3106,7 +3130,13 @@
       ],
       "properties": {
         "name": "Normal Procedures Checklist",
-        "revision": "C172S POH Section 4"
+        "revision": "C172S POH Section 4",
+        "documentId": "DOC-0005",
+        "title": "Normal Procedures Checklist — C172S",
+        "contentType": "text/markdown",
+        "version": 1,
+        "storageRef": "checklist",
+        "checksum": "sha256:528d24bf2e9f65b9e5f8e6cd271969888562af32d0e96b33193c6fed6ad3f079"
       }
     },
     {
@@ -3116,7 +3146,13 @@
         "WeightBalanceRecord"
       ],
       "properties": {
-        "name": "Weight & Balance Record"
+        "name": "Weight & Balance Record",
+        "documentId": "DOC-0006",
+        "title": "Weight & Balance Record — G-ECHO",
+        "contentType": "text/markdown",
+        "version": 4,
+        "storageRef": "wbSheet",
+        "checksum": "sha256:ca1ff9a1227c5ca2079448c9d938013a3213442a56132d6fb40b8c2743a09af7"
       }
     },
     {
@@ -3132,7 +3168,12 @@
         "version": 1,
         "validFrom": "2024-03-01",
         "validTo": null,
-        "current": true
+        "current": true,
+        "documentId": "DOC-0007",
+        "title": "Garmin G1000 NXi Pilot's Guide",
+        "contentType": "text/markdown",
+        "storageRef": "g1000Manual",
+        "checksum": "sha256:3ad501d4e4d32370c414506eadd4d42e7c2931f0461c4fb48d3593abdeeec341"
       }
     },
     {
@@ -3142,7 +3183,13 @@
         "AFMSupplement"
       ],
       "properties": {
-        "name": "AFM Supplements"
+        "name": "AFM Supplements",
+        "documentId": "DOC-0008",
+        "title": "AFM Supplements — G-ECHO",
+        "contentType": "text/markdown",
+        "version": 2,
+        "storageRef": "afmSupp",
+        "checksum": "sha256:31bf2c642f4466fe61b1f1d11ce0d74ed9d8839b2889b774adc3a0c4b0e6c556"
       }
     },
     {

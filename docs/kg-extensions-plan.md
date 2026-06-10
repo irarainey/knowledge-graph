@@ -13,15 +13,23 @@ Four areas: (1) classification & authorization, (2) versioning, (3) federation,
 > (e.g. `route` for the maintenance engineer — visible on unclassified flights, nulled on
 > classified ones), and post-retrieval redaction. **Area 2 (versioning)** — valid-time
 > `Specification` versions and event-dated `Flight` as-of queries plus ontology versioning —
-> is implemented. Areas 3–4 (federation, scalability) remain future work. See the decision
-> section below for the enforcement rationale.
+> is implemented. **Area 4 (scalability / external storage)** is now implemented for
+> **document content**: large Document *bodies* live outside the graph in a pluggable
+> `DocumentStore` (local-filesystem default, Azure Blob stub), fetched backend-mediated and
+> surfaced **only** through the `/ask` agent flow via a second typed tool
+> (`fetch_document_content`) under the same authorization (Document entity + `document`
+> category + clearance) and a checksum-integrity check, with a separate `kg.audit.document`
+> trail. Area 3 (federation) remains future work. See the decision section below for the
+> enforcement rationale.
 
 ## Hard constraints (shape every decision)
 - **Neo4j Community Edition**: NO native RBAC, NO label/property security, NO multiple
   databases, NO Fabric/composite DBs. Those are Enterprise. ⇒ enforcement lives in the
   **FastAPI backend**, not the database.
-- **Text-to-Cypher**: the LLM emits arbitrary read Cypher over the whole graph today.
-  This is the riskiest interaction. The LLM cannot be trusted to enforce policy.
+- **Untrusted LLM**: originally the LLM emitted arbitrary read Cypher over the whole graph —
+  the riskiest interaction. The LLM cannot be trusted to enforce policy, which is why the
+  implemented design has it emit a typed *query intent* the backend turns into Cypher
+  deterministically (Area 1), never raw Cypher.
 
 ## The governing principle (the trust boundary)
 The backend is the security boundary. The pipeline must be:
@@ -145,6 +153,28 @@ panel.
 demonstrate graph-as-index cleanly). Telemetry (FlightPhase) stays in-graph as summaries;
 note external time-series store as a design note, don't build it (would look contrived at
 current scale).
+
+> **Implemented (2026-06-10).** Document *bodies* now live outside the graph. See
+> [backend README → External document storage](../backend/README.md#external-document-storage-area-4)
+> for the full design. Summary of what was built vs the plan below:
+> - **Data model:** each `Document` node keeps `documentId`, `title`, `name`, `contentType`,
+>   `version`, optional `classification`, an opaque `storageRef` and a `sha256` `checksum`;
+>   the body is never a graph property.
+> - **Store:** pluggable `DocumentStore` (`backend/src/documents/store.py`) — `LocalFileDocumentStore`
+>   (default, reads `data/documents/<storageRef>.md`, path-traversal-guarded) and a documented
+>   `AzureBlobDocumentStore` stub (managed-identity blob access; not enabled in the PoC).
+> - **Backend-mediated authorized fetch** (`backend/src/documents/access.py`): resolve reference →
+>   authorize (Document entity + `document` category + classification clearance) → fetch →
+>   **verify checksum** → sanitize (untrusted-text framing, control-strip, char-cap) → return an
+>   excerpt. The `storageRef`/URI is never surfaced to the LLM, the metadata event, or the audit.
+> - **LLM integration:** reachable **only** via the `/ask` agent flow through a second typed tool,
+>   `fetch_document_content`; no bypass endpoint.
+> - **Separate audit:** `kg.audit.document` logs every body access with an explicit outcome,
+>   distinct from the `kg.audit` graph trail; fetches also show in the debug panel.
+>
+> *Design note:* the seeded documents are all unclassified (a contrived "secret C172 manual"
+> would be implausible); classification enforcement on document bodies is still implemented in
+> `authorize_document` and covered by unit tests with a synthetic classified document.
 
 **Data model:** `Document` keeps `documentId` (opaque), `title`, `contentType`, `checksum`,
 `version`, `classification`, `storageRef` = **opaque internal ID, never a URL**. Content
