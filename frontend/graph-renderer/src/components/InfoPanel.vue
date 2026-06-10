@@ -140,7 +140,7 @@ function validityWindow(node: GraphNode): string {
   right: 0;
   top: 56px;
   bottom: 0;
-  width: 280px;
+  width: 340px;
   z-index: 50;
   background: var(--panel);
   border-left: 1px solid var(--border);
