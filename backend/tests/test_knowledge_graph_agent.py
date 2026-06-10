@@ -286,6 +286,8 @@ def _make_stream_agent(
     agent._model = "fake-model"  # type: ignore[assignment]
     agent._schema_fingerprint = "testschemafp"  # type: ignore[assignment]
     agent._ontology = OntologyMeta(version="test-ontology")  # type: ignore[assignment]
+    # Pre-load the aerodrome name cache so retrieval does not issue an extra lookup query.
+    agent._aerodrome_names = {"EGGD": "Bristol", "EGBP": "Cotswold Airport"}  # type: ignore[assignment]
     # Permissive vocabulary so the relevance guardrail passes for "flight" questions.
     agent._vocabulary = frozenset({"flight"})  # type: ignore[assignment]
 

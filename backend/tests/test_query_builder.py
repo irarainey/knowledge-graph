@@ -20,6 +20,7 @@ from authz import (
     PolicyStore,
     Principal,
     QueryIntent,
+    attach_aerodrome_names,
     build_query,
     redact_records,
 )
@@ -318,3 +319,64 @@ def test_versioned_filter_composes_with_classification_filter() -> None:
     built = build_query(QueryIntent(entity="Specification"), PUBLIC, STORE)
     assert "n.classification IS NULL" in built.cypher
     assert "n.current = true" in built.cypher
+
+
+_AERODROME_NAMES = {"EGGD": "Bristol", "EGBP": "Cotswold Airport"}
+
+
+def test_attach_aerodrome_names_adds_resolved_name_beside_code() -> None:
+    records: list[dict[str, object]] = [{"destinationAerodrome": "EGGD"}, {"destinationAerodrome": "EGBP"}]
+    enriched = attach_aerodrome_names(records, ["destinationAerodrome"], _AERODROME_NAMES)
+    assert enriched[0] == {"destinationAerodrome": "EGGD", "destinationAerodromeName": "Bristol"}
+    assert enriched[1] == {"destinationAerodrome": "EGBP", "destinationAerodromeName": "Cotswold Airport"}
+
+
+def test_attach_aerodrome_names_resolves_both_departure_and_destination() -> None:
+    records: list[dict[str, object]] = [{"departureAerodrome": "EGGD", "destinationAerodrome": "EGBP"}]
+    enriched = attach_aerodrome_names(records, ["departureAerodrome", "destinationAerodrome"], _AERODROME_NAMES)
+    assert enriched[0]["departureAerodromeName"] == "Bristol"
+    assert enriched[0]["destinationAerodromeName"] == "Cotswold Airport"
+
+
+def test_attach_aerodrome_names_keeps_redacted_code_nameless() -> None:
+    # A gated route nulled on a classified row must not gain a name (no redaction bypass).
+    records: list[dict[str, object]] = [{"destinationAerodrome": None}]
+    enriched = attach_aerodrome_names(records, ["destinationAerodrome"], _AERODROME_NAMES)
+    assert enriched[0] == {"destinationAerodrome": None, "destinationAerodromeName": None}
+
+
+def test_attach_aerodrome_names_unknown_code_resolves_to_none() -> None:
+    records: list[dict[str, object]] = [{"destinationAerodrome": "ZZZZ"}]
+    enriched = attach_aerodrome_names(records, ["destinationAerodrome"], _AERODROME_NAMES)
+    assert enriched[0]["destinationAerodromeName"] is None
+
+
+def test_attach_aerodrome_names_noop_without_aerodrome_fields() -> None:
+    records: list[dict[str, object]] = [{"name": "Flight 001", "flightTime_hours": 1.2}]
+    enriched = attach_aerodrome_names(records, ["name", "flightTime_hours"], _AERODROME_NAMES)
+    assert enriched == [{"name": "Flight 001", "flightTime_hours": 1.2}]
+
+
+def test_requested_name_companion_field_is_canonicalised_to_code() -> None:
+    # The model sometimes asks for the synthetic "<code>Name" companion in its fields; the
+    # builder must project the underlying code field rather than rejecting it as unknown.
+    built = build_query(QueryIntent(entity="Flight", fields=["name", "destinationAerodromeName"]), MAINTENANCE, STORE)
+    assert "n.`destinationAerodromeName`" not in built.cypher
+    assert "destinationAerodrome` ELSE null END AS `destinationAerodrome`" in built.cypher
+    assert "destinationAerodrome" in built.returned_fields
+
+
+def test_filter_on_name_companion_field_is_canonicalised_to_code() -> None:
+    built = build_query(
+        QueryIntent(
+            entity="Flight",
+            fields=["name"],
+            filters=[Filter(field="departureAerodromeName", op=Comparator.EQ, value="EGGD")],
+        ),
+        MAINTENANCE,
+        STORE,
+    )
+    # The filter targets the real code field (guarded for the gated route category), not the
+    # synthetic name companion — so the query builds instead of being denied.
+    assert "n.`departureAerodrome` = $p0" in built.cypher
+    assert "departureAerodromeName" not in built.cypher

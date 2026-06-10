@@ -155,6 +155,30 @@ VERSIONED_ENTITIES: frozenset[str] = frozenset({"Specification"})
 EVENT_DATED_ENTITIES: frozenset[str] = frozenset({"Flight"})
 _EVENT_DATE_FIELD = "date"
 
+# Fields whose value is an aerodrome ICAO code (e.g. "EGGD"). When one of these is returned,
+# the backend resolves the code to the aerodrome's human name server-side and attaches it as
+# "<field>Name" (see :func:`attach_aerodrome_names`), so the answer model receives both the
+# code and the name from a single retrieval instead of issuing a follow-up lookup per code.
+AERODROME_CODE_FIELDS: frozenset[str] = frozenset({"departureAerodrome", "destinationAerodrome"})
+
+
+def aerodrome_name_field(code_field: str) -> str:
+    """The companion key that carries the resolved name for an aerodrome code field."""
+    return f"{code_field}Name"
+
+
+# Reverse map: the synthetic "<code>Name" companion key back to its real code field. The
+# answer model is told the name appears in results automatically, but it sometimes still
+# references the companion key in its intent; canonicalising it to the underlying code field
+# (rather than rejecting the whole query as an unknown field) keeps such queries working — the
+# name is re-attached after retrieval by :func:`attach_aerodrome_names`.
+_AERODROME_NAME_TO_CODE: dict[str, str] = {aerodrome_name_field(code): code for code in AERODROME_CODE_FIELDS}
+
+
+def _canonical_field(field: str) -> str:
+    """Map an aerodrome name-companion field back to its real code field; pass others through."""
+    return _AERODROME_NAME_TO_CODE.get(field, field)
+
 
 def _safe_identifier(name: str, kind: str) -> str:
     if not isinstance(name, str) or not _VALID_IDENTIFIER.match(name):
@@ -243,15 +267,16 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
         where.append(f"n.`{_EVENT_DATE_FIELD}` <= ${_PARAM_AS_OF}")
 
     for index, flt in enumerate(intent.filters):
-        _require_visible(store, principal, entity, flt.field)
-        field = _safe_identifier(flt.field, "field")
+        flt_field = _canonical_field(flt.field)
+        _require_visible(store, principal, entity, flt_field)
+        field = _safe_identifier(flt_field, "field")
         param = f"p{index}"
         parameters[param] = flt.value
         predicate = f"n.`{field}` {flt.op.value} ${param}"
         # A filter on a clearance-gated field must not let classified rows be discovered by
         # their protected values (e.g. finding a military flight by its destination), so it
         # only matches rows within the principal's clearance.
-        if has_gated and store.is_field_clearance_gated(principal, entity, flt.field):
+        if has_gated and store.is_field_clearance_gated(principal, entity, flt_field):
             predicate = f"({classification_predicate()} AND {predicate})"
         where.append(predicate)
 
@@ -261,11 +286,12 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
         if not principal.allowAggregates:
             raise AuthorizationError("Aggregate queries are not permitted for this identity.")
         if agg.field is not None:
-            _require_visible(store, principal, entity, agg.field)
-            field = _safe_identifier(agg.field, "field")
+            agg_field = _canonical_field(agg.field)
+            _require_visible(store, principal, entity, agg_field)
+            field = _safe_identifier(agg_field, "field")
             # Aggregating a clearance-gated field must exclude rows above clearance so the
             # protected values (e.g. military routes/distance) never contribute to the result.
-            if has_gated and store.is_field_clearance_gated(principal, entity, agg.field):
+            if has_gated and store.is_field_clearance_gated(principal, entity, agg_field):
                 where.append(classification_predicate())
             return_clause = f"{agg.func.value}(n.`{field}`) AS result"
         elif agg.func is AggregateFunc.COUNT:
@@ -277,9 +303,9 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
         limit_clause = ""
     else:
         if intent.fields:
-            for field_name in intent.fields:
+            projection = list(dict.fromkeys(_canonical_field(field_name) for field_name in intent.fields))
+            for field_name in projection:
                 _require_visible(store, principal, entity, field_name)
-            projection = list(dict.fromkeys(intent.fields))
         else:
             projection = store.visible_fields(principal, entity)
         if not projection:
@@ -331,3 +357,25 @@ def redact_records(records: list[dict[str, object]], returned_fields: list[str])
     """
     allowed = set(returned_fields)
     return [{key: value for key, value in row.items() if key in allowed} for row in records]
+
+
+def attach_aerodrome_names(
+    records: list[dict[str, object]], returned_fields: list[str], name_map: dict[str, str]
+) -> list[dict[str, object]]:
+    """Attach a resolved aerodrome name beside each returned aerodrome ICAO-code field.
+
+    For every field in ``returned_fields`` that holds an aerodrome ICAO code (see
+    :data:`AERODROME_CODE_FIELDS`), add a sibling ``"<field>Name"`` key resolving the code via
+    ``name_map``. This lets the answer model receive both the code and the human name from a
+    single retrieval instead of issuing a follow-up lookup per code. The name inherits the
+    code's redaction: a code already nulled (e.g. a gated route on a classified flight) maps
+    to a null name, so no redacted route ever gains a name.
+    """
+    code_fields = [field for field in returned_fields if field in AERODROME_CODE_FIELDS]
+    if not code_fields:
+        return records
+    for row in records:
+        for field in code_fields:
+            code = row.get(field)
+            row[aerodrome_name_field(field)] = name_map.get(code) if isinstance(code, str) else None
+    return records

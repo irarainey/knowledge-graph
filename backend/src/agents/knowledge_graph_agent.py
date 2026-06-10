@@ -39,12 +39,14 @@ from agent_framework.openai import OpenAIChatCompletionClient
 from neo4j import Driver, GraphDatabase, Query, RoutingControl
 
 from authz import (
+    AERODROME_CODE_FIELDS,
     Aggregate,
     AuthorizationError,
     Filter,
     PolicyStore,
     Principal,
     QueryIntent,
+    attach_aerodrome_names,
     build_query,
     redact_records,
 )
@@ -95,6 +97,10 @@ PROGRESS_PLANNING = "planning"
 PROGRESS_CYPHER = "cypher"
 PROGRESS_QUERYING = "querying"
 PROGRESS_ANSWERING = "answering"
+
+# Read-only lookup of every aerodrome's ICAO code and name, used to resolve flight aerodrome
+# codes to names server-side (labels/identifiers are controlled here, values are not user input).
+_AERODROME_NAME_QUERY = "MATCH (a:`Aerodrome`) RETURN a.`icao` AS icao, a.`name` AS name"
 
 
 def _install_query_safety(driver: Driver, timeout: float) -> None:
@@ -285,6 +291,11 @@ class KnowledgeGraphAgent:
         logger.debug("Graph schema fetched (%d characters)", len(schema))
         self._schema_fingerprint = schema_fingerprint(schema)
         self._vocabulary = build_relevance_vocabulary(schema)
+        # Cached ICAO-code -> aerodrome-name lookup, loaded lazily on first use. The aerodrome
+        # catalogue is small and static (not versioned), so resolving flight aerodrome codes to
+        # names server-side from this map lets a single retrieval return both code and name —
+        # avoiding a per-code follow-up query and the extra LLM turns it costs.
+        self._aerodrome_names: dict[str, str] | None = None
         logger.debug("Knowledge-graph agent ready (structured-intent query builder)")
 
     async def _run_query_tool(self, principal: Principal, intent: QueryIntent, as_of: str | None) -> str:
@@ -331,6 +342,8 @@ class KnowledgeGraphAgent:
             return "Retrieval failed; no rows are available for this question."
 
         records = redact_records(records, built.returned_fields)
+        if records and any(field in AERODROME_CODE_FIELDS for field in built.returned_fields):
+            records = attach_aerodrome_names(records, built.returned_fields, await self._aerodrome_name_map())
         cap = row_cap()
         if len(records) > cap:
             logger.info("Capping retrieval rows from %d to %d (QUERY_ROW_CAP)", len(records), cap)
@@ -365,6 +378,20 @@ class KnowledgeGraphAgent:
             routing_=RoutingControl.READ,
         )
         return [dict(record) for record in result.records]
+
+    async def _aerodrome_name_map(self) -> dict[str, str]:
+        """Return (and lazily load + cache) the ICAO-code -> aerodrome-name lookup.
+
+        Used to resolve flight aerodrome codes to names server-side. The catalogue is small
+        and static, so it is fetched once and reused for the lifetime of the agent.
+        """
+        if self._aerodrome_names is None:
+            rows = await asyncio.to_thread(self._execute, _AERODROME_NAME_QUERY, {})
+            self._aerodrome_names = {
+                row["icao"]: row["name"] for row in rows if isinstance(row.get("icao"), str) and isinstance(row.get("name"), str)
+            }
+            logger.debug("Loaded %d aerodrome name(s) for code resolution", len(self._aerodrome_names))
+        return self._aerodrome_names
 
     def _build_tool(self, principal: Principal, as_of: str | None) -> FunctionTool:
         """Build the typed retrieval tool, bound (via closure) to the acting principal.

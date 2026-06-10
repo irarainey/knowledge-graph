@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from authz.models import AccessPolicy, EntityCatalog, Identity, Principal
 from authz.query_builder import (
+    AERODROME_CODE_FIELDS,
     EVENT_DATED_ENTITIES,
     VERSIONED_ENTITIES,
     Aggregate,
@@ -21,12 +22,15 @@ from authz.query_builder import (
     Comparator,
     Filter,
     QueryIntent,
+    aerodrome_name_field,
+    attach_aerodrome_names,
     build_query,
     redact_records,
 )
 from authz.store import ENV_ACCESS_POLICY_PATH, PolicyError, PolicyStore
 
 __all__ = [
+    "AERODROME_CODE_FIELDS",
     "ENV_ACCESS_POLICY_PATH",
     "EVENT_DATED_ENTITIES",
     "VERSIONED_ENTITIES",
@@ -43,6 +47,8 @@ __all__ = [
     "PolicyStore",
     "Principal",
     "QueryIntent",
+    "aerodrome_name_field",
+    "attach_aerodrome_names",
     "build_query",
     "redact_records",
 ]
