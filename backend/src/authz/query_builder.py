@@ -113,10 +113,38 @@ class BuiltQuery(BaseModel):
     returned_fields: list[str] = Field(description="The field names the query projects (for redaction).")
     entity: str
     aggregated: bool = False
+    versioned: bool = Field(default=False, description="True if the entity is temporally versioned (a temporal filter was injected).")
+    version_mode: str = Field(default="current", description="Temporal mode applied: 'current', or 'as-of' when a date was supplied.")
+    as_of: str | None = Field(default=None, description="The as-of date the temporal filter used, if any.")
+    event_dated: bool = Field(
+        default=False, description="True if an event-date cutoff was injected (an as-of query over an event-dated entity)."
+    )
+
+    @property
+    def temporal_filter_applied(self) -> bool:
+        """Whether any temporal predicate (version selection or event-date cutoff) was injected."""
+        return self.versioned or self.event_dated
 
 
 _PARAM_CLASSIFICATIONS = "__authz_classifications"
 _PARAM_LIMIT = "__authz_limit"
+_PARAM_AS_OF = "__asOf"
+
+# Entities whose nodes are temporally versioned (carry logicalId/version/validFrom/validTo/
+# current). Only these get a temporal predicate injected; everything else is queried as-is.
+# Kept deliberately narrow for the PoC — versioning the whole graph would force the model to
+# reason about validity windows it cannot see, mixing current and historical facts. The set
+# is structural ontology metadata, not authorization, so it lives here next to the builder
+# rather than in the access policy.
+VERSIONED_ENTITIES: frozenset[str] = frozenset({"Specification"})
+
+# Entities that are *event-dated* rather than versioned: immutable events carrying an ISO
+# ``date`` (e.g. Flight). They are never versioned — an event is not a "version" of anything —
+# but under an as-of snapshot only events that had already occurred are included, so a
+# historical view reflects the graph as it existed on that date. The cutoff is injected
+# deterministically, only for these entities and only when an as_of date is supplied.
+EVENT_DATED_ENTITIES: frozenset[str] = frozenset({"Flight"})
+_EVENT_DATE_FIELD = "date"
 
 
 def _safe_identifier(name: str, kind: str) -> str:
@@ -131,12 +159,26 @@ def _require_visible(store: PolicyStore, principal: Principal, entity: str, fiel
         raise AuthorizationError(f"Field '{field}' on '{entity}' is not permitted for this identity.")
 
 
-def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore) -> BuiltQuery:
+def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *, as_of: str | None = None) -> BuiltQuery:
     """Validate ``intent`` against policy and build parameterised, read-only Cypher.
 
     Raises :class:`AuthorizationError` if the entity, any field, any filter field, or the
     aggregate is not permitted for ``principal``. The returned query always carries a
     clearance filter so classified rows cannot participate in execution.
+
+    Temporal filtering is applied here too, deterministically (never by the LLM), in two
+    distinct flavours:
+
+    * **Versioning** (valid-time) — if the entity is in :data:`VERSIONED_ENTITIES`, a
+      predicate is injected: with no ``as_of`` only the *current* version of each logical
+      node participates; with an ``as_of`` date only the version valid at that date does.
+    * **Event-date cutoff** (event-time) — if the entity is in :data:`EVENT_DATED_ENTITIES`
+      and an ``as_of`` date is supplied, only events that had already occurred by that date
+      (``date <= as_of``) participate, so a historical view reflects the graph as it existed
+      then. Events are never *versioned* — an event is not a version of anything.
+
+    Entities in neither set are queried unchanged — a temporal predicate is never applied to
+    a node type that lacks the relevant property (which would silently drop every row).
     """
     entity = intent.entity
     if store.entity_catalog(entity) is None or entity not in principal.entities:
@@ -151,6 +193,25 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore) -
     allowed = store.allowed_classifications(principal)
     parameters[_PARAM_CLASSIFICATIONS] = allowed
     where = [f"(n.classification IS NULL OR n.classification IN ${_PARAM_CLASSIFICATIONS})"]
+
+    # --- WHERE: temporal version filter (only for versioned entities) -------------------
+    versioned = entity in VERSIONED_ENTITIES
+    version_mode = "current"
+    if versioned:
+        if as_of is None:
+            where.append("n.current = true")
+        else:
+            version_mode = "as-of"
+            parameters[_PARAM_AS_OF] = as_of
+            where.append(f"(n.validFrom <= ${_PARAM_AS_OF} AND (n.validTo IS NULL OR ${_PARAM_AS_OF} < n.validTo))")
+
+    # --- WHERE: event-date cutoff (only for event-dated entities, only as-of) ------------
+    # An event that had not yet occurred on the as-of date is not in that historical snapshot.
+    event_dated = False
+    if entity in EVENT_DATED_ENTITIES and as_of is not None:
+        event_dated = True
+        parameters[_PARAM_AS_OF] = as_of
+        where.append(f"n.`{_EVENT_DATE_FIELD}` <= ${_PARAM_AS_OF}")
 
     for index, flt in enumerate(intent.filters):
         _require_visible(store, principal, entity, flt.field)
@@ -197,7 +258,17 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore) -
     cypher = f"MATCH (n:`{label}`) WHERE {where_clause} RETURN {return_clause}{limit_clause}"
     # Defence-in-depth: the builder only emits read-only MATCH/RETURN, but re-check anyway.
     assert_safe_cypher(cypher)
-    return BuiltQuery(cypher=cypher, parameters=parameters, returned_fields=returned_fields, entity=entity, aggregated=aggregated)
+    return BuiltQuery(
+        cypher=cypher,
+        parameters=parameters,
+        returned_fields=returned_fields,
+        entity=entity,
+        aggregated=aggregated,
+        versioned=versioned,
+        version_mode=version_mode,
+        as_of=as_of if (versioned or event_dated) else None,
+        event_dated=event_dated,
+    )
 
 
 def redact_records(records: list[dict[str, object]], returned_fields: list[str]) -> list[dict[str, object]]:

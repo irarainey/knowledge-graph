@@ -4,26 +4,86 @@ import GraphHeader from './components/GraphHeader.vue'
 import SidebarFilters from './components/SidebarFilters.vue'
 import InfoPanel from './components/InfoPanel.vue'
 import KnowledgeGraph from './components/KnowledgeGraph.vue'
-import { adaptNeo4j, createStyleResolver, presentTypes } from './graph'
+import {
+  adaptNeo4j,
+  buildTypeTree,
+  createStyleResolver,
+  nodeFilterKey,
+  presentTypes,
+} from './graph'
 import type { Graph, GraphNode, LayoutMode, NodeStyles, RawGraph } from './types'
+import { filterGraphByVersion } from './version'
+import type { GraphViewMode } from './version'
 
 const graph = ref<Graph>({ nodes: [], links: [] })
 const styles = ref<NodeStyles>({})
-const activeTypes = ref<Set<string>>(new Set())
+const activeKeys = ref<Set<string>>(new Set())
 const selectedNode = ref<GraphNode | null>(null)
 const layout = ref<LayoutMode>('force')
+const viewKind = ref<GraphViewMode['kind']>('current')
+const asOfDate = ref(new Date().toISOString().slice(0, 10))
 const error = ref<string | null>(null)
+
+// The aircraft is the root the whole graph hangs off, so it is always shown and
+// is excluded from the sidebar — hiding it would orphan everything.
+const PINNED_TYPES = new Set(['Aircraft'])
 
 const graphRef = useTemplateRef<InstanceType<typeof KnowledgeGraph>>('graphRef')
 
 const styleFor = computed(() => createStyleResolver(styles.value))
-const types = computed(() => presentTypes(graph.value, styles.value))
+const viewMode = computed<GraphViewMode>(() =>
+  viewKind.value === 'as-of' ? { kind: 'as-of', date: asOfDate.value } : { kind: 'current' },
+)
+const filteredGraph = computed(() => filterGraphByVersion(graph.value, viewMode.value))
+const types = computed(() => presentTypes(filteredGraph.value, styles.value))
+const allGroups = computed(() => buildTypeTree(filteredGraph.value, styles.value))
+const sidebarGroups = computed(() => allGroups.value.filter((g) => !PINNED_TYPES.has(g.type)))
+const visibleSelectedId = computed(() => {
+  const id = selectedNode.value?.id
+  if (!id) return null
+  return filteredGraph.value.nodes.some((node) => node.id === id) ? id : null
+})
 
-function toggleType(type: string): void {
-  const next = new Set(activeTypes.value)
-  if (next.has(type)) next.delete(type)
-  else next.add(type)
-  activeTypes.value = next
+// The filter leaf keys belonging to a group: its subtype leaves, or the bare
+// type when the group has no subtypes.
+function groupLeafKeys(type: string): string[] {
+  const group = allGroups.value.find((g) => g.type === type)
+  if (!group) return []
+  return group.subgroups.length ? group.subgroups.map((s) => s.key) : [group.key]
+}
+
+function toggleKey(key: string): void {
+  const next = new Set(activeKeys.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  activeKeys.value = next
+}
+
+// Show every type. Deselect all still keeps the pinned aircraft active, since it
+// is always shown and anchors the rest of the graph.
+function selectAll(): void {
+  activeKeys.value = new Set(graph.value.nodes.map(nodeFilterKey))
+}
+
+function deselectAll(): void {
+  activeKeys.value = new Set(
+    graph.value.nodes.filter((n) => PINNED_TYPES.has(n.type)).map(nodeFilterKey),
+  )
+}
+
+// Toggling a top-level group flips all its leaves together: if every leaf is
+// already on, turn them all off, otherwise turn them all on.
+function toggleGroup(type: string): void {
+  if (PINNED_TYPES.has(type)) return
+  const keys = groupLeafKeys(type)
+  if (!keys.length) return
+  const next = new Set(activeKeys.value)
+  const allOn = keys.every((k) => next.has(k))
+  for (const k of keys) {
+    if (allOn) next.delete(k)
+    else next.add(k)
+  }
+  activeKeys.value = next
 }
 
 function reset(): void {
@@ -60,7 +120,7 @@ async function loadGraph(): Promise<void> {
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = (await res.json()) as RawGraph
     graph.value = adaptNeo4j(data)
-    activeTypes.value = new Set(presentTypes(graph.value, styles.value))
+    activeKeys.value = new Set(graph.value.nodes.map(nodeFilterKey))
   } catch (err) {
     console.error('Failed to load knowledge-graph.json:', err)
     error.value = 'Failed to load /data/knowledge-graph.json. Is the dev server running?'
@@ -72,37 +132,46 @@ onMounted(loadGraph)
 
 <template>
   <GraphHeader
-    :node-count="graph.nodes.length"
-    :edge-count="graph.links.length"
+    :node-count="filteredGraph.nodes.length"
+    :edge-count="filteredGraph.links.length"
     :layout="layout"
+    :view-kind="viewKind"
+    :as-of-date="asOfDate"
     @reset="reset"
     @set-layout="setLayout"
+    @set-view-kind="viewKind = $event"
+    @set-as-of-date="asOfDate = $event"
   />
 
   <SidebarFilters
-    :types="types"
-    :graph="graph"
-    :active-types="activeTypes"
+    :groups="sidebarGroups"
+    :active-keys="activeKeys"
     :style-for="styleFor"
-    @toggle="toggleType"
+    @toggle="toggleKey"
+    @toggle-group="toggleGroup"
+    @select-all="selectAll"
+    @deselect-all="deselectAll"
   />
 
   <KnowledgeGraph
     ref="graphRef"
-    :graph="graph"
+    :graph="filteredGraph"
     :types="types"
-    :active-types="activeTypes"
+    :active-keys="activeKeys"
+    :pinned-types="PINNED_TYPES"
     :style-for="styleFor"
     :layout="layout"
-    :selected-id="selectedNode?.id ?? null"
+    :selected-id="visibleSelectedId"
     @node-selected="onNodeSelected"
     @background="selectedNode = null"
   />
 
   <InfoPanel
     :node="selectedNode"
-    :graph="graph"
+    :graph="filteredGraph"
+    :full-graph="graph"
     :style-for="styleFor"
+    @select-node="selectedNode = $event"
     @close="selectedNode = null"
   />
 

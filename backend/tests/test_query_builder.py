@@ -183,3 +183,63 @@ def test_redaction_strips_unexpected_keys() -> None:
     rows: list[dict[str, object]] = [{"name": "G-ECHO", "classification": "secret", "militaryMissionCode": "X"}]
     redacted = redact_records(rows, ["name"])
     assert redacted == [{"name": "G-ECHO"}]
+
+
+# --- Temporal versioning (Area 2) ------------------------------------------------------
+
+
+def test_versioned_entity_defaults_to_current_only() -> None:
+    built = build_query(QueryIntent(entity="Specification"), PUBLIC, STORE)
+    assert built.versioned is True
+    assert built.version_mode == "current"
+    assert built.as_of is None
+    assert "n.current = true" in built.cypher
+    assert "__asOf" not in built.parameters
+
+
+def test_versioned_entity_as_of_injects_temporal_filter() -> None:
+    built = build_query(QueryIntent(entity="Specification"), PUBLIC, STORE, as_of="2020-01-01")
+    assert built.versioned is True
+    assert built.version_mode == "as-of"
+    assert built.as_of == "2020-01-01"
+    assert built.parameters["__asOf"] == "2020-01-01"
+    assert "n.validFrom <= $__asOf" in built.cypher
+    assert "n.validTo IS NULL OR $__asOf < n.validTo" in built.cypher
+    assert "n.current = true" not in built.cypher
+
+
+def test_unversioned_entity_gets_no_temporal_filter() -> None:
+    built = build_query(QueryIntent(entity="Aircraft"), PUBLIC, STORE, as_of="2020-01-01")
+    assert built.versioned is False
+    assert built.as_of is None
+    assert "current" not in built.cypher
+    assert "validFrom" not in built.cypher
+    assert "__asOf" not in built.parameters
+
+
+def test_event_dated_entity_current_mode_has_no_cutoff() -> None:
+    built = build_query(QueryIntent(entity="Flight"), MAINTENANCE, STORE)
+    assert built.event_dated is False
+    assert built.temporal_filter_applied is False
+    assert built.as_of is None
+    assert "n.`date` <= $__asOf" not in built.cypher
+    assert "__asOf" not in built.parameters
+
+
+def test_event_dated_entity_as_of_injects_date_cutoff() -> None:
+    built = build_query(QueryIntent(entity="Flight"), MAINTENANCE, STORE, as_of="2022-01-01")
+    assert built.versioned is False
+    assert built.event_dated is True
+    assert built.temporal_filter_applied is True
+    assert built.as_of == "2022-01-01"
+    assert built.parameters["__asOf"] == "2022-01-01"
+    assert "n.`date` <= $__asOf" in built.cypher
+    # An event-dated entity is not versioned: no version predicate is injected.
+    assert "n.current = true" not in built.cypher
+    assert "validFrom" not in built.cypher
+
+
+def test_versioned_filter_composes_with_classification_filter() -> None:
+    built = build_query(QueryIntent(entity="Specification"), PUBLIC, STORE)
+    assert "n.classification IS NULL" in built.cypher
+    assert "n.current = true" in built.cypher

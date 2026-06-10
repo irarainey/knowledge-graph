@@ -3,12 +3,13 @@ import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import * as d3 from 'd3'
 import type { Graph, GraphNode, LayoutMode } from '../types'
 import type { StyleResolver } from '../graph'
-import { humanizeType } from '../graph'
+import { nodeFilterKey } from '../graph'
 
 const props = defineProps<{
   graph: Graph
   types: string[]
-  activeTypes: Set<string>
+  activeKeys: Set<string>
+  pinnedTypes: Set<string>
   styleFor: StyleResolver
   layout: LayoutMode
   selectedId: string | null
@@ -26,6 +27,12 @@ interface SimNode extends GraphNode, d3.SimulationNodeDatum {
 }
 interface SimLink extends d3.SimulationLinkDatum<SimNode> {
   rel: string
+  // Endpoints trimmed to the node boundaries, recomputed each tick so the
+  // arrowhead always sits just outside the target circle (whatever its size).
+  x1?: number
+  y1?: number
+  x2?: number
+  y2?: number
 }
 
 const svgRef = ref<SVGSVGElement | null>(null)
@@ -35,26 +42,14 @@ let zoomBehavior: d3.ZoomBehavior<SVGSVGElement, unknown> | null = null
 let linkSel: d3.Selection<SVGLineElement, SimLink, SVGGElement, unknown> | null = null
 let linkLabelSel: d3.Selection<SVGTextElement, SimLink, SVGGElement, unknown> | null = null
 let nodeSel: d3.Selection<SVGGElement, SimNode, SVGGElement, unknown> | null = null
-// Cluster labels: a small heading per node type, positioned above each type's
-// cluster. Only populated in the clustered (default) layout.
-let hullLabelSel: d3.Selection<SVGTextElement, string, SVGGElement, unknown> | null = null
-// Per-build: nodes grouped by primary type, used to position cluster labels.
-let nodesByType = new Map<string, SimNode[]>()
 
 // Relationship types that form the containment hierarchy (the tree spine).
 const HIERARCHY = ['HAS_SYSTEM', 'HAS_COMPONENT', 'HAS_PART', 'HAS_PHASE', 'HAS_RUNWAY']
 const isHierarchy = (rel: string): boolean => HIERARCHY.includes(rel)
 
-// Above these sizes the renderer drops expensive per-element extras (the per-node
-// blur filter, the per-edge text labels) to stay responsive on large graphs.
-// Smaller graphs render exactly as before.
-const SHADOW_MAX_NODES = 600
+// Above this size the renderer drops the per-edge text labels (thousands of
+// mostly-hidden <text> nodes repositioned every tick) to stay responsive.
 const LINK_LABEL_MAX_LINKS = 1200
-// Cluster labels iterate every node of a type each tick to find their heading
-// position, so they are only drawn while the graph is small enough to stay cheap.
-const CLUSTER_LABEL_MAX_NODES = 1500
-// Vertical gap (px) between a cluster's topmost node and its heading label.
-const CLUSTER_LABEL_GAP = 32
 
 // Remembered node positions so layout switches aren't jarring.
 const posCache = new Map<string, { x: number; y: number }>()
@@ -64,6 +59,18 @@ let savedTransform: d3.ZoomTransform = d3.zoomIdentity
 // Per-build derived structure, recomputed on every build().
 let parentMap = new Map<string, string>()
 let outAdj = new Map<string, { t: string; hier: boolean }[]>()
+// Node filter key by id, the containment tree (parent → children), the
+// association adjacency (undirected, non-containment edges), and the set of
+// contained node ids. A node stays visible only if it is connected back to a
+// pinned anchor (the aircraft) — and a *contained* node may only be reached
+// through its containment parent, never via an association edge, so e.g. an
+// electrical component can never appear unless the electrical system it hangs
+// off is shown.
+let nodeKeyById = new Map<string, string>()
+let hierChildren = new Map<string, string[]>()
+let assocAdj = new Map<string, string[]>()
+let hasHierParent = new Set<string>()
+let anchorIds: string[] = []
 // Memoised downstream set for the current selection (cleared on rebuild).
 let focusCache: { id: string | null; set: Set<string> } = { id: null, set: new Set() }
 
@@ -77,7 +84,6 @@ function teardown(): void {
   linkSel = null
   linkLabelSel = null
   nodeSel = null
-  hullLabelSel = null
   zoomBehavior = null
 }
 
@@ -137,12 +143,36 @@ function build(): void {
 
   // Directed adjacency (source → targets) drives downstream focus highlighting.
   // The `hier` flag marks containment edges, which alone are followed transitively.
+  // The containment tree and association adjacency drive the anchoring below.
   outAdj = new Map()
+  hierChildren = new Map()
+  assocAdj = new Map()
+  hasHierParent = new Set()
   focusCache = { id: null, set: new Set() }
-  for (const l of props.graph.links) {
-    if (!outAdj.has(l.source)) outAdj.set(l.source, [])
-    outAdj.get(l.source)!.push({ t: l.target, hier: isHierarchy(l.rel) })
+  const addAssoc = (a: string, b: string): void => {
+    const list = assocAdj.get(a)
+    if (list) list.push(b)
+    else assocAdj.set(a, [b])
   }
+  for (const l of props.graph.links) {
+    const hier = isHierarchy(l.rel)
+    if (!outAdj.has(l.source)) outAdj.set(l.source, [])
+    outAdj.get(l.source)!.push({ t: l.target, hier })
+    if (hier) {
+      const children = hierChildren.get(l.source)
+      if (children) children.push(l.target)
+      else hierChildren.set(l.source, [l.target])
+      hasHierParent.add(l.target)
+    } else {
+      addAssoc(l.source, l.target)
+      addAssoc(l.target, l.source)
+    }
+  }
+
+  // Reachability inputs: a lookup of every node's filter key and the pinned
+  // anchor node ids the anchoring fans out from.
+  nodeKeyById = new Map(props.graph.nodes.map((n) => [n.id, nodeFilterKey(n)]))
+  anchorIds = props.graph.nodes.filter((n) => props.pinnedTypes.has(n.type)).map((n) => n.id)
 
   // Single <g> container that the zoom behaviour transforms.
   const container = root.append('g')
@@ -162,7 +192,10 @@ function build(): void {
   // Re-apply the preserved transform after a rebuild.
   root.call(zoomBehavior.transform, savedTransform)
 
-  // Arrow markers, one per node type (coloured by target type).
+  // Arrow markers, one per node type (coloured by target type). Sized in user
+  // space (not stroke-width) and with the tip at the line end, so trimming the
+  // line to the node boundary places the arrowhead just outside any node — even
+  // large ones like the aircraft.
   const defs = root.append('defs')
   props.types.forEach((type) => {
     const cfg = props.styleFor(type)
@@ -170,15 +203,16 @@ function build(): void {
       .append('marker')
       .attr('id', `arrow-${type}`)
       .attr('viewBox', '0 -4 8 8')
-      .attr('refX', 18)
+      .attr('refX', 8)
       .attr('refY', 0)
-      .attr('markerWidth', 6)
-      .attr('markerHeight', 6)
+      .attr('markerWidth', 7)
+      .attr('markerHeight', 7)
+      .attr('markerUnits', 'userSpaceOnUse')
       .attr('orient', 'auto')
       .append('path')
       .attr('d', 'M0,-4L8,0L0,4')
       .attr('fill', cfg.color)
-      .attr('opacity', 0.6)
+      .attr('opacity', 0.7)
   })
 
   // Clone nodes/links so the force simulation never mutates props. Seed each
@@ -198,19 +232,15 @@ function build(): void {
   for (const n of nodes) maxDepth = Math.max(maxDepth, n.depth)
   const ringGap = Math.max(70, Math.min(160, Math.min(W, H) / 2 / (maxDepth + 1.5)))
 
-  // Group nodes by primary type and give each type a stable anchor on a ring
-  // around the centre. In the default layout a gentle force pulls each node toward
-  // its type anchor so same-type nodes settle into their own readable cluster.
-  nodesByType = d3.group(nodes, (d) => d.type)
-  const clusterTypes = props.types.filter((t) => nodesByType.has(t))
-  const typeAnchors = new Map<string, { x: number; y: number }>()
-  const clusterR = Math.min(W, H) / 3.2
-  clusterTypes.forEach((t, i) => {
-    const a = (i / Math.max(1, clusterTypes.length)) * 2 * Math.PI - Math.PI / 2
-    typeAnchors.set(t, { x: W / 2 + clusterR * Math.cos(a), y: H / 2 + clusterR * Math.sin(a) })
-  })
-  const anchorX = (d: SimNode): number => typeAnchors.get(d.type)?.x ?? W / 2
-  const anchorY = (d: SimNode): number => typeAnchors.get(d.type)?.y ?? H / 2
+  // Node degree drives the de-clumping: hubs (aircraft, flights) repel harder and
+  // hold their children further out, so dense neighbourhoods fan open instead of
+  // piling into a hairball.
+  const degree = new Map<string, number>()
+  for (const l of props.graph.links) {
+    degree.set(l.source, (degree.get(l.source) ?? 0) + 1)
+    degree.set(l.target, (degree.get(l.target) ?? 0) + 1)
+  }
+  const degreeOf = (id: string): number => degree.get(id) ?? 0
 
   simulation = d3
     .forceSimulation<SimNode>(nodes)
@@ -220,15 +250,42 @@ function build(): void {
         .forceLink<SimNode, SimLink>(links)
         .id((d) => d.id)
         .distance((d) => {
-          if (d.rel === 'HAS_SYSTEM') return 120
-          if (d.rel === 'HAS_COMPONENT') return 80
-          if (d.rel === 'FOLLOWS') return 60
-          return 90
+          const base =
+            d.rel === 'HAS_SYSTEM'
+              ? 120
+              : d.rel === 'HAS_COMPONENT'
+                ? 80
+                : d.rel === 'FOLLOWS'
+                  ? 60
+                  : 90
+          // Extend links hanging off a hub so its many children spread out.
+          const hub = Math.max(
+            degreeOf((d.source as SimNode).id),
+            degreeOf((d.target as SimNode).id),
+          )
+          return base + Math.min(140, Math.sqrt(hub) * 16)
         })
-        .strength(radial ? 0.15 : 0.5),
+        .strength(radial ? 0.15 : 0.6),
     )
-    .force('charge', d3.forceManyBody().strength(radial ? -140 : -220))
-    .force('collision', d3.forceCollide(22))
+    // Stronger base repulsion than before, scaled up further for hubs and capped
+    // by distanceMax so it stays fast and far-apart clusters don't fly off-screen.
+    .force(
+      'charge',
+      d3
+        .forceManyBody<SimNode>()
+        .strength((d) => (radial ? -160 : -300) - Math.min(420, degreeOf(d.id) * 14))
+        .distanceMax(radial ? 650 : 520)
+        .theta(0.9),
+    )
+    // Collision radius tracks each node's drawn size (plus padding) so circles and
+    // their labels stop overlapping on busy graphs.
+    .force(
+      'collision',
+      d3
+        .forceCollide<SimNode>()
+        .radius((d) => props.styleFor(d.type).size + 22)
+        .strength(0.9),
+    )
 
   if (radial) {
     simulation
@@ -239,24 +296,14 @@ function build(): void {
       .force('x', d3.forceX(W / 2).strength(0.02))
       .force('y', d3.forceY(H / 2).strength(0.02))
   } else {
+    // Default layout is purely connectivity-driven: only a gentle pull toward the
+    // centre keeps the graph on-screen, so the link force decides positions and
+    // every node visibly hangs off its neighbours (and ultimately the aircraft).
+    // No type-clustering force — that pulled leaf nodes out to per-type anchors,
+    // leaving them tethered only by a faint edge and looking disconnected.
     simulation
-      .force('x', d3.forceX<SimNode>(anchorX).strength(0.18))
-      .force('y', d3.forceY<SimNode>(anchorY).strength(0.18))
-  }
-
-  // Cluster headings: one label per type, drawn above each type's cluster in the
-  // default (clustered) layout only. Created here (before nodes) so positions
-  // update each tick.
-  if (!radial && nodes.length <= CLUSTER_LABEL_MAX_NODES) {
-    const hullLabelGroup = container.append('g').attr('class', 'hull-labels')
-    hullLabelSel = hullLabelGroup
-      .selectAll<SVGTextElement, string>('text')
-      .data(clusterTypes)
-      .enter()
-      .append('text')
-      .attr('class', 'hull-label')
-      .attr('fill', (t) => props.styleFor(t).color)
-      .text((t) => humanizeType(t))
+      .force('x', d3.forceX(W / 2).strength(0.03))
+      .force('y', d3.forceY(H / 2).strength(0.03))
   }
 
   const typeOf = (n: SimNode | string | number): string => (typeof n === 'object' ? n.type : '')
@@ -325,17 +372,11 @@ function build(): void {
       emit('node-selected', d)
     })
 
-  const circleSel = nodeSel
+  nodeSel
     .append('circle')
     .attr('r', (d) => props.styleFor(d.type).size)
     .attr('fill', (d) => props.styleFor(d.type).dimColor)
     .attr('stroke', (d) => props.styleFor(d.type).color)
-
-  // The per-node drop-shadow blur is the most expensive SVG effect at scale, so
-  // it is only applied while the graph is small enough to stay smooth.
-  if (nodes.length <= SHADOW_MAX_NODES) {
-    circleSel.style('filter', (d) => `drop-shadow(0 0 6px ${props.styleFor(d.type).color}66)`)
-  }
 
   nodeSel
     .append('text')
@@ -344,13 +385,33 @@ function build(): void {
     .text((d) => d.label)
 
   simulation.on('tick', () => {
-    if (hullLabelSel) updateClusterLabels()
+    // Trim each link to the node boundaries: start at the source edge and stop a
+    // hair outside the target circle, leaving room for the arrowhead so it always
+    // shows regardless of node size (the aircraft is much larger than a leaf).
+    const ARROW = 4
+    for (const d of links) {
+      const s = d.source as SimNode
+      const t = d.target as SimNode
+      const sx = s.x ?? 0
+      const sy = s.y ?? 0
+      const tx = t.x ?? 0
+      const ty = t.y ?? 0
+      const dist = Math.hypot(tx - sx, ty - sy) || 1
+      const ux = (tx - sx) / dist
+      const uy = (ty - sy) / dist
+      const sr = props.styleFor(s.type).size
+      const tr = props.styleFor(t.type).size + ARROW
+      d.x1 = sx + ux * sr
+      d.y1 = sy + uy * sr
+      d.x2 = tx - ux * tr
+      d.y2 = ty - uy * tr
+    }
 
     linkSel!
-      .attr('x1', (d) => (d.source as SimNode).x ?? 0)
-      .attr('y1', (d) => (d.source as SimNode).y ?? 0)
-      .attr('x2', (d) => (d.target as SimNode).x ?? 0)
-      .attr('y2', (d) => (d.target as SimNode).y ?? 0)
+      .attr('x1', (d) => d.x1 ?? 0)
+      .attr('y1', (d) => d.y1 ?? 0)
+      .attr('x2', (d) => d.x2 ?? 0)
+      .attr('y2', (d) => d.y2 ?? 0)
 
     if (linkLabelSel) {
       linkLabelSel
@@ -373,23 +434,6 @@ function build(): void {
   })
 
   applyVisualState()
-}
-
-// Reposition each cluster heading above its type's topmost node, centred on the
-// cluster. Cheap at PoC scale; gated by CLUSTER_LABEL_MAX_NODES on big graphs.
-function updateClusterLabels(): void {
-  if (!hullLabelSel) return
-  hullLabelSel.attr('transform', (type) => {
-    const ns = nodesByType.get(type)
-    if (!ns || ns.length === 0) return 'translate(-9999,-9999)'
-    let minY = Infinity
-    let sumX = 0
-    for (const n of ns) {
-      sumX += n.x ?? 0
-      minY = Math.min(minY, n.y ?? 0)
-    }
-    return `translate(${sumX / ns.length},${minY - CLUSTER_LABEL_GAP})`
-  })
 }
 
 function seedFromParent(id: string, W: number, H: number): { x: number; y: number } {
@@ -422,6 +466,42 @@ function downstreamSet(id: string): Set<string> {
   return set
 }
 
+// Nodes that remain anchored under the current filter: starting from the pinned
+// anchors (the aircraft), fan out so that
+//   • a containment child is reached only through its (visible) parent, and
+//   • a non-contained node is reached through any visible association edge.
+// So hiding a system hides all of its components (they can only re-connect
+// through that system), while hiding flights cascades to the airports/phases
+// that only hung off them. Returns null when there is no visible anchor, so the
+// plain filter applies and nothing is anchored away.
+function anchoredNodes(active: Set<string>): Set<string> | null {
+  const isActive = (id: string): boolean => {
+    const k = nodeKeyById.get(id)
+    return k != null && active.has(k)
+  }
+  const seeds = anchorIds.filter(isActive)
+  if (!seeds.length) return null
+
+  const reach = new Set<string>(seeds)
+  const queue = [...seeds]
+  while (queue.length) {
+    const cur = queue.shift()!
+    for (const child of hierChildren.get(cur) ?? []) {
+      if (!reach.has(child) && isActive(child)) {
+        reach.add(child)
+        queue.push(child)
+      }
+    }
+    for (const neighbour of assocAdj.get(cur) ?? []) {
+      if (!reach.has(neighbour) && !hasHierParent.has(neighbour) && isActive(neighbour)) {
+        reach.add(neighbour)
+        queue.push(neighbour)
+      }
+    }
+  }
+  return reach
+}
+
 // Single source of truth for all visual emphasis: type filter (fade), the
 // click-selected focus (reveal the node and its downstream subtree). Edges are
 // always drawn but kept faint; selecting a node brightens the edges of its focus
@@ -429,12 +509,14 @@ function downstreamSet(id: string): Set<string> {
 // Computed from state — never patched incrementally.
 function applyVisualState(): void {
   if (!nodeSel || !linkSel) return
-  const active = props.activeTypes
+  const active = props.activeKeys
   const focusId = props.selectedId
   const focus = focusId ? downstreamSet(focusId) : null
   const inFocus = (id: string): boolean => !focus || focus.has(id)
 
-  const typeVisible = (n: SimNode): boolean => active.has(n.type)
+  const anchored = anchoredNodes(active)
+  const typeVisible = (n: SimNode): boolean =>
+    active.has(nodeFilterKey(n)) && (!anchored || anchored.has(n.id))
   const labelVisible = (n: SimNode): boolean => typeVisible(n)
 
   nodeSel.style('opacity', (d) => {
@@ -461,27 +543,21 @@ function applyVisualState(): void {
   linkSel.style('opacity', (d) => {
     const sn = d.source as SimNode
     const tn = d.target as SimNode
-    if (!active.has(sn.type) || !active.has(tn.type)) return 0.04
+    if (!typeVisible(sn) || !typeVisible(tn)) return 0.04
     if (edgeInFocus(d)) return 0.6
     // A selection is active but this edge is outside it — fade it well back so the
-    // focused subtree stands out; otherwise keep the default faint structural line.
-    return focusId ? 0.05 : 0.22
+    // focused subtree stands out; otherwise keep the structural line clearly visible
+    // so every node reads as tethered to its neighbours.
+    return focusId ? 0.05 : 0.4
   })
 
   if (linkLabelSel) {
     linkLabelSel.style('opacity', (d) => {
       const sn = d.source as SimNode
       const tn = d.target as SimNode
-      if (!active.has(sn.type) || !active.has(tn.type)) return 0
+      if (!typeVisible(sn) || !typeVisible(tn)) return 0
       return edgeInFocus(d) ? 0.95 : 0
     })
-  }
-
-  // Cluster labels track the type filter, and recede while a node is selected so
-  // the focused subtree isn't competing with the group headings for attention.
-  if (hullLabelSel) {
-    const labelFade = focusId ? 0.4 : 1
-    hullLabelSel.style('opacity', (type) => (active.has(type) ? 0.9 * labelFade : 0))
   }
 }
 
@@ -576,7 +652,7 @@ watch(
 
 // Filter toggles and selection only need a cheap visual update.
 watch(
-  () => props.activeTypes,
+  () => props.activeKeys,
   () => applyVisualState(),
   { deep: true },
 )

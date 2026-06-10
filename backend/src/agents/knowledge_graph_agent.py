@@ -60,6 +60,7 @@ from common.azure_openai import AzureOpenAISettings, build_chat_client
 from common.graph_schema import fetch_schema_text
 from common.guardrails import OFF_TOPIC_ANSWER, build_relevance_vocabulary, is_relevant
 from common.logging_config import get_logger
+from common.ontology import OntologyMeta
 from common.query_safety import QuerySafetyError, assert_safe_cypher, row_cap, statement_timeout_seconds
 from common.telemetry import (
     elapsed_ms,
@@ -204,6 +205,9 @@ def _build_stats(
     total_ms: float,
     cypher_count: int,
     record_count: int,
+    as_of: str | None = None,
+    version_applied: bool = False,
+    ontology_version: str | None = None,
 ) -> dict[str, Any]:
     """Assemble the ``stats`` debug event from observed per-call usage and timings.
 
@@ -236,6 +240,12 @@ def _build_stats(
         "llm_calls": len(calls),
         "tokens": {"prompt": aggregate("prompt"), "completion": aggregate("completion"), "total": aggregate("total")},
         "calls": calls,
+        "versioning": {
+            "mode": "as-of" if as_of else "current",
+            "as_of": as_of,
+            "temporal_filter_applied": version_applied,
+            "ontology_version": ontology_version,
+        },
         "durations_ms": {
             "retrieval": retrieval_ms,
             "graph_query": retrieval_ms,
@@ -258,12 +268,14 @@ class KnowledgeGraphAgent:
         *,
         database: str,
         model_name: str | None = None,
+        ontology: OntologyMeta | None = None,
     ) -> None:
         self._chat_client = chat_client
         self._driver = driver
         self._policy = policy
         self._database = database
         self._model = model_name
+        self._ontology = ontology or OntologyMeta.load()
         logger.info("Building knowledge-graph agent (database=%s)", database)
         # Build the schema text once: used to fingerprint for audit drift detection and to
         # derive the deterministic, no-LLM relevance vocabulary for the guardrail. The
@@ -275,7 +287,7 @@ class KnowledgeGraphAgent:
         self._vocabulary = build_relevance_vocabulary(schema)
         logger.debug("Knowledge-graph agent ready (structured-intent query builder)")
 
-    async def _run_query_tool(self, principal: Principal, intent: QueryIntent) -> str:
+    async def _run_query_tool(self, principal: Principal, intent: QueryIntent, as_of: str | None) -> str:
         """Validate ``intent`` against policy, run the built query, return rows as JSON.
 
         Enforcement happens in :func:`authz.build_query`: unauthorised entities/fields/
@@ -283,17 +295,20 @@ class KnowledgeGraphAgent:
         classified rows before execution. Denials are recorded on :data:`safety_sink` (for
         the audit trail) and a short refusal string is returned for the agent to relay,
         rather than raising — so the agent always produces an answer.
+
+        ``as_of`` selects the temporal snapshot for versioned entities (``None`` = current);
+        the builder injects the corresponding temporal filter deterministically.
         """
         tool_start = time.perf_counter()
         emit_progress(PROGRESS_CYPHER)
         try:
-            built = build_query(intent, principal, self._policy)
+            built = build_query(intent, principal, self._policy, as_of=as_of)
         except AuthorizationError as exc:
             logger.info("Query intent denied for %s: %s", principal.id, exc)
             emit_safety_denied(str(exc))
             sink = retrieval_sink.get()
             if sink is not None:
-                sink.append({"cypher": [], "records": [], "duration_ms": elapsed_ms(tool_start)})
+                sink.append({"cypher": [], "records": [], "duration_ms": elapsed_ms(tool_start), "temporal_applied": False})
             emit_progress(PROGRESS_ANSWERING)
             return f"Not permitted: {exc} The requested information is not available to this user."
 
@@ -304,7 +319,14 @@ class KnowledgeGraphAgent:
             logger.exception("/ask graph query failed")
             sink = retrieval_sink.get()
             if sink is not None:
-                sink.append({"cypher": [built.cypher], "records": [], "duration_ms": elapsed_ms(tool_start)})
+                sink.append(
+                    {
+                        "cypher": [built.cypher],
+                        "records": [],
+                        "duration_ms": elapsed_ms(tool_start),
+                        "temporal_applied": built.temporal_filter_applied,
+                    }
+                )
             emit_progress(PROGRESS_ANSWERING)
             return "Retrieval failed; no rows are available for this question."
 
@@ -315,7 +337,14 @@ class KnowledgeGraphAgent:
             records = records[:cap]
         sink = retrieval_sink.get()
         if sink is not None:
-            sink.append({"cypher": [built.cypher], "records": records, "duration_ms": elapsed_ms(tool_start)})
+            sink.append(
+                {
+                    "cypher": [built.cypher],
+                    "records": records,
+                    "duration_ms": elapsed_ms(tool_start),
+                    "temporal_applied": built.temporal_filter_applied,
+                }
+            )
         # The graph rows are back; the agent's next turn generates the answer from them.
         emit_progress(PROGRESS_ANSWERING)
         if not records:
@@ -337,12 +366,13 @@ class KnowledgeGraphAgent:
         )
         return [dict(record) for record in result.records]
 
-    def _build_tool(self, principal: Principal) -> FunctionTool:
+    def _build_tool(self, principal: Principal, as_of: str | None) -> FunctionTool:
         """Build the typed retrieval tool, bound (via closure) to the acting principal.
 
         The agent fills in a structured intent; the backend validates it against
-        ``principal``'s policy and builds the Cypher. Binding the principal here (rather than
-        passing it as a tool argument) keeps it out of the model's reach.
+        ``principal``'s policy and builds the Cypher. Binding the principal (and the request's
+        ``as_of`` snapshot) here, rather than passing them as tool arguments, keeps them out
+        of the model's reach — the temporal mode is the backend's decision, not the LLM's.
         """
 
         @tool(name=TOOL_NAME, description="Query the aircraft knowledge graph by describing what to fetch; returns matching rows.")
@@ -354,25 +384,27 @@ class KnowledgeGraphAgent:
             limit: Annotated[int | None, "Optional maximum number of rows to return."] = None,
         ) -> str:
             intent = QueryIntent(entity=entity, fields=fields, filters=filters, aggregate=aggregate, limit=limit)
-            return await self._run_query_tool(principal, intent)
+            return await self._run_query_tool(principal, intent, as_of)
 
         return query_knowledge_graph
 
-    def _build_maf_agent(self, principal: Principal) -> Agent:
+    def _build_maf_agent(self, principal: Principal, as_of: str | None) -> Agent:
         """Construct a per-request MAF agent with instructions and tools scoped to ``principal``.
 
         Only the entities and fields the principal may see are described in the instructions
         (via :meth:`PolicyStore.describe_surface`), so unauthorised field *names* never reach
         the model. The agent is forced to call the typed retrieval tool on its first turn,
         then answers from the rows. The turn-recorder middleware captures each LLM call
-        (planning + answer) individually for the debug ``stats`` event.
+        (planning + answer) individually for the debug ``stats`` event. ``as_of`` is bound
+        into the retrieval tool so the temporal snapshot is applied deterministically.
         """
-        instructions = STRUCTURED_AGENT_SYSTEM_PROMPT.format(surface=self._policy.describe_surface(principal))
+        surface = self._policy.describe_surface(principal)
+        instructions = STRUCTURED_AGENT_SYSTEM_PROMPT.format(surface=f"{surface}\n\n{self._ontology.describe()}")
         return Agent(
             client=self._chat_client,
             instructions=instructions,
             name="knowledge-graph",
-            tools=[self._build_tool(principal)],
+            tools=[self._build_tool(principal, as_of)],
             default_options=ChatOptions(tool_choice=_TOOL_CHOICE),
             middleware=[_MafTurnRecorder(instructions)],
         )
@@ -390,7 +422,7 @@ class KnowledgeGraphAgent:
         _install_query_safety(driver, statement_timeout_seconds())
         return agent
 
-    async def ask(self, question: str, principal: Principal | None = None) -> AsyncIterator[dict[str, Any]]:
+    async def ask(self, question: str, principal: Principal | None = None, *, as_of: str | None = None) -> AsyncIterator[dict[str, Any]]:
         """Answer a question while streaming the agent's tokens.
 
         Yields newline-delimited-JSON-friendly event dicts in order:
@@ -441,6 +473,9 @@ class KnowledgeGraphAgent:
                 total_ms=elapsed_ms(total_start),
                 cypher_count=0,
                 record_count=0,
+                as_of=as_of,
+                version_applied=False,
+                ontology_version=self._ontology.version,
             )
             stats["audit"] = log_audit(
                 build_audit(
@@ -471,7 +506,7 @@ class KnowledgeGraphAgent:
 
         # Build the agent for THIS request so its instructions and tool surface are scoped to
         # the acting principal (only data the identity may see is described to the model).
-        request_agent = self._build_maf_agent(principal)
+        request_agent = self._build_maf_agent(principal, as_of)
 
         # Merge the agent's answer-token stream with backend-emitted ``progress`` phase
         # events onto a single queue. The query-build and graph-query steps run inside the
@@ -578,6 +613,7 @@ class KnowledgeGraphAgent:
         cypher_used, records = aggregate_retrieval()
         retrieval_ms = round(sum(entry["duration_ms"] for entry in retrievals), 1)
         generation_ms = round(max(elapsed_ms(agent_start) - retrieval_ms, 0.0), 1)
+        version_applied = any(entry.get("temporal_applied") for entry in retrievals)
         logger.info("Answer generated in %.1fms (total %.1fms)", generation_ms, elapsed_ms(total_start))
 
         stats = _build_stats(
@@ -589,6 +625,9 @@ class KnowledgeGraphAgent:
             total_ms=elapsed_ms(total_start),
             cypher_count=len(cypher_used),
             record_count=len(records),
+            as_of=as_of,
+            version_applied=version_applied,
+            ontology_version=self._ontology.version,
         )
         stats["audit"] = log_audit(
             build_audit(

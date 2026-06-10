@@ -320,7 +320,7 @@
         "Flap"
       ],
       "properties": {
-        "name": "Flaps (0–30°)",
+        "name": "Flaps (0\u201330\u00b0)",
         "type": "single-slotted, electric",
         "settings_deg": "0/10/20/30"
       }
@@ -359,7 +359,12 @@
         "name": "Garmin G1000 PFD",
         "model": "Garmin GDU 1040/1044B PFD",
         "partNumber": "011-00867-00",
-        "display_in": 10.4
+        "display_in": 10.4,
+        "logicalId": "g1000",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -372,7 +377,12 @@
         "name": "Transponder",
         "model": "Garmin GTX 33",
         "mode": "Mode S",
-        "partNumber": "011-00779-00"
+        "partNumber": "011-00779-00",
+        "logicalId": "xpdr",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -384,7 +394,12 @@
       "properties": {
         "name": "VHF Radio",
         "note": "COM integrated in GIA 63",
-        "channels": "25/8.33 kHz"
+        "channels": "25/8.33 kHz",
+        "logicalId": "vhf",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -395,7 +410,12 @@
       ],
       "properties": {
         "name": "Altimeter",
-        "note": "displayed on G1000 PFD, source GDC 74A"
+        "note": "displayed on G1000 PFD, source GDC 74A",
+        "logicalId": "altimeter",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -406,7 +426,12 @@
       ],
       "properties": {
         "name": "Airspeed Indicator",
-        "note": "displayed on G1000 PFD, source GDC 74A"
+        "note": "displayed on G1000 PFD, source GDC 74A",
+        "logicalId": "asi",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -417,7 +442,12 @@
       ],
       "properties": {
         "name": "Attitude Indicator",
-        "note": "displayed on G1000 PFD, source GRS 77 AHRS"
+        "note": "displayed on G1000 PFD, source GRS 77 AHRS",
+        "logicalId": "ai",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -510,7 +540,7 @@
         "POH"
       ],
       "properties": {
-        "name": "POH — C172S"
+        "name": "POH \u2014 C172S"
       }
     },
     {
@@ -553,7 +583,7 @@
         "departureAerodrome": "EGGD",
         "destinationAerodrome": "EGBP",
         "blockTime_minutes": 42,
-        "date": "2026-05-20",
+        "date": "2018-04-12",
         "callsign": "GECHO",
         "flightRules": "VFR",
         "distance_nm": 28,
@@ -583,7 +613,8 @@
         "activity": "walkaround & cockpit checks",
         "fuelState": "full tanks",
         "startTime": "2026-05-20T09:00Z",
-        "endTime": "2026-05-20T09:15Z"
+        "endTime": "2026-05-20T09:15Z",
+        "date": "2018-04-12"
       }
     },
     {
@@ -601,7 +632,8 @@
         "groundRoll_m": 1482,
         "route": "apron to holding point",
         "startTime": "2026-05-20T09:15Z",
-        "endTime": "2026-05-20T09:20Z"
+        "endTime": "2026-05-20T09:20Z",
+        "date": "2018-04-12"
       }
     },
     {
@@ -621,7 +653,8 @@
         "groundRoll_m": 290,
         "distance_nm": 0.2,
         "startTime": "2026-05-20T09:20Z",
-        "endTime": "2026-05-20T09:21Z"
+        "endTime": "2026-05-20T09:21Z",
+        "date": "2018-04-12"
       }
     },
     {
@@ -641,7 +674,8 @@
         "distance_nm": 5.0,
         "powerSetting": "full throttle",
         "startTime": "2026-05-20T09:21Z",
-        "endTime": "2026-05-20T09:25Z"
+        "endTime": "2026-05-20T09:25Z",
+        "date": "2018-04-12"
       }
     },
     {
@@ -662,7 +696,8 @@
         "distance_nm": 36.7,
         "startTime": "2026-05-20T09:25Z",
         "endTime": "2026-05-20T09:45Z",
-        "squawk": "7000"
+        "squawk": "7000",
+        "date": "2018-04-12"
       }
     },
     {
@@ -681,7 +716,8 @@
         "groundspeed_kt": 120,
         "distance_nm": 12.0,
         "startTime": "2026-05-20T09:45Z",
-        "endTime": "2026-05-20T09:51Z"
+        "endTime": "2026-05-20T09:51Z",
+        "date": "2018-04-12"
       }
     },
     {
@@ -701,7 +737,8 @@
         "distance_nm": 5.8,
         "arrivalRunway": "08/26",
         "startTime": "2026-05-20T09:51Z",
-        "endTime": "2026-05-20T09:56Z"
+        "endTime": "2026-05-20T09:56Z",
+        "date": "2018-04-12"
       }
     },
     {
@@ -720,7 +757,8 @@
         "groundRoll_m": 175,
         "distance_nm": 0.3,
         "startTime": "2026-05-20T09:56Z",
-        "endTime": "2026-05-20T09:57Z"
+        "endTime": "2026-05-20T09:57Z",
+        "date": "2018-04-12"
       }
     },
     {
@@ -835,7 +873,12 @@
       "properties": {
         "name": "Air Data Computer (ADC)",
         "model": "Garmin GDC 74A",
-        "partNumber": "011-00882-20"
+        "partNumber": "011-00882-20",
+        "logicalId": "adc",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -847,7 +890,12 @@
       "properties": {
         "name": "AHRS",
         "model": "Garmin GRS 77",
-        "partNumber": "011-00779-10"
+        "partNumber": "011-00779-10",
+        "logicalId": "ahrs",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -1118,7 +1166,12 @@
         "model": "Garmin GDU 1044B",
         "partNumber": "011-01023-00",
         "display_in": 10.4,
-        "function": "engine data, map, flight planning"
+        "function": "engine data, map, flight planning",
+        "logicalId": "mfd",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -1131,7 +1184,12 @@
         "name": "Audio Panel",
         "model": "Garmin GMA 1347",
         "partNumber": "011-01070-00",
-        "features": "intercom, marker beacon"
+        "features": "intercom, marker beacon",
+        "logicalId": "audioPanel",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -1144,7 +1202,12 @@
         "name": "GIA 63 #1",
         "model": "Garmin GIA 63W",
         "partNumber": "011-01034-00",
-        "function": "COM/NAV/GPS/glideslope"
+        "function": "COM/NAV/GPS/glideslope",
+        "logicalId": "gia1",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -1157,7 +1220,12 @@
         "name": "GIA 63 #2",
         "model": "Garmin GIA 63W",
         "partNumber": "011-01034-00",
-        "function": "COM/NAV/GPS/glideslope"
+        "function": "COM/NAV/GPS/glideslope",
+        "logicalId": "gia2",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -1170,7 +1238,12 @@
         "name": "GEA 71",
         "model": "Garmin GEA 71",
         "partNumber": "011-00942-00",
-        "function": "engine/airframe sensor interface"
+        "function": "engine/airframe sensor interface",
+        "logicalId": "gea71",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -1183,7 +1256,12 @@
         "name": "GMU 44 Magnetometer",
         "model": "Garmin GMU 44",
         "partNumber": "011-00861-00",
-        "location": "left wing"
+        "location": "left wing",
+        "logicalId": "gmu44",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -1196,7 +1274,12 @@
         "name": "ELT",
         "model": "Artex ELT 345",
         "frequency_mhz": 406,
-        "batteryType": "lithium"
+        "batteryType": "lithium",
+        "logicalId": "elt",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -1620,7 +1703,7 @@
         "name": "Flight 002",
         "departureAerodrome": "EGBP",
         "destinationAerodrome": "EGBJ",
-        "date": "2026-05-22",
+        "date": "2019-02-23",
         "callsign": "GECHO",
         "flightRules": "VFR",
         "distance_nm": 14,
@@ -1644,7 +1727,7 @@
         "name": "Flight 003",
         "departureAerodrome": "EGGD",
         "destinationAerodrome": "EGFF",
-        "date": "2026-05-25",
+        "date": "2019-09-30",
         "callsign": "GECHO",
         "flightRules": "VFR",
         "distance_nm": 23,
@@ -1668,7 +1751,7 @@
         "name": "Flight 004",
         "departureAerodrome": "EGGD",
         "destinationAerodrome": "EGTE",
-        "date": "2026-05-28",
+        "date": "2020-07-18",
         "callsign": "GECHO",
         "flightRules": "VFR",
         "distance_nm": 47,
@@ -1692,7 +1775,7 @@
         "name": "Flight 005",
         "departureAerodrome": "EGBP",
         "destinationAerodrome": "EGTK",
-        "date": "2026-06-01",
+        "date": "2021-08-05",
         "callsign": "GECHO",
         "flightRules": "VFR",
         "distance_nm": 29,
@@ -1716,7 +1799,7 @@
         "name": "Flight 006",
         "departureAerodrome": "EGGD",
         "destinationAerodrome": "EGHH",
-        "date": "2026-06-04",
+        "date": "2022-03-14",
         "callsign": "GECHO",
         "flightRules": "VFR",
         "distance_nm": 49,
@@ -1747,7 +1830,8 @@
         "activity": "walkaround & cockpit checks",
         "fuelState": "full tanks",
         "startTime": "2026-05-22T10:30Z",
-        "endTime": "2026-05-22T10:45Z"
+        "endTime": "2026-05-22T10:45Z",
+        "date": "2019-02-23"
       }
     },
     {
@@ -1765,7 +1849,8 @@
         "groundRoll_m": 1482,
         "route": "apron to holding point",
         "startTime": "2026-05-22T10:45Z",
-        "endTime": "2026-05-22T10:50Z"
+        "endTime": "2026-05-22T10:50Z",
+        "date": "2019-02-23"
       }
     },
     {
@@ -1785,7 +1870,8 @@
         "groundRoll_m": 290,
         "distance_nm": 0.2,
         "startTime": "2026-05-22T10:50Z",
-        "endTime": "2026-05-22T10:51Z"
+        "endTime": "2026-05-22T10:51Z",
+        "date": "2019-02-23"
       }
     },
     {
@@ -1805,7 +1891,8 @@
         "distance_nm": 5.0,
         "powerSetting": "full throttle",
         "startTime": "2026-05-22T10:51Z",
-        "endTime": "2026-05-22T10:55Z"
+        "endTime": "2026-05-22T10:55Z",
+        "date": "2019-02-23"
       }
     },
     {
@@ -1826,7 +1913,8 @@
         "distance_nm": 5.5,
         "startTime": "2026-05-22T10:55Z",
         "endTime": "2026-05-22T10:58Z",
-        "squawk": "7000"
+        "squawk": "7000",
+        "date": "2019-02-23"
       }
     },
     {
@@ -1845,7 +1933,8 @@
         "groundspeed_kt": 120,
         "distance_nm": 12.0,
         "startTime": "2026-05-22T10:58Z",
-        "endTime": "2026-05-22T11:04Z"
+        "endTime": "2026-05-22T11:04Z",
+        "date": "2019-02-23"
       }
     },
     {
@@ -1865,7 +1954,8 @@
         "distance_nm": 5.8,
         "arrivalRunway": "09/27",
         "startTime": "2026-05-22T11:04Z",
-        "endTime": "2026-05-22T11:09Z"
+        "endTime": "2026-05-22T11:09Z",
+        "date": "2019-02-23"
       }
     },
     {
@@ -1884,7 +1974,8 @@
         "groundRoll_m": 175,
         "distance_nm": 0.3,
         "startTime": "2026-05-22T11:09Z",
-        "endTime": "2026-05-22T11:10Z"
+        "endTime": "2026-05-22T11:10Z",
+        "date": "2019-02-23"
       }
     },
     {
@@ -1903,7 +1994,8 @@
         "activity": "walkaround & cockpit checks",
         "fuelState": "full tanks",
         "startTime": "2026-05-25T08:15Z",
-        "endTime": "2026-05-25T08:30Z"
+        "endTime": "2026-05-25T08:30Z",
+        "date": "2019-09-30"
       }
     },
     {
@@ -1921,7 +2013,8 @@
         "groundRoll_m": 1482,
         "route": "apron to holding point",
         "startTime": "2026-05-25T08:30Z",
-        "endTime": "2026-05-25T08:35Z"
+        "endTime": "2026-05-25T08:35Z",
+        "date": "2019-09-30"
       }
     },
     {
@@ -1941,7 +2034,8 @@
         "groundRoll_m": 290,
         "distance_nm": 0.2,
         "startTime": "2026-05-25T08:35Z",
-        "endTime": "2026-05-25T08:36Z"
+        "endTime": "2026-05-25T08:36Z",
+        "date": "2019-09-30"
       }
     },
     {
@@ -1961,7 +2055,8 @@
         "distance_nm": 5.0,
         "powerSetting": "full throttle",
         "startTime": "2026-05-25T08:36Z",
-        "endTime": "2026-05-25T08:40Z"
+        "endTime": "2026-05-25T08:40Z",
+        "date": "2019-09-30"
       }
     },
     {
@@ -1982,7 +2077,8 @@
         "distance_nm": 12.8,
         "startTime": "2026-05-25T08:40Z",
         "endTime": "2026-05-25T08:47Z",
-        "squawk": "7000"
+        "squawk": "7000",
+        "date": "2019-09-30"
       }
     },
     {
@@ -2001,7 +2097,8 @@
         "groundspeed_kt": 120,
         "distance_nm": 12.0,
         "startTime": "2026-05-25T08:47Z",
-        "endTime": "2026-05-25T08:53Z"
+        "endTime": "2026-05-25T08:53Z",
+        "date": "2019-09-30"
       }
     },
     {
@@ -2021,7 +2118,8 @@
         "distance_nm": 5.8,
         "arrivalRunway": "12/30",
         "startTime": "2026-05-25T08:53Z",
-        "endTime": "2026-05-25T08:58Z"
+        "endTime": "2026-05-25T08:58Z",
+        "date": "2019-09-30"
       }
     },
     {
@@ -2040,7 +2138,8 @@
         "groundRoll_m": 175,
         "distance_nm": 0.3,
         "startTime": "2026-05-25T08:58Z",
-        "endTime": "2026-05-25T08:59Z"
+        "endTime": "2026-05-25T08:59Z",
+        "date": "2019-09-30"
       }
     },
     {
@@ -2059,7 +2158,8 @@
         "activity": "walkaround & cockpit checks",
         "fuelState": "full tanks",
         "startTime": "2026-05-28T13:00Z",
-        "endTime": "2026-05-28T13:15Z"
+        "endTime": "2026-05-28T13:15Z",
+        "date": "2020-07-18"
       }
     },
     {
@@ -2077,7 +2177,8 @@
         "groundRoll_m": 1482,
         "route": "apron to holding point",
         "startTime": "2026-05-28T13:15Z",
-        "endTime": "2026-05-28T13:20Z"
+        "endTime": "2026-05-28T13:20Z",
+        "date": "2020-07-18"
       }
     },
     {
@@ -2097,7 +2198,8 @@
         "groundRoll_m": 290,
         "distance_nm": 0.2,
         "startTime": "2026-05-28T13:20Z",
-        "endTime": "2026-05-28T13:21Z"
+        "endTime": "2026-05-28T13:21Z",
+        "date": "2020-07-18"
       }
     },
     {
@@ -2117,7 +2219,8 @@
         "distance_nm": 5.0,
         "powerSetting": "full throttle",
         "startTime": "2026-05-28T13:21Z",
-        "endTime": "2026-05-28T13:25Z"
+        "endTime": "2026-05-28T13:25Z",
+        "date": "2020-07-18"
       }
     },
     {
@@ -2138,7 +2241,8 @@
         "distance_nm": 34.8,
         "startTime": "2026-05-28T13:25Z",
         "endTime": "2026-05-28T13:44Z",
-        "squawk": "7000"
+        "squawk": "7000",
+        "date": "2020-07-18"
       }
     },
     {
@@ -2157,7 +2261,8 @@
         "groundspeed_kt": 120,
         "distance_nm": 12.0,
         "startTime": "2026-05-28T13:44Z",
-        "endTime": "2026-05-28T13:50Z"
+        "endTime": "2026-05-28T13:50Z",
+        "date": "2020-07-18"
       }
     },
     {
@@ -2177,7 +2282,8 @@
         "distance_nm": 5.8,
         "arrivalRunway": "08/26",
         "startTime": "2026-05-28T13:50Z",
-        "endTime": "2026-05-28T13:55Z"
+        "endTime": "2026-05-28T13:55Z",
+        "date": "2020-07-18"
       }
     },
     {
@@ -2196,7 +2302,8 @@
         "groundRoll_m": 175,
         "distance_nm": 0.3,
         "startTime": "2026-05-28T13:55Z",
-        "endTime": "2026-05-28T13:56Z"
+        "endTime": "2026-05-28T13:56Z",
+        "date": "2020-07-18"
       }
     },
     {
@@ -2215,7 +2322,8 @@
         "activity": "walkaround & cockpit checks",
         "fuelState": "full tanks",
         "startTime": "2026-06-01T11:00Z",
-        "endTime": "2026-06-01T11:15Z"
+        "endTime": "2026-06-01T11:15Z",
+        "date": "2021-08-05"
       }
     },
     {
@@ -2233,7 +2341,8 @@
         "groundRoll_m": 1482,
         "route": "apron to holding point",
         "startTime": "2026-06-01T11:15Z",
-        "endTime": "2026-06-01T11:20Z"
+        "endTime": "2026-06-01T11:20Z",
+        "date": "2021-08-05"
       }
     },
     {
@@ -2253,7 +2362,8 @@
         "groundRoll_m": 290,
         "distance_nm": 0.2,
         "startTime": "2026-06-01T11:20Z",
-        "endTime": "2026-06-01T11:21Z"
+        "endTime": "2026-06-01T11:21Z",
+        "date": "2021-08-05"
       }
     },
     {
@@ -2273,7 +2383,8 @@
         "distance_nm": 5.0,
         "powerSetting": "full throttle",
         "startTime": "2026-06-01T11:21Z",
-        "endTime": "2026-06-01T11:25Z"
+        "endTime": "2026-06-01T11:25Z",
+        "date": "2021-08-05"
       }
     },
     {
@@ -2294,7 +2405,8 @@
         "distance_nm": 23.8,
         "startTime": "2026-06-01T11:25Z",
         "endTime": "2026-06-01T11:38Z",
-        "squawk": "7000"
+        "squawk": "7000",
+        "date": "2021-08-05"
       }
     },
     {
@@ -2313,7 +2425,8 @@
         "groundspeed_kt": 120,
         "distance_nm": 12.0,
         "startTime": "2026-06-01T11:38Z",
-        "endTime": "2026-06-01T11:44Z"
+        "endTime": "2026-06-01T11:44Z",
+        "date": "2021-08-05"
       }
     },
     {
@@ -2333,7 +2446,8 @@
         "distance_nm": 5.8,
         "arrivalRunway": "01/19",
         "startTime": "2026-06-01T11:44Z",
-        "endTime": "2026-06-01T11:49Z"
+        "endTime": "2026-06-01T11:49Z",
+        "date": "2021-08-05"
       }
     },
     {
@@ -2352,7 +2466,8 @@
         "groundRoll_m": 175,
         "distance_nm": 0.3,
         "startTime": "2026-06-01T11:49Z",
-        "endTime": "2026-06-01T11:50Z"
+        "endTime": "2026-06-01T11:50Z",
+        "date": "2021-08-05"
       }
     },
     {
@@ -2371,7 +2486,8 @@
         "activity": "walkaround & cockpit checks",
         "fuelState": "full tanks",
         "startTime": "2026-06-04T14:00Z",
-        "endTime": "2026-06-04T14:15Z"
+        "endTime": "2026-06-04T14:15Z",
+        "date": "2022-03-14"
       }
     },
     {
@@ -2389,7 +2505,8 @@
         "groundRoll_m": 1482,
         "route": "apron to holding point",
         "startTime": "2026-06-04T14:15Z",
-        "endTime": "2026-06-04T14:20Z"
+        "endTime": "2026-06-04T14:20Z",
+        "date": "2022-03-14"
       }
     },
     {
@@ -2409,7 +2526,8 @@
         "groundRoll_m": 290,
         "distance_nm": 0.2,
         "startTime": "2026-06-04T14:20Z",
-        "endTime": "2026-06-04T14:21Z"
+        "endTime": "2026-06-04T14:21Z",
+        "date": "2022-03-14"
       }
     },
     {
@@ -2429,7 +2547,8 @@
         "distance_nm": 5.0,
         "powerSetting": "full throttle",
         "startTime": "2026-06-04T14:21Z",
-        "endTime": "2026-06-04T14:25Z"
+        "endTime": "2026-06-04T14:25Z",
+        "date": "2022-03-14"
       }
     },
     {
@@ -2450,7 +2569,8 @@
         "distance_nm": 45.8,
         "startTime": "2026-06-04T14:25Z",
         "endTime": "2026-06-04T14:50Z",
-        "squawk": "7000"
+        "squawk": "7000",
+        "date": "2022-03-14"
       }
     },
     {
@@ -2469,7 +2589,8 @@
         "groundspeed_kt": 120,
         "distance_nm": 12.0,
         "startTime": "2026-06-04T14:50Z",
-        "endTime": "2026-06-04T14:56Z"
+        "endTime": "2026-06-04T14:56Z",
+        "date": "2022-03-14"
       }
     },
     {
@@ -2489,7 +2610,8 @@
         "distance_nm": 5.8,
         "arrivalRunway": "08/26",
         "startTime": "2026-06-04T14:56Z",
-        "endTime": "2026-06-04T15:01Z"
+        "endTime": "2026-06-04T15:01Z",
+        "date": "2022-03-14"
       }
     },
     {
@@ -2508,7 +2630,8 @@
         "groundRoll_m": 175,
         "distance_nm": 0.3,
         "startTime": "2026-06-04T15:01Z",
-        "endTime": "2026-06-04T15:02Z"
+        "endTime": "2026-06-04T15:02Z",
+        "date": "2022-03-14"
       }
     },
     {
@@ -2825,7 +2948,12 @@
         "height_ft": 8.9,
         "wingArea_sqft": 174,
         "cabinWidth_in": 39.5,
-        "seats": 4
+        "seats": 4,
+        "logicalId": "dims",
+        "version": 1,
+        "validFrom": "2018-01-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -2842,26 +2970,84 @@
         "standardEmptyWeight_lb": 1680,
         "maxUsefulLoad_lb": 878,
         "maxBaggage_lb": 120,
-        "usableFuel_gal": 53
+        "usableFuel_gal": 53,
+        "logicalId": "weights",
+        "version": 1,
+        "validFrom": "2018-01-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
-      "id": "perf",
+      "id": "perf__v1",
       "labels": [
         "Specification",
         "Performance"
       ],
       "properties": {
         "name": "Performance",
-        "maxCruiseSpeed_kt": 124,
-        "serviceCeiling_ft": 14000,
-        "maxRange_nm": 518,
+        "maxCruiseSpeed_kt": 108,
+        "serviceCeiling_ft": 11500,
+        "maxRange_nm": 380,
         "maxEndurance_hours": 5.0,
-        "maxClimbRateSL_fpm": 730,
+        "maxClimbRateSL_fpm": 580,
         "takeoffGroundRoll_ft": 960,
         "landingGroundRoll_ft": 575,
-        "cruiseFuelBurn_gph": 8.5,
-        "conditions": "POH figures at gross weight, standard day, sea level, paved level dry runway"
+        "cruiseFuelBurn_gph": 11.5,
+        "conditions": "POH figures at gross weight, standard day, sea level, paved level dry runway",
+        "logicalId": "perf",
+        "version": 1,
+        "validFrom": "2018-01-01",
+        "validTo": "2021-06-01",
+        "current": false
+      }
+    },
+    {
+      "id": "perf__v2",
+      "labels": [
+        "Specification",
+        "Performance"
+      ],
+      "properties": {
+        "name": "Performance",
+        "maxCruiseSpeed_kt": 122,
+        "serviceCeiling_ft": 13500,
+        "maxRange_nm": 480,
+        "maxEndurance_hours": 5.0,
+        "maxClimbRateSL_fpm": 700,
+        "takeoffGroundRoll_ft": 960,
+        "landingGroundRoll_ft": 575,
+        "cruiseFuelBurn_gph": 9.4,
+        "conditions": "POH figures at gross weight, standard day, sea level, paved level dry runway",
+        "logicalId": "perf",
+        "version": 2,
+        "validFrom": "2021-06-01",
+        "validTo": "2024-03-01",
+        "current": false
+      }
+    },
+    {
+      "id": "perf__v3",
+      "labels": [
+        "Specification",
+        "Performance"
+      ],
+      "properties": {
+        "name": "Performance",
+        "maxCruiseSpeed_kt": 140,
+        "serviceCeiling_ft": 15500,
+        "maxRange_nm": 620,
+        "maxEndurance_hours": 5.0,
+        "maxClimbRateSL_fpm": 850,
+        "takeoffGroundRoll_ft": 960,
+        "landingGroundRoll_ft": 575,
+        "cruiseFuelBurn_gph": 7.8,
+        "conditions": "POH figures at gross weight, standard day, sea level, paved level dry runway",
+        "logicalId": "perf",
+        "version": 3,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -2883,7 +3069,12 @@
         "vs_kt": 48,
         "vs0_kt": 40,
         "bestGlide_kt": 68,
-        "maxDemoCrosswind_kt": 15
+        "maxDemoCrosswind_kt": 15,
+        "logicalId": "vspeeds",
+        "version": 1,
+        "validFrom": "2018-01-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -2899,7 +3090,12 @@
         "maxOperatingAltitude_ft": 14000,
         "minFuelGrade": "100LL / 100 (avgas)",
         "oilCapacity_qt": 8,
-        "maxOilConsumption_qtPerHr": 0.6
+        "maxOilConsumption_qtPerHr": 0.6,
+        "logicalId": "limits",
+        "version": 1,
+        "validFrom": "2018-01-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -2931,7 +3127,12 @@
       ],
       "properties": {
         "name": "Garmin G1000 Pilot's Guide",
-        "system": "Garmin G1000 NXi"
+        "system": "Garmin G1000 NXi",
+        "logicalId": "g1000Manual",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -3029,7 +3230,12 @@
       "properties": {
         "name": "G1000 PFD",
         "model": "Garmin GDU 1040",
-        "size_in": 10.4
+        "size_in": 10.4,
+        "logicalId": "pfd",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -3039,7 +3245,12 @@
         "StandbyInstrument"
       ],
       "properties": {
-        "name": "Standby Attitude Indicator"
+        "name": "Standby Attitude Indicator",
+        "logicalId": "standbyAi",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -3049,7 +3260,12 @@
         "StandbyInstrument"
       ],
       "properties": {
-        "name": "Standby Altimeter"
+        "name": "Standby Altimeter",
+        "logicalId": "standbyAlt",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -3059,7 +3275,12 @@
         "StandbyInstrument"
       ],
       "properties": {
-        "name": "Standby Airspeed Indicator"
+        "name": "Standby Airspeed Indicator",
+        "logicalId": "standbyAsi",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     },
     {
@@ -3174,7 +3395,7 @@
         "name": "Flight 007",
         "departureAerodrome": "EGGD",
         "destinationAerodrome": "EGFF",
-        "date": "2026-06-08",
+        "date": "2022-11-02",
         "callsign": "GECHO",
         "flightRules": "VFR",
         "distance_nm": 23,
@@ -3205,7 +3426,8 @@
         "activity": "walkaround & cockpit checks",
         "fuelState": "full tanks",
         "startTime": "2026-06-08T09:00Z",
-        "endTime": "2026-06-08T09:15Z"
+        "endTime": "2026-06-08T09:15Z",
+        "date": "2022-11-02"
       }
     },
     {
@@ -3222,7 +3444,8 @@
         "distance_nm": 0.8,
         "route": "apron to holding point",
         "startTime": "2026-06-08T09:15Z",
-        "endTime": "2026-06-08T09:20Z"
+        "endTime": "2026-06-08T09:20Z",
+        "date": "2022-11-02"
       }
     },
     {
@@ -3242,7 +3465,8 @@
         "groundRoll_m": 290,
         "distance_nm": 0.2,
         "startTime": "2026-06-08T09:20Z",
-        "endTime": "2026-06-08T09:21Z"
+        "endTime": "2026-06-08T09:21Z",
+        "date": "2022-11-02"
       }
     },
     {
@@ -3262,7 +3486,8 @@
         "distance_nm": 5.0,
         "powerSetting": "full throttle",
         "startTime": "2026-06-08T09:21Z",
-        "endTime": "2026-06-08T09:25Z"
+        "endTime": "2026-06-08T09:25Z",
+        "date": "2022-11-02"
       }
     },
     {
@@ -3283,7 +3508,8 @@
         "distance_nm": 12,
         "startTime": "2026-06-08T09:25Z",
         "endTime": "2026-06-08T09:37Z",
-        "squawk": "7000"
+        "squawk": "7000",
+        "date": "2022-11-02"
       }
     },
     {
@@ -3302,7 +3528,8 @@
         "groundspeed_kt": 120,
         "distance_nm": 12.0,
         "startTime": "2026-06-08T09:37Z",
-        "endTime": "2026-06-08T09:43Z"
+        "endTime": "2026-06-08T09:43Z",
+        "date": "2022-11-02"
       }
     },
     {
@@ -3322,7 +3549,8 @@
         "distance_nm": 5.8,
         "arrivalRunway": "12/30",
         "startTime": "2026-06-08T09:43Z",
-        "endTime": "2026-06-08T09:48Z"
+        "endTime": "2026-06-08T09:48Z",
+        "date": "2022-11-02"
       }
     },
     {
@@ -3341,7 +3569,8 @@
         "groundRoll_m": 175,
         "distance_nm": 0.3,
         "startTime": "2026-06-08T09:48Z",
-        "endTime": "2026-06-08T09:49Z"
+        "endTime": "2026-06-08T09:49Z",
+        "date": "2022-11-02"
       }
     },
     {
@@ -3353,7 +3582,7 @@
         "name": "Flight 008",
         "departureAerodrome": "EGFF",
         "destinationAerodrome": "EGGD",
-        "date": "2026-06-08",
+        "date": "2023-06-21",
         "callsign": "GECHO",
         "flightRules": "VFR",
         "distance_nm": 23,
@@ -3384,7 +3613,8 @@
         "activity": "walkaround & cockpit checks",
         "fuelState": "full tanks",
         "startTime": "2026-06-08T11:30Z",
-        "endTime": "2026-06-08T11:45Z"
+        "endTime": "2026-06-08T11:45Z",
+        "date": "2023-06-21"
       }
     },
     {
@@ -3401,7 +3631,8 @@
         "distance_nm": 0.8,
         "route": "apron to holding point",
         "startTime": "2026-06-08T11:45Z",
-        "endTime": "2026-06-08T11:50Z"
+        "endTime": "2026-06-08T11:50Z",
+        "date": "2023-06-21"
       }
     },
     {
@@ -3421,7 +3652,8 @@
         "groundRoll_m": 290,
         "distance_nm": 0.2,
         "startTime": "2026-06-08T11:50Z",
-        "endTime": "2026-06-08T11:51Z"
+        "endTime": "2026-06-08T11:51Z",
+        "date": "2023-06-21"
       }
     },
     {
@@ -3441,7 +3673,8 @@
         "distance_nm": 5.0,
         "powerSetting": "full throttle",
         "startTime": "2026-06-08T11:51Z",
-        "endTime": "2026-06-08T11:55Z"
+        "endTime": "2026-06-08T11:55Z",
+        "date": "2023-06-21"
       }
     },
     {
@@ -3462,7 +3695,8 @@
         "distance_nm": 12,
         "startTime": "2026-06-08T11:55Z",
         "endTime": "2026-06-08T12:07Z",
-        "squawk": "7000"
+        "squawk": "7000",
+        "date": "2023-06-21"
       }
     },
     {
@@ -3481,7 +3715,8 @@
         "groundspeed_kt": 120,
         "distance_nm": 12.0,
         "startTime": "2026-06-08T12:07Z",
-        "endTime": "2026-06-08T12:13Z"
+        "endTime": "2026-06-08T12:13Z",
+        "date": "2023-06-21"
       }
     },
     {
@@ -3501,7 +3736,8 @@
         "distance_nm": 5.8,
         "arrivalRunway": "09/27",
         "startTime": "2026-06-08T12:13Z",
-        "endTime": "2026-06-08T12:18Z"
+        "endTime": "2026-06-08T12:18Z",
+        "date": "2023-06-21"
       }
     },
     {
@@ -3520,7 +3756,8 @@
         "groundRoll_m": 175,
         "distance_nm": 0.3,
         "startTime": "2026-06-08T12:18Z",
-        "endTime": "2026-06-08T12:19Z"
+        "endTime": "2026-06-08T12:19Z",
+        "date": "2023-06-21"
       }
     },
     {
@@ -3532,7 +3769,7 @@
         "name": "Flight 009",
         "departureAerodrome": "EGGD",
         "destinationAerodrome": "EGHH",
-        "date": "2026-06-11",
+        "date": "2024-05-09",
         "callsign": "GECHO",
         "flightRules": "VFR",
         "distance_nm": 49,
@@ -3563,7 +3800,8 @@
         "activity": "walkaround & cockpit checks",
         "fuelState": "full tanks",
         "startTime": "2026-06-11T10:00Z",
-        "endTime": "2026-06-11T10:15Z"
+        "endTime": "2026-06-11T10:15Z",
+        "date": "2024-05-09"
       }
     },
     {
@@ -3580,7 +3818,8 @@
         "distance_nm": 0.8,
         "route": "apron to holding point",
         "startTime": "2026-06-11T10:15Z",
-        "endTime": "2026-06-11T10:20Z"
+        "endTime": "2026-06-11T10:20Z",
+        "date": "2024-05-09"
       }
     },
     {
@@ -3600,7 +3839,8 @@
         "groundRoll_m": 290,
         "distance_nm": 0.2,
         "startTime": "2026-06-11T10:20Z",
-        "endTime": "2026-06-11T10:21Z"
+        "endTime": "2026-06-11T10:21Z",
+        "date": "2024-05-09"
       }
     },
     {
@@ -3620,7 +3860,8 @@
         "distance_nm": 5.0,
         "powerSetting": "full throttle",
         "startTime": "2026-06-11T10:21Z",
-        "endTime": "2026-06-11T10:25Z"
+        "endTime": "2026-06-11T10:25Z",
+        "date": "2024-05-09"
       }
     },
     {
@@ -3641,7 +3882,8 @@
         "distance_nm": 38,
         "startTime": "2026-06-11T10:25Z",
         "endTime": "2026-06-11T10:49Z",
-        "squawk": "7000"
+        "squawk": "7000",
+        "date": "2024-05-09"
       }
     },
     {
@@ -3660,7 +3902,8 @@
         "groundspeed_kt": 120,
         "distance_nm": 12.0,
         "startTime": "2026-06-11T10:49Z",
-        "endTime": "2026-06-11T10:55Z"
+        "endTime": "2026-06-11T10:55Z",
+        "date": "2024-05-09"
       }
     },
     {
@@ -3680,7 +3923,8 @@
         "distance_nm": 5.8,
         "arrivalRunway": "08/26",
         "startTime": "2026-06-11T10:55Z",
-        "endTime": "2026-06-11T11:00Z"
+        "endTime": "2026-06-11T11:00Z",
+        "date": "2024-05-09"
       }
     },
     {
@@ -3699,7 +3943,8 @@
         "groundRoll_m": 175,
         "distance_nm": 0.3,
         "startTime": "2026-06-11T11:00Z",
-        "endTime": "2026-06-11T11:01Z"
+        "endTime": "2026-06-11T11:01Z",
+        "date": "2024-05-09"
       }
     },
     {
@@ -3711,7 +3956,7 @@
         "name": "Flight 010",
         "departureAerodrome": "EGBJ",
         "destinationAerodrome": "EGTK",
-        "date": "2026-06-14",
+        "date": "2025-01-27",
         "callsign": "GECHO",
         "flightRules": "VFR",
         "distance_nm": 44,
@@ -3742,7 +3987,8 @@
         "activity": "walkaround & cockpit checks",
         "fuelState": "full tanks",
         "startTime": "2026-06-14T08:30Z",
-        "endTime": "2026-06-14T08:45Z"
+        "endTime": "2026-06-14T08:45Z",
+        "date": "2025-01-27"
       }
     },
     {
@@ -3759,7 +4005,8 @@
         "distance_nm": 0.8,
         "route": "apron to holding point",
         "startTime": "2026-06-14T08:45Z",
-        "endTime": "2026-06-14T08:50Z"
+        "endTime": "2026-06-14T08:50Z",
+        "date": "2025-01-27"
       }
     },
     {
@@ -3779,7 +4026,8 @@
         "groundRoll_m": 290,
         "distance_nm": 0.2,
         "startTime": "2026-06-14T08:50Z",
-        "endTime": "2026-06-14T08:51Z"
+        "endTime": "2026-06-14T08:51Z",
+        "date": "2025-01-27"
       }
     },
     {
@@ -3799,7 +4047,8 @@
         "distance_nm": 5.0,
         "powerSetting": "full throttle",
         "startTime": "2026-06-14T08:51Z",
-        "endTime": "2026-06-14T08:55Z"
+        "endTime": "2026-06-14T08:55Z",
+        "date": "2025-01-27"
       }
     },
     {
@@ -3820,7 +4069,8 @@
         "distance_nm": 33,
         "startTime": "2026-06-14T08:55Z",
         "endTime": "2026-06-14T09:15Z",
-        "squawk": "7000"
+        "squawk": "7000",
+        "date": "2025-01-27"
       }
     },
     {
@@ -3839,7 +4089,8 @@
         "groundspeed_kt": 120,
         "distance_nm": 12.0,
         "startTime": "2026-06-14T09:15Z",
-        "endTime": "2026-06-14T09:21Z"
+        "endTime": "2026-06-14T09:21Z",
+        "date": "2025-01-27"
       }
     },
     {
@@ -3859,7 +4110,8 @@
         "distance_nm": 5.8,
         "arrivalRunway": "01/19",
         "startTime": "2026-06-14T09:21Z",
-        "endTime": "2026-06-14T09:26Z"
+        "endTime": "2026-06-14T09:26Z",
+        "date": "2025-01-27"
       }
     },
     {
@@ -3878,7 +4130,8 @@
         "groundRoll_m": 175,
         "distance_nm": 0.3,
         "startTime": "2026-06-14T09:26Z",
-        "endTime": "2026-06-14T09:27Z"
+        "endTime": "2026-06-14T09:27Z",
+        "date": "2025-01-27"
       }
     },
     {
@@ -3890,7 +4143,7 @@
         "name": "Flight 011",
         "departureAerodrome": "EGTE",
         "destinationAerodrome": "EGGD",
-        "date": "2026-06-18",
+        "date": "2025-10-15",
         "callsign": "GECHO",
         "flightRules": "VFR",
         "distance_nm": 47,
@@ -3921,7 +4174,8 @@
         "activity": "walkaround & cockpit checks",
         "fuelState": "full tanks",
         "startTime": "2026-06-18T15:00Z",
-        "endTime": "2026-06-18T15:15Z"
+        "endTime": "2026-06-18T15:15Z",
+        "date": "2025-10-15"
       }
     },
     {
@@ -3938,7 +4192,8 @@
         "distance_nm": 0.8,
         "route": "apron to holding point",
         "startTime": "2026-06-18T15:15Z",
-        "endTime": "2026-06-18T15:20Z"
+        "endTime": "2026-06-18T15:20Z",
+        "date": "2025-10-15"
       }
     },
     {
@@ -3958,7 +4213,8 @@
         "groundRoll_m": 290,
         "distance_nm": 0.2,
         "startTime": "2026-06-18T15:20Z",
-        "endTime": "2026-06-18T15:21Z"
+        "endTime": "2026-06-18T15:21Z",
+        "date": "2025-10-15"
       }
     },
     {
@@ -3978,7 +4234,8 @@
         "distance_nm": 5.0,
         "powerSetting": "full throttle",
         "startTime": "2026-06-18T15:21Z",
-        "endTime": "2026-06-18T15:25Z"
+        "endTime": "2026-06-18T15:25Z",
+        "date": "2025-10-15"
       }
     },
     {
@@ -3999,7 +4256,8 @@
         "distance_nm": 36,
         "startTime": "2026-06-18T15:25Z",
         "endTime": "2026-06-18T15:47Z",
-        "squawk": "7000"
+        "squawk": "7000",
+        "date": "2025-10-15"
       }
     },
     {
@@ -4018,7 +4276,8 @@
         "groundspeed_kt": 120,
         "distance_nm": 12.0,
         "startTime": "2026-06-18T15:47Z",
-        "endTime": "2026-06-18T15:53Z"
+        "endTime": "2026-06-18T15:53Z",
+        "date": "2025-10-15"
       }
     },
     {
@@ -4038,7 +4297,8 @@
         "distance_nm": 5.8,
         "arrivalRunway": "09/27",
         "startTime": "2026-06-18T15:53Z",
-        "endTime": "2026-06-18T15:58Z"
+        "endTime": "2026-06-18T15:58Z",
+        "date": "2025-10-15"
       }
     },
     {
@@ -4057,7 +4317,8 @@
         "groundRoll_m": 175,
         "distance_nm": 0.3,
         "startTime": "2026-06-18T15:58Z",
-        "endTime": "2026-06-18T15:59Z"
+        "endTime": "2026-06-18T15:59Z",
+        "date": "2025-10-15"
       }
     },
     {
@@ -4069,7 +4330,7 @@
         "name": "Flight 012",
         "departureAerodrome": "EGBP",
         "destinationAerodrome": "EGFF",
-        "date": "2026-06-21",
+        "date": "2026-05-20",
         "callsign": "GECHO",
         "flightRules": "VFR",
         "distance_nm": 38,
@@ -4100,7 +4361,8 @@
         "activity": "walkaround & cockpit checks",
         "fuelState": "full tanks",
         "startTime": "2026-06-21T12:00Z",
-        "endTime": "2026-06-21T12:15Z"
+        "endTime": "2026-06-21T12:15Z",
+        "date": "2026-05-20"
       }
     },
     {
@@ -4117,7 +4379,8 @@
         "distance_nm": 0.8,
         "route": "apron to holding point",
         "startTime": "2026-06-21T12:15Z",
-        "endTime": "2026-06-21T12:20Z"
+        "endTime": "2026-06-21T12:20Z",
+        "date": "2026-05-20"
       }
     },
     {
@@ -4137,7 +4400,8 @@
         "groundRoll_m": 290,
         "distance_nm": 0.2,
         "startTime": "2026-06-21T12:20Z",
-        "endTime": "2026-06-21T12:21Z"
+        "endTime": "2026-06-21T12:21Z",
+        "date": "2026-05-20"
       }
     },
     {
@@ -4157,7 +4421,8 @@
         "distance_nm": 5.0,
         "powerSetting": "full throttle",
         "startTime": "2026-06-21T12:21Z",
-        "endTime": "2026-06-21T12:25Z"
+        "endTime": "2026-06-21T12:25Z",
+        "date": "2026-05-20"
       }
     },
     {
@@ -4178,7 +4443,8 @@
         "distance_nm": 27,
         "startTime": "2026-06-21T12:25Z",
         "endTime": "2026-06-21T12:43Z",
-        "squawk": "7000"
+        "squawk": "7000",
+        "date": "2026-05-20"
       }
     },
     {
@@ -4197,7 +4463,8 @@
         "groundspeed_kt": 120,
         "distance_nm": 12.0,
         "startTime": "2026-06-21T12:43Z",
-        "endTime": "2026-06-21T12:49Z"
+        "endTime": "2026-06-21T12:49Z",
+        "date": "2026-05-20"
       }
     },
     {
@@ -4217,7 +4484,8 @@
         "distance_nm": 5.8,
         "arrivalRunway": "12/30",
         "startTime": "2026-06-21T12:49Z",
-        "endTime": "2026-06-21T12:54Z"
+        "endTime": "2026-06-21T12:54Z",
+        "date": "2026-05-20"
       }
     },
     {
@@ -4236,7 +4504,218 @@
         "groundRoll_m": 175,
         "distance_nm": 0.3,
         "startTime": "2026-06-21T12:54Z",
-        "endTime": "2026-06-21T12:55Z"
+        "endTime": "2026-06-21T12:55Z",
+        "date": "2026-05-20"
+      }
+    },
+    {
+      "id": "avpkg__v1",
+      "labels": [
+        "AvionicsPackage"
+      ],
+      "properties": {
+        "name": "Analog Panel",
+        "logicalId": "avpkg",
+        "version": 1,
+        "validFrom": "2018-01-01",
+        "validTo": "2021-06-01",
+        "current": false
+      }
+    },
+    {
+      "id": "avpkg__v2",
+      "labels": [
+        "AvionicsPackage"
+      ],
+      "properties": {
+        "name": "GPS-Equipped Panel",
+        "logicalId": "avpkg",
+        "version": 2,
+        "validFrom": "2021-06-01",
+        "validTo": "2024-03-01",
+        "current": false
+      }
+    },
+    {
+      "id": "avpkg__v3",
+      "labels": [
+        "AvionicsPackage"
+      ],
+      "properties": {
+        "name": "G1000 Glass Cockpit",
+        "logicalId": "avpkg",
+        "version": 3,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
+      }
+    },
+    {
+      "id": "instr_asi_v1",
+      "labels": [
+        "Instrument"
+      ],
+      "properties": {
+        "name": "Airspeed Indicator (Analog)",
+        "logicalId": "instr_asi_v1",
+        "version": 1,
+        "validFrom": "2018-01-01",
+        "validTo": "2021-06-01",
+        "current": false
+      }
+    },
+    {
+      "id": "instr_alt_v1",
+      "labels": [
+        "Instrument"
+      ],
+      "properties": {
+        "name": "Altimeter (Analog)",
+        "logicalId": "instr_alt_v1",
+        "version": 1,
+        "validFrom": "2018-01-01",
+        "validTo": "2021-06-01",
+        "current": false
+      }
+    },
+    {
+      "id": "instr_ai_v1",
+      "labels": [
+        "Instrument"
+      ],
+      "properties": {
+        "name": "Attitude Indicator (Vacuum)",
+        "logicalId": "instr_ai_v1",
+        "version": 1,
+        "validFrom": "2018-01-01",
+        "validTo": "2021-06-01",
+        "current": false
+      }
+    },
+    {
+      "id": "instr_compass_v1",
+      "labels": [
+        "Instrument"
+      ],
+      "properties": {
+        "name": "Magnetic Compass",
+        "logicalId": "instr_compass_v1",
+        "version": 1,
+        "validFrom": "2018-01-01",
+        "validTo": "2021-06-01",
+        "current": false
+      }
+    },
+    {
+      "id": "instr_asi_v2",
+      "labels": [
+        "Instrument"
+      ],
+      "properties": {
+        "name": "Airspeed Indicator (Analog)",
+        "logicalId": "instr_asi_v2",
+        "version": 1,
+        "validFrom": "2021-06-01",
+        "validTo": "2024-03-01",
+        "current": false
+      }
+    },
+    {
+      "id": "instr_alt_v2",
+      "labels": [
+        "Instrument"
+      ],
+      "properties": {
+        "name": "Altimeter (Analog)",
+        "logicalId": "instr_alt_v2",
+        "version": 1,
+        "validFrom": "2021-06-01",
+        "validTo": "2024-03-01",
+        "current": false
+      }
+    },
+    {
+      "id": "instr_ai_v2",
+      "labels": [
+        "Instrument"
+      ],
+      "properties": {
+        "name": "Attitude Indicator (Vacuum)",
+        "logicalId": "instr_ai_v2",
+        "version": 1,
+        "validFrom": "2021-06-01",
+        "validTo": "2024-03-01",
+        "current": false
+      }
+    },
+    {
+      "id": "instr_compass_v2",
+      "labels": [
+        "Instrument"
+      ],
+      "properties": {
+        "name": "Magnetic Compass",
+        "logicalId": "instr_compass_v2",
+        "version": 1,
+        "validFrom": "2021-06-01",
+        "validTo": "2024-03-01",
+        "current": false
+      }
+    },
+    {
+      "id": "instr_gps_v2",
+      "labels": [
+        "Instrument"
+      ],
+      "properties": {
+        "name": "GPS Navigator (GNS 430)",
+        "logicalId": "instr_gps_v2",
+        "version": 1,
+        "validFrom": "2021-06-01",
+        "validTo": "2024-03-01",
+        "current": false
+      }
+    },
+    {
+      "id": "instr_pfd_v3",
+      "labels": [
+        "Instrument"
+      ],
+      "properties": {
+        "name": "Primary Flight Display (PFD)",
+        "logicalId": "instr_pfd_v3",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
+      }
+    },
+    {
+      "id": "instr_mfd_v3",
+      "labels": [
+        "Instrument"
+      ],
+      "properties": {
+        "name": "Multifunction Display (MFD)",
+        "logicalId": "instr_mfd_v3",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
+      }
+    },
+    {
+      "id": "instr_iau_v3",
+      "labels": [
+        "Instrument"
+      ],
+      "properties": {
+        "name": "Integrated Avionics (G1000)",
+        "logicalId": "instr_iau_v3",
+        "version": 1,
+        "validFrom": "2024-03-01",
+        "validTo": null,
+        "current": true
       }
     }
   ],
@@ -6781,10 +7260,24 @@
       "properties": {}
     },
     {
-      "id": "r384",
+      "id": "r762",
       "type": "HAS_SPECIFICATION",
       "startNode": "G-ECHO",
-      "endNode": "perf",
+      "endNode": "perf__v1",
+      "properties": {}
+    },
+    {
+      "id": "r763",
+      "type": "HAS_SPECIFICATION",
+      "startNode": "G-ECHO",
+      "endNode": "perf__v2",
+      "properties": {}
+    },
+    {
+      "id": "r764",
+      "type": "HAS_SPECIFICATION",
+      "startNode": "G-ECHO",
+      "endNode": "perf__v3",
       "properties": {}
     },
     {
@@ -9424,6 +9917,139 @@
       "type": "HANDLED_BY",
       "startNode": "ph_012_landing",
       "endNode": "atcEGFF_twr",
+      "properties": {}
+    },
+    {
+      "id": "r765",
+      "type": "PREVIOUS_VERSION",
+      "startNode": "perf__v3",
+      "endNode": "perf__v2",
+      "properties": {}
+    },
+    {
+      "id": "r766",
+      "type": "PREVIOUS_VERSION",
+      "startNode": "perf__v2",
+      "endNode": "perf__v1",
+      "properties": {}
+    },
+    {
+      "id": "r767",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "avpkg__v1",
+      "properties": {}
+    },
+    {
+      "id": "r768",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "avpkg__v2",
+      "properties": {}
+    },
+    {
+      "id": "r769",
+      "type": "HAS_COMPONENT",
+      "startNode": "avionics",
+      "endNode": "avpkg__v3",
+      "properties": {}
+    },
+    {
+      "id": "r770",
+      "type": "PREVIOUS_VERSION",
+      "startNode": "avpkg__v2",
+      "endNode": "avpkg__v1",
+      "properties": {}
+    },
+    {
+      "id": "r771",
+      "type": "PREVIOUS_VERSION",
+      "startNode": "avpkg__v3",
+      "endNode": "avpkg__v2",
+      "properties": {}
+    },
+    {
+      "id": "r772",
+      "type": "HAS_PART",
+      "startNode": "avpkg__v1",
+      "endNode": "instr_asi_v1",
+      "properties": {}
+    },
+    {
+      "id": "r773",
+      "type": "HAS_PART",
+      "startNode": "avpkg__v1",
+      "endNode": "instr_alt_v1",
+      "properties": {}
+    },
+    {
+      "id": "r774",
+      "type": "HAS_PART",
+      "startNode": "avpkg__v1",
+      "endNode": "instr_ai_v1",
+      "properties": {}
+    },
+    {
+      "id": "r775",
+      "type": "HAS_PART",
+      "startNode": "avpkg__v1",
+      "endNode": "instr_compass_v1",
+      "properties": {}
+    },
+    {
+      "id": "r776",
+      "type": "HAS_PART",
+      "startNode": "avpkg__v2",
+      "endNode": "instr_asi_v2",
+      "properties": {}
+    },
+    {
+      "id": "r777",
+      "type": "HAS_PART",
+      "startNode": "avpkg__v2",
+      "endNode": "instr_alt_v2",
+      "properties": {}
+    },
+    {
+      "id": "r778",
+      "type": "HAS_PART",
+      "startNode": "avpkg__v2",
+      "endNode": "instr_ai_v2",
+      "properties": {}
+    },
+    {
+      "id": "r779",
+      "type": "HAS_PART",
+      "startNode": "avpkg__v2",
+      "endNode": "instr_compass_v2",
+      "properties": {}
+    },
+    {
+      "id": "r780",
+      "type": "HAS_PART",
+      "startNode": "avpkg__v2",
+      "endNode": "instr_gps_v2",
+      "properties": {}
+    },
+    {
+      "id": "r781",
+      "type": "HAS_PART",
+      "startNode": "avpkg__v3",
+      "endNode": "instr_pfd_v3",
+      "properties": {}
+    },
+    {
+      "id": "r782",
+      "type": "HAS_PART",
+      "startNode": "avpkg__v3",
+      "endNode": "instr_mfd_v3",
+      "properties": {}
+    },
+    {
+      "id": "r783",
+      "type": "HAS_PART",
+      "startNode": "avpkg__v3",
+      "endNode": "instr_iau_v3",
       "properties": {}
     }
   ]

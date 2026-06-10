@@ -2,7 +2,7 @@
 
 This panel lays out the agent's workflow in chronological order, driven entirely by the
 ``stats`` event the backend emits on the stream. A single Microsoft Agent Framework agent
-is forced to call its text-to-Cypher retrieval tool, then writes the answer from the rows
+is forced to call its typed-intent retrieval tool, then writes the answer from the rows
 the tool returns.
 """
 
@@ -103,6 +103,21 @@ def render_debug(
                 f"&nbsp;·&nbsp; role `{principal.get('role', '—')}` "
                 f"&nbsp;·&nbsp; clearance `{principal.get('clearance', '—')}` "
                 f"&nbsp;·&nbsp; policy `{principal.get('policyVersion', '—')}`"
+            )
+
+        # Which temporal snapshot the answer was grounded in, and the active ontology
+        # version. "Current" answers from the latest version of each versioned entity;
+        # "as-of" answers from the version valid on the chosen date (a temporal filter the
+        # backend injects deterministically — never the LLM).
+        versioning = stats.get("versioning") or {}
+        if versioning:
+            mode = versioning.get("mode", "current")
+            as_of = versioning.get("as_of")
+            snapshot = f"as of `{as_of}`" if mode == "as-of" and as_of else "current"
+            applied = "applied" if versioning.get("temporal_filter_applied") else "not applicable (no versioned entity queried)"
+            st.markdown(
+                f"**Snapshot:** {snapshot} &nbsp;·&nbsp; temporal filter {applied} "
+                f"&nbsp;·&nbsp; **ontology** `{versioning.get('ontology_version', '—')}`"
             )
 
         # Step 1 — The agent's tool-planning turn: it emits a typed query intent.

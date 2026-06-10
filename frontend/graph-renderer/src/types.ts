@@ -53,3 +53,21 @@ export interface Graph {
   nodes: GraphNode[]
   links: GraphLink[]
 }
+
+// ── Sidebar filter tree ──────────────────────────────────────────────────────
+// A top-level type and the subtypes present beneath it. Leaves are addressed by
+// a stable filter key (see nodeFilterKey): the subtype key for nodes that have a
+// second label, or the bare type for nodes that don't.
+export interface TypeSubgroup {
+  key: string
+  label: string
+  count: number
+}
+
+export interface TypeGroup {
+  type: string
+  key: string
+  label: string
+  count: number
+  subgroups: TypeSubgroup[]
+}

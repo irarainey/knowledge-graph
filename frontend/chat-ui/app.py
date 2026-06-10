@@ -58,12 +58,13 @@ def render_message(message: dict[str, Any]) -> None:
         render_debug(message.get("stats"), message.get("cypher") or [], message.get("records") or [])
 
 
-def handle_question(base_url: str, question: str, user: str | None) -> None:
+def handle_question(base_url: str, question: str, user: str | None, as_of: str | None = None) -> None:
     """Render the question and stream the answer live, then store both in history.
 
     Rendering happens inline *after* the history loop has already run, and we do not
     call ``st.rerun()`` — so the live turn renders exactly once now, and once from
-    history on subsequent runs. ``user`` is the selected identity the backend answers as.
+    history on subsequent runs. ``user`` is the selected identity the backend answers as;
+    ``as_of`` is the optional snapshot date for versioned entities (``None`` = current).
     """
     st.session_state.messages.append({"role": "user", "content": question})
     with st.chat_message("user"):
@@ -79,7 +80,7 @@ def handle_question(base_url: str, question: str, user: str | None) -> None:
         message_placeholder = st.empty()
         status = message_placeholder.status(_PROGRESS_LABELS["planning"], expanded=False)
         parts: list[str] = []
-        for event in stream_answer(base_url, question, holder, user=user):
+        for event in stream_answer(base_url, question, holder, user=user, as_of=as_of):
             if event["type"] == "progress":
                 # The backend advances through planning → cypher → querying → answering;
                 # reflect the live stage so the wait isn't one opaque label.
@@ -123,6 +124,29 @@ def _on_user_change() -> None:
     st.session_state.pop("pending_question", None)
 
 
+def _render_snapshot_selector() -> str | None:
+    """Render the 'Snapshot' control and return the as-of ISO date, or ``None`` for current.
+
+    Versioned entities (e.g. specifications) keep their full history in the graph. "Current"
+    answers from the latest version of each; "As of date" answers from whichever version was
+    valid on the chosen date — the backend injects the temporal filter deterministically.
+    """
+    st.caption("Snapshot")
+    mode = st.radio(
+        "Snapshot",
+        options=("current", "as-of"),
+        format_func=lambda m: "Current" if m == "current" else "As of date",
+        key="snapshot_mode",
+        horizontal=True,
+        label_visibility="collapsed",
+        help="Versioned data only. 'As of date' answers from the version valid on the chosen date.",
+    )
+    if mode == "current":
+        return None
+    selected = st.date_input("As of date", key="snapshot_date", label_visibility="collapsed")
+    return selected.isoformat() if selected else None
+
+
 def _render_identity_selector(base_url: str) -> str:
     """Render the 'Ask as' identity selector and return the selected user id."""
     users = st.session_state.get("users")
@@ -158,6 +182,7 @@ def main() -> None:
 
     with st.sidebar:
         user_id = _render_identity_selector(BACKEND_URL)
+        as_of = _render_snapshot_selector()
 
         if st.button("New conversation", use_container_width=True):
             st.session_state.messages = []
@@ -194,7 +219,7 @@ def main() -> None:
     typed = st.chat_input("Ask a question about the aircraft…")
     question = pending or typed
     if question:
-        handle_question(BACKEND_URL, question, user_id)
+        handle_question(BACKEND_URL, question, user_id, as_of)
 
 
 if __name__ == "__main__":

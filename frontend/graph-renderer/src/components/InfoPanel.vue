@@ -2,20 +2,23 @@
 import { computed } from 'vue'
 import type { Graph, GraphNode } from '../types'
 import type { StyleResolver } from '../graph'
+import { getVersionInfo, versionHistory } from '../version'
 
 const props = defineProps<{
   node: GraphNode | null
   graph: Graph
+  fullGraph: Graph
   styleFor: StyleResolver
 }>()
 
 defineEmits<{
   close: []
+  'select-node': [node: GraphNode]
 }>()
 
 const labelsById = computed(() => {
   const map = new Map<string, string>()
-  for (const n of props.graph.nodes) map.set(n.id, n.label)
+  for (const n of props.fullGraph.nodes) map.set(n.id, n.label)
   return map
 })
 const labelFor = (id: string): string => labelsById.value.get(id) ?? id
@@ -44,6 +47,16 @@ const linksByTarget = computed(() => {
 const outgoing = computed(() => (props.node ? (linksBySource.value.get(props.node.id) ?? []) : []))
 const incoming = computed(() => (props.node ? (linksByTarget.value.get(props.node.id) ?? []) : []))
 const propEntries = computed(() => (props.node ? Object.entries(props.node.props) : []))
+const selectedVersion = computed(() => (props.node ? getVersionInfo(props.node) : null))
+const history = computed(() =>
+  selectedVersion.value ? versionHistory(props.fullGraph, selectedVersion.value.logicalId) : [],
+)
+
+function validityWindow(node: GraphNode): string {
+  const version = getVersionInfo(node)
+  if (!version) return ''
+  return `${version.validFrom}–${version.validTo ?? 'current'}`
+}
 </script>
 
 <template>
@@ -52,6 +65,41 @@ const propEntries = computed(() => (props.node ? Object.entries(props.node.props
     <template v-if="node">
       <div class="info-type">{{ styleFor(node.type).label }}</div>
       <div class="info-label">{{ node.label }}</div>
+
+      <div v-if="selectedVersion" class="info-section">
+        <div class="info-section-title">VERSION</div>
+        <div class="info-row">
+          <span class="arrow">·</span><span>version:&nbsp;</span
+          ><span class="target">{{ selectedVersion.version }}</span>
+        </div>
+        <div class="info-row">
+          <span class="arrow">·</span><span>validFrom:&nbsp;</span
+          ><span class="target">{{ selectedVersion.validFrom }}</span>
+        </div>
+        <div class="info-row">
+          <span class="arrow">·</span><span>validTo:&nbsp;</span
+          ><span class="target">{{ selectedVersion.validTo ?? 'current' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="arrow">·</span><span>current:&nbsp;</span
+          ><span class="target">{{ selectedVersion.current }}</span>
+        </div>
+      </div>
+
+      <div v-if="history.length" class="info-section">
+        <div class="info-section-title">VERSION HISTORY</div>
+        <button
+          v-for="historyNode in history"
+          :key="historyNode.id"
+          class="history-row"
+          :class="{ active: historyNode.id === node.id }"
+          @click="$emit('select-node', historyNode)"
+        >
+          <span>v{{ getVersionInfo(historyNode)?.version }}</span>
+          <span class="history-window">{{ validityWindow(historyNode) }}</span>
+          <span v-if="getVersionInfo(historyNode)?.current" class="history-current">current</span>
+        </button>
+      </div>
 
       <div v-if="propEntries.length" class="info-section">
         <div class="info-section-title">PROPERTIES</div>
@@ -151,6 +199,38 @@ const propEntries = computed(() => (props.node ? Object.entries(props.node.props
 }
 .info-row .rel {
   color: var(--accent);
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  margin-bottom: 4px;
+  padding: 7px 8px;
+  text-align: left;
+}
+.history-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.history-row.active {
+  background: var(--panel-2);
+  border-color: var(--border);
+}
+.history-window {
+  color: var(--text-dim);
+  flex: 1;
+}
+.history-current {
+  color: var(--accent);
+  font-size: 11px;
 }
 
 .close-btn {

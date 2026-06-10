@@ -86,7 +86,10 @@ The chat UI needs no secrets of its own; Azure OpenAI credentials live in `backe
   policy version — taken from the `stats` event's `principal`, and an **Audit** slice
   (outcome, timestamp, schema fingerprint, policy version, and any authorization or
   query-safety denials)
-  from the `stats` event's `audit` record.
+  from the `stats` event's `audit` record. It also shows a **Snapshot** line — whether the
+  answer was grounded in the *current* data or *as of* a chosen date, whether a temporal
+  filter actually applied, and the active ontology version — from the `stats` event's
+  `versioning` block.
 - An **“Ask as” identity selector** in the sidebar, populated from the backend's
   `GET /users` (so it is policy-driven, not hard-coded). The chosen identity is sent with
   each question; the backend resolves it into a principal and attributes the answer to it.
@@ -94,6 +97,11 @@ The chat UI needs no secrets of its own; Azure OpenAI credentials live in `backe
   model's context and must not carry across an identity change. If the backend is
   unreachable, the selector falls back to a single least-privilege identity so the page
   still loads.
+- A **Snapshot** control in the sidebar: answer from the **current** graph (default) or
+  **as of** a chosen date. When set, it sends an `as_of` date with each question and the
+  backend answers from the graph **as it existed on that date** — the version of each
+  versioned entity that was valid then, and only the events (flights) that had already
+  occurred.
 - Sidebar with a **New conversation** button, one-click **example questions**, and
   shortcut buttons to **open the graph renderer** (Vue app) and **open the Neo4j
   browser** in a new tab.

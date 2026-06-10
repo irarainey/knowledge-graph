@@ -80,6 +80,13 @@ Additional flags:
 A convenience wrapper, `scripts/import-data.sh`, runs the same command from any
 directory and forwards these arguments.
 
+**Version validation.** After loading, the import asserts the temporal invariant that makes
+the "current" query mode well-defined: every versioned `logicalId` must have **at most one**
+`current=true` version and **unique** `version` numbers. The import fails loudly if not (zero
+current versions is allowed — a fully retired logical entity). See
+[Versioning](#versioning-temporal-data-and-ontology) for the data model and why this is
+enforced in the importer rather than the database on Community Edition.
+
 ## Querying the graph (REST API)
 
 `src/app.py` is a FastAPI service that runs arbitrary Cypher queries against the
@@ -294,6 +301,7 @@ The question pipeline streams the answer as the LLM generates it. The request bo
 | --- | --- | --- | --- |
 | `question` | string | yes | A natural-language question about the graph. |
 | `user` | string | no | Id of the identity asking (see [`POST /users`](#get-users)). Resolved server-side into a principal against the access policy; an unknown or omitted id falls back to the least-privilege default identity (default-deny). |
+| `as_of` | string | no | An ISO `YYYY-MM-DD` date. When present, the answer reflects the graph **as it existed on that date**: versioned entities use the version valid then, and event-dated entities (Flights) exclude events that hadn't occurred yet (see [Versioning](#versioning-temporal-data-and-ontology)). Omitted means "current". |
 
 The response is `application/x-ndjson` — a stream of newline-delimited JSON events,
 one object per line:
@@ -304,7 +312,7 @@ one object per line:
 | `metadata` | `{ "type": "metadata", "cypher_used": [...], "records": [...] }` | Once, after retrieval, before any tokens. |
 | `token` | `{ "type": "token", "text": "..." }` | Repeated, as answer tokens arrive. |
 | `error` | `{ "type": "error", "message": "..." }` | Only on failure (in-band, since headers are already sent). |
-| `stats` | `{ "type": "stats", "model": ..., "principal": {...}, "llm_calls": N, "tokens": {...}, "calls": [...], "durations_ms": {...}, "cypher_count": N, "record_count": N, "audit": {...} }` | Once, just before `done` — debug/telemetry for the request. |
+| `stats` | `{ "type": "stats", "model": ..., "principal": {...}, "llm_calls": N, "tokens": {...}, "calls": [...], "durations_ms": {...}, "cypher_count": N, "record_count": N, "audit": {...}, "versioning": {...} }` | Once, just before `done` — debug/telemetry for the request. |
 | `done` | `{ "type": "done" }` | Always last. |
 
 The `stats` event reports debug telemetry for the request: the model, the acting
@@ -325,6 +333,12 @@ the audit trail (see [Query safety and audit](#query-safety-and-audit)): `outcom
 (`answered` / `refused_off_topic` / `error`), `timestamp`, the principal fields,
 `policyVersion`, `schemaFingerprint`, the `cypher` run, `recordCount`, `llmCalls`,
 any `denied` constructs (authorization or query-safety denials), and `durationMs`.
+
+The `stats` event also carries a `versioning` object describing the temporal snapshot the
+answer was grounded in (see [Versioning](#versioning-temporal-data-and-ontology)): `mode`
+(`current` / `as-of`), the `as_of` date (or `null`), `temporal_filter_applied` (whether a
+version selection **or** an event-date cutoff was actually injected) and the active
+`ontology_version`.
 
 The `progress` events let the client surface the pipeline stage currently in flight.
 The query-build and graph-query steps run inside the forced tool and emit no answer
@@ -474,6 +488,118 @@ redaction net — are documented step-by-step under
 [Natural-language questions → How it works](#how-it-works). The code lives in
 [`src/authz/`](src/authz/): `models.py` (the policy/`Principal` models), `store.py`
 (`PolicyStore`) and `query_builder.py` (the enforcement layer).
+
+## Versioning (temporal data and ontology)
+
+Three things in this system version on independent clocks: the **graph data**, the **access
+policy** (who may see what — above), and the **ontology** (what the schema means). And the
+*data* itself carries two different temporal concepts that are easy to conflate but must be
+kept distinct:
+
+- **Valid-time versioning** — a *logical entity is revised* over time (e.g. a performance
+  `Specification` re-measured every few years). Each revision is a version; an as-of query
+  selects the version valid then.
+- **Event time** — an *event happened* at a point in time (e.g. a `Flight`). An event is not a
+  "version" of anything; it simply did or did not exist yet. An as-of query includes only
+  events that had already occurred.
+
+Both are driven by the *same* as-of date and unify under one idea: **the knowledge graph as it
+existed on that date**. Both filters are injected deterministically by the backend (never the
+LLM), and both are kept deliberately **narrow** — versioning the whole graph would force the
+model to reason about validity windows it cannot see, mixing current and historical facts.
+
+### How versioned data is modelled
+
+Each version of a logical thing is its **own node**. They share a stable `logicalId` and
+differ by `version`, with `validFrom`/`validTo` describing the window each was valid and a
+boolean `current` flag marking the live one. Consecutive versions are chained by a
+`PREVIOUS_VERSION` relationship (newer → older). So the database holds **all** versions —
+nothing is overwritten — and "current" is just a flag, not a deletion of the past. In the
+shipped data the `perf` (performance) specification has three versions with deliberately
+divergent figures (max cruise speed 108 → 122 → 140 kt across the eras); the other
+specifications are single-version. Every `Specification` node carries the version properties,
+so the temporal filter below never encounters a missing field.
+
+The full history lives in the shared `data/knowledge-graph.json` export (unlike the
+classification overlay, versioning is graph structure, not a security secret), so the Vue
+graph renderer can show current vs as-of slices and per-entity history too.
+
+**Structural versioning (renderer illustration).** To make versioning *visible* in the graph
+(not just a changed number behind a click), the shipped data also models an **avionics
+retrofit**: an `avpkg` ("avionics package") logical node with three versions — *Analog Panel*
+→ *GPS-Equipped Panel* → *G1000 Glass Cockpit* — each wired to a different set of versioned
+instrument nodes, and the existing glass-cockpit components marked as the current era. As you
+move the renderer's as-of date the **topology visibly changes** (different nodes, labels and
+counts appear). This subgraph is a **renderer-side illustration only**: its labels
+(`AvionicsPackage`, `Instrument`, and the retrofitted `Component`s) are *not* in
+`VERSIONED_ENTITIES`, so the backend query builder never injects a temporal filter for them —
+the backend's temporal querying is scoped to `Specification` (valid-time) and `Flight`
+(event-time).
+
+### Two query modes — current and as-of
+
+The temporal filter is **never the LLM's job** — exactly like the clearance filter, it is
+injected deterministically by the builder, and only for versioned entities
+(`VERSIONED_ENTITIES` in [`src/authz/query_builder.py`](src/authz/query_builder.py)):
+
+- **Current** (default): `AND n.current = true` — only the live version participates.
+- **As-of** a date (`as_of` on `POST /ask`, an ISO `YYYY-MM-DD`):
+  `AND n.validFrom <= $__asOf AND (n.validTo IS NULL OR $__asOf < n.validTo)` — only the
+  version valid on that date participates.
+
+This is the same selective approach authz uses: the predicate is added **only** for versioned
+labels, so unversioned entities are queried exactly as before and never hit a null-property
+trap (a blind `n.current = true` against a node with no `current` property would silently drop
+every row). The acting identity's *current* policy is always evaluated against the selected
+data snapshot — we time-travel the data, not the permissions. The mode, the `as_of` date and
+whether a temporal filter was actually applied are reported in the debug `stats.versioning`
+block so the panel reflects exactly what ran.
+
+### Event-dated entities — the as-of cutoff for events
+
+`Flight` is **event-dated**, not versioned: each flight is an immutable event with an ISO
+`date`. Entities in `EVENT_DATED_ENTITIES` (in
+[`src/authz/query_builder.py`](src/authz/query_builder.py)) get a different predicate, and
+only under an as-of query:
+
+- **Current** (default): no cutoff — every event is in scope.
+- **As-of** a date: `AND n.date <= $__asOf` — only events that had already occurred by that
+  date participate.
+
+So asking "how many flights?" as-of an early date returns only the flights flown by then, and
+in the renderer flights (and their flight phases) appear progressively as you advance the
+date. This is the event-time half of "the graph as it existed on that date", kept separate
+from versioning because an event genuinely is not a version — it has no `current` flag and no
+validity window, just an occurrence date.
+
+### Ingest validation
+
+The import script ([`scripts/import_graph.py`](scripts/import_graph.py)) checks, after
+loading, that **no `logicalId` has more than one `current=true` version** and that version
+numbers are unique within a `logicalId`. An ambiguous "current" would make the `current`
+filter silently wrong, and idempotent re-imports can otherwise leave several current rows
+(e.g. a botched edit). **Zero** current versions is allowed — that is a fully *retired*
+logical entity (the analog/GPS avionics packages and instruments, replaced by the glass
+retrofit, have no live version), which is a legitimate state in a deprecate-don't-delete model.
+
+### Ontology versioning
+
+The active ontology is described by [`policy/ontology.json`](policy/ontology.json) and loaded
+by [`src/common/ontology.py`](src/common/ontology.py): a semantic `version` plus a list of
+**deprecated-but-retained** terms (deprecate-don't-delete — an old term stays interpretable
+after the data moves to its replacement). The active version (and any deprecations) is added
+to the answer model's retrieval context and recorded in `stats.versioning.ontology_version`,
+so every answer is attributable to the ontology it was grounded in.
+
+### Community Edition note
+
+Enforcing the "at most one current version per `logicalId`" invariant is done in the **import
+script** because Community Edition has no **node-key / property-existence constraints** to
+enforce it in the database (only uniqueness constraints exist). There is likewise no
+temporal/bitemporal storage type, so as-of is an application-level string-date comparison over
+ISO dates (lexicographic comparison is correct for `YYYY-MM-DD`). On Enterprise you could back
+the invariant with a constraint and model validity with native `date`/`datetime` types. See
+[Neo4j Community Edition trade-offs](#neo4j-community-edition-trade-offs-and-enterprise-alternatives).
 
 ## Query safety and audit
 

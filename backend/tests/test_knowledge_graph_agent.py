@@ -13,6 +13,7 @@ from agents.knowledge_graph_agent import KnowledgeGraphAgent
 from authz import Aggregate, AggregateFunc, PolicyStore, QueryIntent
 from common.azure_openai import AzureOpenAISettings
 from common.graph_schema import fetch_schema_text
+from common.ontology import OntologyMeta
 from common.telemetry import maf_call_sink
 
 
@@ -277,13 +278,14 @@ def _make_stream_agent(
     agent._database = "graph"  # type: ignore[assignment]
     agent._model = "fake-model"  # type: ignore[assignment]
     agent._schema_fingerprint = "testschemafp"  # type: ignore[assignment]
+    agent._ontology = OntologyMeta(version="test-ontology")  # type: ignore[assignment]
     # Permissive vocabulary so the relevance guardrail passes for "flight" questions.
     agent._vocabulary = frozenset({"flight"})  # type: ignore[assignment]
 
     # ask() builds the per-request agent via _build_maf_agent(principal); return the fake and
     # bind its forced tool call to the agent's real _run_query_tool (with the principal).
-    def build(principal: Any) -> FakeMafAgent:
-        maf_agent.tool_call = lambda intent: agent._run_query_tool(principal, intent)
+    def build(principal: Any, as_of: Any = None) -> FakeMafAgent:
+        maf_agent.tool_call = lambda intent: agent._run_query_tool(principal, intent, as_of)
         maf_agent.instructions = _TEST_INSTRUCTIONS
         return maf_agent
 
@@ -333,6 +335,13 @@ async def test_ask_emits_metadata_tokens_and_done() -> None:
     assert [call["stage"] for call in stats["calls"]] == ["agent_planning", "answer_generation"]
     # Tokens aggregate across both calls.
     assert stats["tokens"] == {"prompt": 10 + 120, "completion": 2 + 8, "total": 12 + 128}
+    # The versioning block reflects the request (default current mode) and ontology version.
+    assert stats["versioning"] == {
+        "mode": "current",
+        "as_of": None,
+        "temporal_filter_applied": False,
+        "ontology_version": "test-ontology",
+    }
     planning_call, answer_call = stats["calls"]
     assert (planning_call["prompt"], planning_call["total"]) == (10, 12)
     assert {answer_call["prompt"], answer_call["completion"], answer_call["total"]} == {120, 8, 128}
@@ -361,6 +370,22 @@ async def test_ask_handles_missing_usage() -> None:
     assert stats["tokens"] == {"prompt": None, "completion": None, "total": None}
     assert [call["stage"] for call in stats["calls"]] == ["agent_planning", "answer_generation"]
     assert events[-1] == {"type": "done"}
+
+
+async def test_ask_as_of_applies_temporal_filter_for_versioned_entity() -> None:
+    spec_intent = QueryIntent(entity="Specification", fields=["maxCruiseSpeed_kt"])
+    maf = FakeMafAgent(stream_texts=["122 kt."], intent=spec_intent)
+    agent, driver, principal = _make_stream_agent(maf, records=[{"maxCruiseSpeed_kt": 122}])
+
+    events = [event async for event in agent.ask("flight cruise speed in 2020?", principal=principal, as_of="2020-01-01")]
+
+    # The built query carried the as-of temporal filter (deterministic, backend-injected).
+    assert "$__asOf" in driver.queries[0][0]
+    assert driver.queries[0][1]["__asOf"] == "2020-01-01"
+    stats = next(event for event in events if event["type"] == "stats")
+    assert stats["versioning"]["mode"] == "as-of"
+    assert stats["versioning"]["as_of"] == "2020-01-01"
+    assert stats["versioning"]["temporal_filter_applied"] is True
 
 
 async def test_ask_off_topic_question_is_refused() -> None:
@@ -544,7 +569,7 @@ class FakeKGAgent:
     def __init__(self) -> None:
         self.principal: Any = None
 
-    async def ask(self, question: str, principal: Any = None) -> Any:
+    async def ask(self, question: str, principal: Any = None, *, as_of: Any = None) -> Any:
         self.principal = principal
         yield {"type": "metadata", "cypher_used": ["MATCH (n) RETURN count(n)"], "records": [{"count": 1}]}
         yield {"type": "token", "text": "42"}

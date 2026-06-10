@@ -173,6 +173,42 @@ class GraphImporter:
                 applied += summary.counters.properties_set > 0
         return applied
 
+    def validate_versions(self) -> int:
+        """Assert each versioned logical node has **at most one** ``current`` version.
+
+        A node is treated as versioned if it carries a ``logicalId``. The invariant is:
+        no ``logicalId`` may have **more than one** ``current=true`` version (an ambiguous
+        "current" would make the query builder's ``current`` filter silently wrong), and
+        version numbers must be unique within a ``logicalId``. **Zero** current versions is
+        allowed — that is a fully *retired* logical entity (e.g. avionics replaced in a
+        retrofit), which legitimately has no live version. Idempotent imports can otherwise
+        leave several ``current=true`` rows per ``logicalId`` (e.g. a botched edit); Neo4j
+        Community Edition cannot enforce this with a constraint, so it is checked here at
+        ingest and fails loudly. Returns the number of distinct versioned logical nodes.
+        """
+        with self._driver.session(database=self._database) as session:
+            rows = list(
+                session.run(
+                    "MATCH (n) WHERE n.logicalId IS NOT NULL "
+                    "WITH n.logicalId AS logicalId, "
+                    "  count(n) AS versions, "
+                    "  sum(CASE WHEN n.current THEN 1 ELSE 0 END) AS currents, "
+                    "  count(DISTINCT n.version) AS distinctVersions "
+                    "RETURN logicalId, versions, currents, distinctVersions"
+                )
+            )
+        offenders = [
+            (r["logicalId"], r["currents"], r["versions"], r["distinctVersions"])
+            for r in rows
+            if r["currents"] > 1 or r["distinctVersions"] != r["versions"]
+        ]
+        if offenders:
+            details = "; ".join(
+                f"{lid}: {currents} current, {versions} versions ({distinct} distinct)" for lid, currents, versions, distinct in offenders
+            )
+            raise SystemExit(f"Version invariant violated (expected at most one current and unique versions per logicalId): {details}")
+        return len(rows)
+
     @staticmethod
     def _write_node(session: Session, node: dict[str, Any]) -> None:
         query = build_node_query(node.get("labels", []))
@@ -215,12 +251,15 @@ def main(argv: list[str] | None = None) -> int:
         importer = GraphImporter(driver, config.database)
         node_count, rel_count = importer.import_graph(graph, clear=args.clear)
         classified = importer.apply_classification(classification)
+        versioned_nodes = importer.validate_versions()
     finally:
         driver.close()
 
     logger.info("Imported %d nodes and %d relationships from %s.", node_count, rel_count, args.file)
     if classification:
         logger.info("Applied classification to %d of %d listed node(s).", classified, len(classification))
+    if versioned_nodes:
+        logger.info("Validated version invariant for %d versioned logical node(s).", versioned_nodes)
     return 0
 
 

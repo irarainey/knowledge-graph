@@ -1,4 +1,12 @@
-import type { Graph, NodeStyle, NodeStyles, RawGraph } from './types'
+import type {
+  Graph,
+  GraphNode,
+  NodeStyle,
+  NodeStyles,
+  RawGraph,
+  TypeGroup,
+  TypeSubgroup,
+} from './types'
 
 // Adapt a Neo4j/APOC graph export into the internal model used by the renderer.
 export function adaptNeo4j(data: RawGraph): Graph {
@@ -74,4 +82,37 @@ export function presentTypes(graph: Graph, styles: NodeStyles): string[] {
   const configured = Object.keys(styles).filter((t) => present.has(t))
   const extras = [...present].filter((t) => !(t in styles)).sort()
   return [...configured, ...extras]
+}
+
+// Stable key identifying the filter leaf a node belongs to: the `type::sub`
+// pair when the node has a subtype, otherwise the bare top-level type. This is
+// the granularity the renderer and sidebar filter on.
+export function nodeFilterKey(n: Pick<GraphNode, 'type' | 'sub'>): string {
+  return n.sub ? `${n.type}::${n.sub}` : n.type
+}
+
+// Build the two-level filter tree: each present top-level type, with the
+// subtypes found beneath it nested as expandable leaves. Types whose nodes have
+// no subtype are leaves themselves (no children). Top-level order follows
+// presentTypes; subgroups are sorted by label.
+export function buildTypeTree(graph: Graph, styles: NodeStyles): TypeGroup[] {
+  const styleFor = createStyleResolver(styles)
+  const subCounts = new Map<string, Map<string | null, number>>()
+  for (const n of graph.nodes) {
+    if (!n.type) continue
+    if (!subCounts.has(n.type)) subCounts.set(n.type, new Map())
+    const subs = subCounts.get(n.type)!
+    subs.set(n.sub, (subs.get(n.sub) ?? 0) + 1)
+  }
+
+  return presentTypes(graph, styles).map((type) => {
+    const subs = subCounts.get(type) ?? new Map<string | null, number>()
+    let count = 0
+    for (const c of subs.values()) count += c
+    const subgroups: TypeSubgroup[] = [...subs.entries()]
+      .filter((e): e is [string, number] => e[0] != null && e[0] !== '')
+      .map(([sub, c]) => ({ key: `${type}::${sub}`, label: humanizeType(sub), count: c }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+    return { type, key: type, label: styleFor(type).label, count, subgroups }
+  })
 }

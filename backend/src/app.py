@@ -155,10 +155,16 @@ async def ask(
     are recorded with the answer.
     """
     principal: Principal = policy.resolve_principal(payload.user)
-    logger.info("POST /ask (acting as %s, clearance=%s): %s", principal.id, principal.clearance, payload.question)
+    logger.info(
+        "POST /ask (acting as %s, clearance=%s, as_of=%s): %s",
+        principal.id,
+        principal.clearance,
+        payload.as_of or "current",
+        payload.question,
+    )
 
     async def event_generator() -> AsyncIterator[bytes]:
-        async for event in agent.ask(payload.question, principal=principal):
+        async for event in agent.ask(payload.question, principal=principal, as_of=payload.as_of):
             yield (json.dumps(event) + "\n").encode("utf-8")
 
     return StreamingResponse(event_generator(), media_type="application/x-ndjson")

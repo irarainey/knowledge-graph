@@ -182,3 +182,79 @@ def test_importer_real_data_roundtrip() -> None:
 
 def test_module_exposes_main() -> None:
     assert callable(import_graph.main)
+
+
+# ── version invariant validation ─────────────────────────────────────────────
+class FakeVersionSession:
+    """Fake session whose ``run`` returns a fixed set of per-logicalId aggregate rows."""
+
+    def __init__(self, rows: list[dict[str, Any]]) -> None:
+        self._rows = rows
+
+    def __enter__(self) -> FakeVersionSession:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def run(self, query: str, **params: Any) -> list[dict[str, Any]]:
+        return self._rows
+
+
+class FakeVersionDriver:
+    def __init__(self, session: FakeVersionSession) -> None:
+        self._session = session
+
+    def session(self, **kwargs: Any) -> FakeVersionSession:
+        return self._session
+
+
+def _validate_with_rows(rows: list[dict[str, Any]]) -> int:
+    driver = FakeVersionDriver(FakeVersionSession(rows))
+    return GraphImporter(driver, "neo4j").validate_versions()  # type: ignore[arg-type]
+
+
+def test_validate_versions_accepts_well_formed() -> None:
+    rows = [
+        {"logicalId": "perf", "versions": 3, "currents": 1, "distinctVersions": 3},
+        {"logicalId": "dims", "versions": 1, "currents": 1, "distinctVersions": 1},
+    ]
+    assert _validate_with_rows(rows) == 2
+
+
+def test_validate_versions_accepts_zero_current() -> None:
+    """A fully retired logical entity (no live version) is allowed — zero current is valid."""
+    rows = [
+        {"logicalId": "perf", "versions": 3, "currents": 1, "distinctVersions": 3},
+        {"logicalId": "instr_asi_v1", "versions": 1, "currents": 0, "distinctVersions": 1},
+    ]
+    assert _validate_with_rows(rows) == 2
+
+
+def test_validate_versions_rejects_multiple_current() -> None:
+    rows = [{"logicalId": "perf", "versions": 3, "currents": 2, "distinctVersions": 3}]
+    with pytest.raises(SystemExit, match="Version invariant violated"):
+        _validate_with_rows(rows)
+
+
+def test_validate_versions_rejects_duplicate_version() -> None:
+    rows = [{"logicalId": "perf", "versions": 3, "currents": 1, "distinctVersions": 2}]
+    with pytest.raises(SystemExit, match="Version invariant violated"):
+        _validate_with_rows(rows)
+
+
+def test_real_data_satisfies_version_invariant() -> None:
+    """The shipped graph export must have at most one current version per logicalId."""
+    graph = load_graph(DEFAULT_JSON_PATH)
+    by_logical: dict[str, list[dict[str, Any]]] = {}
+    for node in graph["nodes"]:
+        props = node.get("properties", {})
+        logical_id = props.get("logicalId")
+        if logical_id is not None:
+            by_logical.setdefault(logical_id, []).append(props)
+    assert by_logical, "expected at least one versioned node in the shipped data"
+    for logical_id, versions in by_logical.items():
+        currents = [v for v in versions if v.get("current")]
+        assert len(currents) <= 1, f"{logical_id} must have at most one current version, found {len(currents)}"
+        version_numbers = [v.get("version") for v in versions]
+        assert len(version_numbers) == len(set(version_numbers)), f"{logical_id} has duplicate version numbers"

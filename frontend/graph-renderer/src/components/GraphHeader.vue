@@ -1,16 +1,26 @@
 <script setup lang="ts">
 import type { LayoutMode } from '../types'
+import type { GraphViewMode } from '../version'
 
 defineProps<{
   nodeCount: number
   edgeCount: number
   layout: LayoutMode
+  viewKind: GraphViewMode['kind']
+  asOfDate: string
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   reset: []
   'set-layout': [mode: LayoutMode]
+  'set-view-kind': [kind: GraphViewMode['kind']]
+  'set-as-of-date': [date: string]
 }>()
+
+function setAsOfDate(event: Event): void {
+  const target = event.target as HTMLInputElement | null
+  if (target) emit('set-as-of-date', target.value)
+}
 </script>
 
 <template>
@@ -31,6 +41,31 @@ defineEmits<{
     </div>
 
     <div class="header-right">
+      <div class="view-mode">
+        <div class="layout-toggle">
+          <button
+            class="btn-layout"
+            :class="{ active: viewKind === 'current' }"
+            @click="$emit('set-view-kind', 'current')"
+          >
+            Current
+          </button>
+          <button
+            class="btn-layout"
+            :class="{ active: viewKind === 'as-of' }"
+            @click="$emit('set-view-kind', 'as-of')"
+          >
+            As-of
+          </button>
+        </div>
+        <input
+          v-if="viewKind === 'as-of'"
+          class="date-input"
+          type="date"
+          :value="asOfDate"
+          @input="setAsOfDate"
+        />
+      </div>
       <div class="layout-toggle">
         <button
           class="btn-layout"
@@ -107,6 +142,12 @@ header {
   align-items: center;
 }
 
+.view-mode {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .layout-toggle {
   display: flex;
   border: 1px solid var(--border);
@@ -134,6 +175,21 @@ header {
 .btn-layout.active {
   color: var(--accent);
   background: var(--accent-weak);
+}
+
+.date-input {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  color-scheme: dark;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 5px 8px;
+}
+.date-input:focus {
+  border-color: var(--accent);
+  outline: none;
 }
 
 .btn-reset {

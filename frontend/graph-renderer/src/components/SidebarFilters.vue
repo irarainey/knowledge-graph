@@ -1,42 +1,97 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { Graph } from '../types'
+import { ref } from 'vue'
+import type { TypeGroup } from '../types'
 import type { StyleResolver } from '../graph'
 
 const props = defineProps<{
-  types: string[]
-  graph: Graph
-  activeTypes: Set<string>
+  groups: TypeGroup[]
+  activeKeys: Set<string>
   styleFor: StyleResolver
 }>()
 
 defineEmits<{
-  toggle: [type: string]
+  toggle: [key: string]
+  'toggle-group': [type: string]
+  'select-all': []
+  'deselect-all': []
 }>()
 
-// Count nodes per type once per graph change instead of scanning all nodes for
-// every button on every render (O(types × nodes) per render otherwise).
-const typeCounts = computed(() => {
-  const counts = new Map<string, number>()
-  for (const n of props.graph.nodes) counts.set(n.type, (counts.get(n.type) ?? 0) + 1)
-  return counts
-})
+// Which top-level groups are currently expanded. Collapsed by default to keep
+// the list compact; only groups that actually have subtypes can expand.
+const expanded = ref<Set<string>>(new Set())
+
+function toggleExpand(type: string): void {
+  const next = new Set(expanded.value)
+  if (next.has(type)) next.delete(type)
+  else next.add(type)
+  expanded.value = next
+}
+
+// The leaf keys that make up a group: its subtypes, or the bare type when it has
+// none. Used to derive the group's on/off/mixed state from activeKeys.
+function leafKeys(group: TypeGroup): string[] {
+  return group.subgroups.length ? group.subgroups.map((s) => s.key) : [group.key]
+}
+
+function groupState(group: TypeGroup): 'on' | 'off' | 'mixed' {
+  const keys = leafKeys(group)
+  const on = keys.filter((k) => props.activeKeys.has(k)).length
+  if (on === 0) return 'off'
+  if (on === keys.length) return 'on'
+  return 'mixed'
+}
 </script>
 
 <template>
   <div id="sidebar">
     <div class="sidebar-heading">Node types</div>
-    <button
-      v-for="type in types"
-      :key="type"
-      class="filter-btn"
-      :class="{ active: activeTypes.has(type) }"
-      @click="$emit('toggle', type)"
-    >
-      <span class="dot" :style="{ background: styleFor(type).color }"></span>
-      {{ styleFor(type).label }}
-      <span class="count">{{ typeCounts.get(type) ?? 0 }}</span>
-    </button>
+
+    <div class="bulk-actions">
+      <button class="bulk-btn" @click="$emit('select-all')">Select all</button>
+      <button class="bulk-btn" @click="$emit('deselect-all')">Deselect all</button>
+    </div>
+
+    <div v-for="group in groups" :key="group.type" class="group">
+      <div class="group-row" :class="groupState(group)">
+        <button
+          class="expand"
+          :class="{ open: expanded.has(group.type) }"
+          :disabled="group.subgroups.length === 0"
+          :aria-label="expanded.has(group.type) ? 'Collapse' : 'Expand'"
+          @click="toggleExpand(group.type)"
+        >
+          <svg
+            v-if="group.subgroups.length"
+            viewBox="0 0 16 16"
+            width="12"
+            height="12"
+            aria-hidden="true"
+          >
+            <path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" />
+          </svg>
+        </button>
+
+        <button class="filter-btn" @click="$emit('toggle-group', group.type)">
+          <span class="dot" :style="{ '--dot': styleFor(group.type).color }"></span>
+          <span class="label">{{ group.label }}</span>
+          <span class="count">{{ group.count }}</span>
+        </button>
+      </div>
+
+      <div v-if="expanded.has(group.type) && group.subgroups.length" class="subgroups">
+        <button
+          v-for="sub in group.subgroups"
+          :key="sub.key"
+          class="filter-btn sub"
+          :class="{ active: activeKeys.has(sub.key) }"
+          @click="$emit('toggle', sub.key)"
+        >
+          <span class="dot" :style="{ '--dot': styleFor(group.type).color }"></span>
+          <span class="label">{{ sub.label }}</span>
+          <span class="count">{{ sub.count }}</span>
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -66,6 +121,62 @@ const typeCounts = computed(() => {
   margin: 4px 6px 10px;
 }
 
+.bulk-actions {
+  display: flex;
+  gap: 6px;
+  margin: 0 6px 10px;
+}
+.bulk-btn {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.bulk-btn:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+.group-row {
+  display: flex;
+  align-items: center;
+}
+
+.expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 32px;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 0;
+}
+.expand:disabled {
+  cursor: default;
+  visibility: hidden;
+}
+.expand svg {
+  transition: transform 0.15s;
+}
+.expand.open svg {
+  transform: rotate(90deg);
+}
+
 .filter-btn {
   display: flex;
   align-items: center;
@@ -73,13 +184,14 @@ const typeCounts = computed(() => {
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius);
-  color: var(--text);
+  color: var(--text-dim);
   font-family: inherit;
   font-size: 13px;
   padding: 8px 10px;
   cursor: pointer;
   transition: all 0.15s;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   text-align: left;
 }
 .filter-btn .dot {
@@ -87,17 +199,62 @@ const typeCounts = computed(() => {
   height: 9px;
   border-radius: 50%;
   flex-shrink: 0;
+  /* Hidden state: drain the colour to a hollow ring so the row reads as "off". */
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--text-dim);
+  opacity: 0.7;
 }
-.filter-btn.active {
-  background: var(--panel-2);
-  border-color: var(--border);
+.filter-btn .label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .filter-btn:hover {
   background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
 }
 .filter-btn .count {
   margin-left: auto;
   font-size: 12px;
   color: var(--text-dim);
+}
+
+/* Shown state: full-colour dot, bright text and a clear filled row. The group
+   row is driven by its on/off/mixed state, leaf rows by their own active flag. */
+.group-row.on .filter-btn,
+.group-row.mixed .filter-btn,
+.filter-btn.sub.active {
+  background: var(--panel-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+.group-row.on .filter-btn .dot,
+.filter-btn.sub.active .dot {
+  background: var(--dot);
+  box-shadow: none;
+  opacity: 1;
+}
+.group-row.on .filter-btn .count,
+.filter-btn.sub.active .count {
+  color: var(--text);
+}
+/* Mixed: some subtypes on. Show a half-filled dot so it's distinct from on/off. */
+.group-row.mixed .filter-btn .dot {
+  background: linear-gradient(90deg, var(--dot) 0 50%, transparent 50% 100%);
+  box-shadow: inset 0 0 0 1.5px var(--dot);
+  opacity: 1;
+}
+
+.subgroups {
+  display: flex;
+  flex-direction: column;
+  margin-left: 20px;
+  padding-left: 6px;
+  border-left: 1px solid var(--border);
+}
+.filter-btn.sub {
+  font-size: 12.5px;
+  padding: 6px 10px;
 }
 </style>

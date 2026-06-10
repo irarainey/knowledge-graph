@@ -35,7 +35,9 @@ def fetch_users(base_url: str) -> tuple[list[dict[str, Any]], bool]:
     return users, True
 
 
-def stream_answer(base_url: str, question: str, holder: dict[str, Any], user: str | None = None) -> Iterator[dict[str, Any]]:
+def stream_answer(
+    base_url: str, question: str, holder: dict[str, Any], user: str | None = None, as_of: str | None = None
+) -> Iterator[dict[str, Any]]:
     """Yield streaming events from the backend `/ask` NDJSON endpoint.
 
     Yields small event dicts so the caller can both render answer text and reflect
@@ -45,10 +47,12 @@ def stream_answer(base_url: str, question: str, holder: dict[str, Any], user: st
     and any error are stashed into ``holder``. Each NDJSON line is one complete JSON event.
 
     ``user`` is the id of the selected identity; the backend resolves it to a principal
-    and answers within that identity's authorization.
+    and answers within that identity's authorization. ``as_of`` is an optional ISO date
+    (YYYY-MM-DD): when set, the backend answers from the version of each versioned entity
+    that was valid on that date; when omitted, it answers from the current version.
     """
     timeout = (CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS)
-    payload = {"question": question, "user": user}
+    payload = {"question": question, "user": user, "as_of": as_of}
     try:
         with requests.post(f"{base_url}/ask", json=payload, stream=True, timeout=timeout) as response:
             if response.status_code == 503:

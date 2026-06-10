@@ -275,6 +275,27 @@ to an identity, policy version and schema fingerprint.
 curl http://localhost:8080/users
 ```
 
+### Versioning (temporal data and ontology)
+
+Graph data, the access policy and the ontology version on independent clocks, and an `as_of`
+query reconstructs **the graph as it existed on a chosen date** (ISO `YYYY-MM-DD`) — combining
+two distinct temporal concepts. A deliberately **narrow** slice (the `Specification` entity) is
+**valid-time versioned**: each version is its own node sharing a `logicalId`, with
+`validFrom`/`validTo` windows, a `current` flag and a `PREVIOUS_VERSION` chain — so all history
+is retained, not overwritten; an as-of query selects the version valid then. `Flight` is
+**event-dated** instead: each flight is an immutable event with a `date`, and an as-of query
+includes only flights that had already occurred. Like the clearance filter, both temporal
+filters are **injected deterministically by the backend** (for versioned / event-dated entities
+only) — never written by the LLM — and the acting identity's current policy is always applied to
+whichever snapshot is selected. The import asserts that each logical entity has **at most one**
+current version (zero = retired). The Vue renderer shows the snapshot change as the as-of date
+moves — including an illustrative **avionics retrofit** whose topology visibly changes across
+eras — plus per-node history, and the chat UI's sidebar offers a snapshot date. A separate,
+semantically-versioned ontology ([`backend/policy/ontology.json`](backend/policy/ontology.json))
+records deprecated-but-retained terms and is attributed in each answer's telemetry. See the
+[backend README](backend/README.md#versioning-temporal-data-and-ontology) for the full model
+and Enterprise alternatives.
+
 ## Evaluating answer quality
 
 The backend ships an **offline, deterministic** evaluation harness (no LLM-as-judge) that

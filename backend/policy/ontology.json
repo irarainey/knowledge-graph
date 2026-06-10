@@ -1,0 +1,12 @@
+{
+  "version": "1.2.0",
+  "description": "Active ontology version for the light-aircraft knowledge graph. Versioned independently of both the graph data and the access policy: the schema's meaning can evolve (terms added, renamed, deprecated) without re-importing data or changing who may see what. Every answer records the ontology version it was grounded in.",
+  "deprecated": [
+    {
+      "term": "Specification.ceiling_ft",
+      "supersededBy": "serviceCeiling_ft",
+      "since": "1.2.0",
+      "note": "Renamed for clarity (service ceiling, not absolute ceiling). Retained in the ontology so older queries and documents remain interpretable; current data uses serviceCeiling_ft."
+    }
+  ]
+}

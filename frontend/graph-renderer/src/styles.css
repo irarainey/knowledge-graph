@@ -32,16 +32,6 @@ body {
 }
 
 /* ── SVG canvas ── */
-.hull-label {
-  font-family: var(--font);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-anchor: middle;
-  text-transform: uppercase;
-  pointer-events: none;
-}
-
 .link {
   stroke-opacity: 0.5;
   stroke-width: 1;
@@ -83,7 +73,6 @@ body {
 .node,
 .link,
 .node-label,
-.link-label,
-.hull-label {
+.link-label {
   transition: opacity 0.2s ease;
 }
