@@ -78,23 +78,19 @@
     .pill { display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 12px; font-weight: 600; }
     .pill.pass { background: rgba(63,185,80,.15); color: var(--good); }
     .pill.fail { background: rgba(248,81,73,.15); color: var(--bad); }
-    .bar { position: relative; height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; min-width: 60px; }
-    .bar > span { position: absolute; inset: 0 auto 0 0; border-radius: 3px; }
     details { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
     details > summary { cursor: pointer; padding: 10px 14px; display: flex; gap: 12px; align-items: center; }
     details > summary::-webkit-details-marker { display: none; }
     details[open] > summary { border-bottom: 1px solid var(--border); }
     .qbody { padding: 12px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .qbody .full { grid-column: 1 / -1; }
+    .qbody .cmp { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
     .qbody h4 { margin: 0 0 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
     code, pre { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; }
     pre { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 9px 11px; margin: 0; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
     .q-summary { flex: 1; display: flex; gap: 12px; align-items: center; min-width: 0; }
     .q-summary .qtext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .muted { color: var(--muted); }
-    .trend { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
-    .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--muted); }
-    .legend span::before { content: "■"; margin-right: 5px; }
     .notice { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 20px; color: var(--muted); }
     .notice code { color: var(--text); background: var(--panel-2); padding: 1px 6px; border-radius: 4px; }
     a { color: var(--accent); }
@@ -163,53 +159,38 @@
       return runs;
     }
 
-    function sparkline(values, color) {
-      const w = 100, h = 28, pad = 2;
-      const vals = values.map(v => v == null ? 0 : v);
-      if (!vals.length) return "";
-      const min = 0, max = 1;
-      const pts = vals.map((v, i) => {
-        const x = vals.length === 1 ? w / 2 : pad + (i / (vals.length - 1)) * (w - 2 * pad);
-        const y = h - pad - ((v - min) / (max - min)) * (h - 2 * pad);
-        return [x, y];
-      });
-      const path = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
-      const dots = pts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2" fill="${color}"/>`).join("");
-      return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none">
-        <path d="${path}" fill="none" stroke="${color}" stroke-width="1.5"/>${dots}</svg>`;
-    }
-
-    function renderTrend(runs) {
-      if (runs.length < 2) return "";
-      const series = [
-        { key: "pass_rate", label: "Pass rate", color: "var(--good)" },
-        { key: "mean_f1", label: "Mean F1", color: "var(--accent)" },
-        { key: "mean_answer_coverage", label: "Answer coverage", color: "var(--warn)" },
-        { key: "cypher_valid_rate", label: "Cypher valid", color: "#a371f7" },
-      ];
-      const rows = series.map(s => {
-        const vals = runs.map(r => r.data.summary?.[s.key] ?? null);
-        const last = vals[vals.length - 1];
-        return `<tr>
-          <td><span style="color:${s.color}">■</span> ${s.label}</td>
-          <td>${sparkline(vals, s.color)}</td>
-          <td class="num" style="color:${metricColor(last)}">${pct(last)}</td>
-        </tr>`;
-      }).join("");
-      return `<section>
-        <h2>Trend across ${runs.length} runs</h2>
-        <div class="trend">
-          <table style="border:none">
-            <thead><tr><th>Metric</th><th>History</th><th class="num">Latest</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-          <div class="legend muted">Oldest → newest, left to right. Scale 0–100%.</div>
-        </div>
-      </section>`;
-    }
-
     function card(k, v, color) {
       return `<div class="card"><div class="k">${k}</div><div class="v" ${color ? `style="color:${color}"` : ""}>${v}</div></div>`;
+    }
+
+    // Drop keys whose value is null/undefined, an empty array, or an empty object so the
+    // displayed intent shows only the parts the model actually set (no "fields: [],
+    // filters: [], limit: null" noise). Recurses into nested objects/arrays.
+    function pruneEmpty(value) {
+      if (Array.isArray(value)) {
+        const arr = value.map(pruneEmpty).filter(v => !isEmpty(v));
+        return arr;
+      }
+      if (value && typeof value === "object") {
+        const out = {};
+        for (const [k, v] of Object.entries(value)) {
+          const pv = pruneEmpty(v);
+          if (!isEmpty(pv)) out[k] = pv;
+        }
+        return out;
+      }
+      return value;
+    }
+
+    function isEmpty(v) {
+      return v == null
+        || (Array.isArray(v) && v.length === 0)
+        || (typeof v === "object" && Object.keys(v).length === 0);
+    }
+
+    // A single-element array displays as the bare object (drop the [ ] wrapper).
+    function unwrapSingle(v) {
+      return Array.isArray(v) && v.length === 1 ? v[0] : v;
     }
 
     function renderSummary(run) {
@@ -218,101 +199,105 @@
       const cards = [
         card("Questions", s.question_count ?? "—"),
         card("Pass rate", pct(s.pass_rate), metricColor(s.pass_rate)),
-        card("Mean F1", pct(s.mean_f1), metricColor(s.mean_f1)),
-        card("Mean precision", pct(s.mean_precision), metricColor(s.mean_precision)),
-        card("Mean recall", pct(s.mean_recall), metricColor(s.mean_recall)),
-        card("Exact match", pct(s.exact_match_rate), metricColor(s.exact_match_rate)),
-        card("Cypher valid", pct(s.cypher_valid_rate), metricColor(s.cypher_valid_rate)),
+        card("Output values", pct(s.output_value_accuracy), metricColor(s.output_value_accuracy)),
+        card("Over-fetch cases", (s.overfetch_count ?? 0), s.overfetch_count ? "var(--bad)" : "var(--good)"),
+        card("Query valid", pct(s.query_valid_rate), metricColor(s.query_valid_rate)),
         card("Empty retrieval", pct(s.empty_retrieval_rate), s.empty_retrieval_rate ? "var(--bad)" : "var(--good)"),
-        card("Answer coverage", pct(s.mean_answer_coverage), metricColor(s.mean_answer_coverage)),
-        card("Answer groundedness", pct(s.mean_answer_groundedness), metricColor(s.mean_answer_groundedness)),
-        card("Total tokens", (s.total_tokens ?? 0).toLocaleString()),
-        card("Mean latency", ms(s.mean_latency_ms)),
+        card("Tool selection", pct(s.tool_selection_accuracy), metricColor(s.tool_selection_accuracy)),
+        card("Intent selection", pct(s.intent_selection_accuracy), metricColor(s.intent_selection_accuracy)),
+        card("Document select", pct(s.document_selection_accuracy), metricColor(s.document_selection_accuracy)),
+        card("Document fetch", pct(s.document_fetch_rate), metricColor(s.document_fetch_rate)),
+        card("Refusal correct", pct(s.refusal_correct_rate), metricColor(s.refusal_correct_rate)),
+        card("Forbidden leaks", (s.forbidden_leak_count ?? 0), s.forbidden_leak_count ? "var(--bad)" : "var(--good)"),
       ].join("");
       return `<section>
-        <h2>Run summary <span class="muted" style="font-weight:400">— ${esc(meta.timestamp || "")} · model ${esc(meta.model || "?")} · F1 threshold ${meta.f1_threshold ?? "?"}</span></h2>
+        <h2>Run summary <span class="muted" style="font-weight:400">— ${esc(meta.timestamp || "")} · model ${esc(meta.model || "?")}</span></h2>
         <div class="grid">${cards}</div>
       </section>`;
-    }
-
-    function renderByTag(run) {
-      const byTag = run.data.by_tag || {};
-      const tags = Object.keys(byTag).sort();
-      if (!tags.length) return "";
-      const rows = tags.map(t => {
-        const m = byTag[t];
-        return `<tr>
-          <td><span class="tag">${esc(t)}</span></td>
-          <td class="num">${m.question_count}</td>
-          <td class="num" style="color:${metricColor(m.pass_rate)}">${pct(m.pass_rate)}</td>
-          <td class="num" style="color:${metricColor(m.mean_f1)}">${pct(m.mean_f1)}</td>
-          <td class="num" style="color:${metricColor(m.mean_precision)}">${pct(m.mean_precision)}</td>
-          <td class="num" style="color:${metricColor(m.mean_recall)}">${pct(m.mean_recall)}</td>
-          <td class="num" style="color:${metricColor(m.mean_answer_coverage)}">${pct(m.mean_answer_coverage)}</td>
-          <td class="num">${ms(m.mean_latency_ms)}</td>
-        </tr>`;
-      }).join("");
-      return `<section>
-        <h2>By tag</h2>
-        <table>
-          <thead><tr><th>Tag</th><th class="num">Q</th><th class="num">Pass</th><th class="num">F1</th><th class="num">Precision</th><th class="num">Recall</th><th class="num">Coverage</th><th class="num">Latency</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </section>`;
-    }
-
-    function bar(x) {
-      const c = metricColor(x);
-      const w = x == null ? 0 : Math.round(x * 100);
-      return `<div class="bar"><span style="width:${w}%;background:${c}"></span></div>`;
     }
 
     function renderQuestions(run) {
       const qs = run.data.questions || [];
       const items = qs.map(q => {
-        const ret = q.retrieval || {};
-        const ans = q.answer || {};
         const cost = q.cost || {};
-        const tags = (q.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join("");
         const pill = q.passed ? `<span class="pill pass">PASS</span>` : `<span class="pill fail">FAIL</span>`;
         const errRow = q.error ? `<div class="full"><h4>Error</h4><pre style="color:var(--bad)">${esc(q.error)}</pre></div>` : "";
+        const overfetch = (q.unexpected_output_rows || []).length;
+
+        // Comparison panels: expected on the LEFT, the agent's actual output on the RIGHT,
+        // each pair aligned on its own row for easy side-by-side reading.
+        const panel = (title, body) => `<div><h4>${title}</h4><pre>${body}</pre></div>`;
+        const cmp = (left, right) => `<div class="cmp">${left}${right}</div>`;
+        const actualRows = (q.records && q.records.length) ? esc(JSON.stringify(q.records, null, 2)) : "(no rows returned)";
+        const rowCount = `<span class="muted" style="font-weight:400">(${q.predicted_record_count ?? 0})</span>`;
+
+        const cmpPanels = [];
+        if (q.expected_intent || (q.intents_used && q.intents_used.length)) {
+          cmpPanels.push(cmp(
+            panel("Expected intent", esc(q.expected_intent ? JSON.stringify(pruneEmpty(q.expected_intent), null, 2) : "")),
+            panel("Intent used", esc((q.intents_used && q.intents_used.length) ? JSON.stringify(unwrapSingle(pruneEmpty(q.intents_used)), null, 2) : "")),
+          ));
+        }
+        if (q.expected_output_rows && q.expected_output_rows.length) {
+          const exp = esc(JSON.stringify(q.expected_output_rows, null, 2))
+            + ((q.missing_output_rows && q.missing_output_rows.length) ? "\n" + esc("missing: " + JSON.stringify(q.missing_output_rows)) : "")
+            + ((q.unexpected_output_rows && q.unexpected_output_rows.length) ? "\n" + esc("over-fetched: " + JSON.stringify(q.unexpected_output_rows)) : "");
+          cmpPanels.push(cmp(panel("Expected output rows", exp), panel(`Actual output rows ${rowCount}`, actualRows)));
+        }
+        if (q.expected_output_fields && Object.keys(q.expected_output_fields).length) {
+          const exp = esc(JSON.stringify(q.expected_output_fields, null, 2))
+            + ((q.missing_output_fields && Object.keys(q.missing_output_fields).length) ? "\n" + esc("missing: " + JSON.stringify(q.missing_output_fields)) : "");
+          cmpPanels.push(cmp(panel("Expected output fields", exp), panel(`Actual output rows ${rowCount}`, actualRows)));
+        }
+        if ((q.expected_output_values && q.expected_output_values.length) || (q.documents_used && q.documents_used.length)) {
+          const exp = esc((q.expected_output_values && q.expected_output_values.length) ? q.expected_output_values.join(", ") : "")
+            + ((q.missing_output_values && q.missing_output_values.length) ? "\n" + esc("missing: " + q.missing_output_values.join(", ")) : "");
+          const docTitle = "Document selected" + (q.expected_document_id ? " (expected " + esc(q.expected_document_id) + ")" : "");
+          cmpPanels.push(cmp(
+            panel("Expected output (document content)", exp),
+            panel(docTitle, esc((q.documents_used && q.documents_used.length) ? q.documents_used.join(", ") : "")),
+          ));
+        }
+
         return `<details>
           <summary>
             ${pill}
             <span class="q-summary">
               <span class="qtext"><strong>${esc(q.id)}</strong> · ${esc(q.question)}</span>
             </span>
-            <span class="muted" style="font-variant-numeric:tabular-nums">F1 ${pct(ret.f1)}</span>
-            ${bar(ret.f1)}
+            <span class="muted" style="font-variant-numeric:tabular-nums">${esc(q.mode || "—")}</span>
           </summary>
           <div class="qbody">
             <div>
               <h4>Retrieval</h4>
               <table style="border:none">
-                <tr><td class="muted">Precision</td><td class="num">${pct(ret.precision)}</td></tr>
-                <tr><td class="muted">Recall</td><td class="num">${pct(ret.recall)}</td></tr>
-                <tr><td class="muted">F1</td><td class="num">${pct(ret.f1)}</td></tr>
-                <tr><td class="muted">Jaccard</td><td class="num">${pct(ret.jaccard)}</td></tr>
-                <tr><td class="muted">Exact match</td><td class="num">${ret.exact_match ? "yes" : "no"}</td></tr>
-                <tr><td class="muted">Strict exact</td><td class="num">${ret.strict_exact_match ? "yes" : "no"}</td></tr>
-                <tr><td class="muted">Gold / predicted rows</td><td class="num">${q.gold_record_count ?? "—"} / ${q.predicted_record_count ?? "—"}</td></tr>
-                <tr><td class="muted">Cypher valid</td><td class="num">${q.cypher_valid ? "yes" : "no"}</td></tr>
+                <tr><td class="muted">Output values</td><td class="num">${q.output_values_ok == null ? "—" : (q.output_values_ok ? "ok" : "BAD")}</td></tr>
+                <tr><td class="muted">Exact output</td><td class="num">${q.exact_output ? "yes" : "no"}</td></tr>
+                <tr><td class="muted">Over-fetched rows</td><td class="num" ${overfetch ? `style="color:var(--bad)"` : ""}>${overfetch}</td></tr>
+                <tr><td class="muted">Predicted rows</td><td class="num">${q.predicted_record_count ?? "—"}</td></tr>
+                <tr><td class="muted">Empty retrieval</td><td class="num">${q.empty_retrieval ? "yes" : "no"}</td></tr>
+                <tr><td class="muted">Query valid</td><td class="num">${q.query_valid ? "yes" : "no"}</td></tr>
               </table>
             </div>
             <div>
-              <h4>Answer & cost</h4>
+              <h4>Tools, authorization & cost</h4>
               <table style="border:none">
-                <tr><td class="muted">Coverage</td><td class="num">${pct(ans.coverage)}</td></tr>
-                <tr><td class="muted">Groundedness</td><td class="num">${pct(ans.groundedness)}</td></tr>
-                <tr><td class="muted">Missing values</td><td class="num">${(ans.missing || []).length}</td></tr>
+                <tr><td class="muted">Mode</td><td class="num">${esc(q.mode || "—")}</td></tr>
+                <tr><td class="muted">Tools used</td><td class="num">${esc((q.tools_used || []).join(", ") || "—")}</td></tr>
+                <tr><td class="muted">Tool selection</td><td class="num">${q.tool_selection_ok == null ? "—" : (q.tool_selection_ok ? "ok" : "BAD")}</td></tr>
+                <tr><td class="muted">Intent selection</td><td class="num">${q.intent_selection_ok == null ? "—" : (q.intent_selection_ok ? "ok" : "BAD")}</td></tr>
+                <tr><td class="muted">Output values</td><td class="num">${q.output_values_ok == null ? "—" : (q.output_values_ok ? "ok" : "BAD")}</td></tr>
+                <tr><td class="muted">Document selection</td><td class="num">${q.document_id_ok == null ? "—" : (q.document_id_ok ? "ok" : "BAD")}</td></tr>
+                <tr><td class="muted">Refused</td><td class="num">${q.refused ? "yes" : "no"}</td></tr>
+                <tr><td class="muted">Forbidden leaks</td><td class="num">${(q.leaked_values || []).length}</td></tr>
                 <tr><td class="muted">LLM calls</td><td class="num">${cost.llm_calls ?? "—"}</td></tr>
                 <tr><td class="muted">Tokens</td><td class="num">${(cost.tokens?.total ?? 0).toLocaleString()}</td></tr>
                 <tr><td class="muted">Latency</td><td class="num">${ms(cost.durations_ms?.total)}</td></tr>
               </table>
             </div>
-            <div class="full"><h4>Answer</h4><pre>${esc(ans.text || "")}</pre></div>
-            <div><h4>Gold Cypher</h4><pre>${esc(q.gold_cypher || "")}</pre></div>
-            <div><h4>Generated Cypher</h4><pre>${esc(q.generated_cypher || "")}</pre></div>
+            <div class="full"><h4>Generated query</h4><pre>${esc(q.generated_query || "")}</pre></div>
+            ${cmpPanels.join("")}
+            <div class="full"><h4>Answer <span class="muted" style="font-weight:400">(not scored)</span></h4><pre>${esc(q.answer_text || "")}</pre></div>
             ${errRow}
           </div>
         </details>`;
@@ -324,7 +309,7 @@
       const run = runs[idx];
       const options = runs.map((r, i) => {
         const s = r.data.summary || {};
-        const label = `${r.data.run?.timestamp || r.file} — F1 ${pct(s.mean_f1)}, pass ${pct(s.pass_rate)}`;
+        const label = `${r.data.run?.timestamp || r.file} — output ${pct(s.output_value_accuracy)}, pass ${pct(s.pass_rate)}`;
         return `<option value="${i}" ${i === idx ? "selected" : ""}>${esc(label)}</option>`;
       }).join("");
 
@@ -334,9 +319,7 @@
           <label for="runSel">Run</label>
           <select id="runSel">${options}</select>
         </div>
-        ${renderTrend(runs)}
         ${renderSummary(run)}
-        ${renderByTag(run)}
         ${renderQuestions(run)}
       `;
       document.getElementById("runSel").addEventListener("change", e => render(runs, Number(e.target.value)));

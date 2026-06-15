@@ -134,7 +134,7 @@ def test_importer_writes_nodes_and_relationships() -> None:
     driver = FakeDriver(session)
     graph = {
         "nodes": [
-            {"id": "G-ECHO", "labels": ["Aircraft", "LightAircraft"], "properties": {"name": "G-ECHO", "mtow_kg": 1111}},
+            {"id": "G-ECHO", "labels": ["Aircraft", "LightAircraft"], "properties": {"name": "G-ECHO", "maxTakeoffWeight_kg": 1111}},
             {"id": "airframe", "labels": ["System"], "properties": {"name": "Airframe"}},
         ],
         "relationships": [
@@ -150,7 +150,7 @@ def test_importer_writes_nodes_and_relationships() -> None:
 
     node_query, node_params = session.calls[0]
     assert "MERGE (n:`Aircraft` {id: $id})" in node_query
-    assert node_params == {"id": "G-ECHO", "props": {"name": "G-ECHO", "mtow_kg": 1111}}
+    assert node_params == {"id": "G-ECHO", "props": {"name": "G-ECHO", "maxTakeoffWeight_kg": 1111}}
 
     rel_query, rel_params = session.calls[2]
     assert "MERGE (a)-[r:`HAS_SYSTEM`]->(b)" in rel_query

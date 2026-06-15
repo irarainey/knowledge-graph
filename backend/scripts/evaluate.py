@@ -4,21 +4,33 @@ Runs each question from a pre-baked ground-truth file through the in-process
 :class:`KnowledgeGraphAgent` (the same code path the API uses), then scores the
 result with deterministic metrics — no LLM-as-judge:
 
-* **Retrieval** — the rows the agent retrieved (its generated Cypher result) are
-  compared as a set against the rows of a hand-written *gold* Cypher query:
-  precision / recall / F1 / Jaccard / exact-match.
-* **Answer** — expected fact values are string-matched against the generated
-  answer (**coverage**) and against the retrieved rows (**groundedness**).
-* **Operational** — Cypher validity, empty-retrieval rate, and the token/latency
+* **Output** — the single source of truth. The *content* the chosen tool returned is
+  checked against **hand-written known answers** in the ground truth. For a query the rows
+  are checked column-aware against the agent's deterministic, entity-qualified output
+  columns: ``expected_output_rows`` asserts the right value in the right field within a
+  single record, and ``expected_output_fields`` asserts per-column coverage across records.
+  ``exact_output`` additionally fails the case if the agent returned any row *outside* the
+  expected set (an over-fetch / precision guard). For a document fetch the selected
+  document's content is substring-matched against ``expected_output_values`` and the chosen
+  document can be pinned (``expected_document_id``).
+* **Intent** — the structured query intent the model emitted (entity/fields/filters/
+  aggregate) is matched against an ``expected_intent`` in the ground truth, scoring the
+  model's retrieval *decision* (what to fetch) separately from the rows it returned.
+* **Tool selection** — did the agent invoke exactly the expected tool(s)?
+* **Operational** — query validity, empty-retrieval rate, and the token/latency
   cost taken from the pipeline's own ``stats`` debug event.
 
+The known-answer values are derived once, by hand, from the seeded graph; the queries that
+produced them are kept in ``eval/ground_truth_provenance.json`` for traceability (they are
+reference only and are never executed by this harness — the ground truth is fixed data, not
+a second live query run against the same database).
+
 Results are written as a single JSON document (per-question detail + run-level
-and per-tag aggregates) and a summary is logged.
+aggregates) and a summary is logged.
 
 Usage:
     uv run poe evaluate
     uv run python scripts/evaluate.py --ground-truth eval/ground_truth.json
-    uv run python scripts/evaluate.py --tag aggregation --f1-threshold 0.7
     uv run python scripts/evaluate.py --question-id flight-count --output -
 """
 
@@ -30,7 +42,7 @@ import json
 import os
 import sys
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -52,17 +64,25 @@ logger = get_logger(__name__)
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_GROUND_TRUTH = BACKEND_ROOT / "eval" / "ground_truth.json"
 DEFAULT_RESULTS_DIR = BACKEND_ROOT / "eval" / "results"
-DEFAULT_F1_THRESHOLD = 0.5
 
 
 # ── Deterministic metrics ───────────────────────────────────────
-# Pure, side-effect-free scoring (no LLM-as-judge). The *primary* retrieval metric
-# is value-based: it compares the set of cell *values* the agent retrieved against
-# the gold Cypher result, ignoring column names and tolerating float formatting, so
-# a correct answer scores well even when the generated Cypher aliases columns
-# differently or returns an unrounded number. A *strict* whole-row comparison is
-# also reported as a secondary diagnostic. Answer metrics string-match expected fact
-# values against the answer text and the retrieved rows.
+# Pure, side-effect-free scoring (no LLM-as-judge). Evaluation deliberately scores the
+# parts of the pipeline that have a single correct, machine-checkable answer:
+#   1. **tool selection** — did the agent pick the right tool(s)?
+#   2. **intent selection** — did the model emit the right structured query intent
+#      (entity/fields/filters/aggregate), matched against the case's ``expected_intent``?
+#   3. **query validity** — did a query/fetch actually run without error?
+#   4. **tool output** — does the content the chosen tool returned carry the case's
+#      hand-written known answer: for a query, the right value in the right column (and same
+#      row) via ``expected_output_rows`` / ``expected_output_fields`` — and, when
+#      ``exact_output`` is set, *no* rows outside the expected set (over-fetch guard); for a
+#      document fetch, the ``expected_output_values`` in its content and the
+#      ``expected_document_id`` selected?
+# The final natural-language answer is intentionally NOT scored: judging its wording for
+# correctness would need an LLM-as-judge (non-deterministic, costly). The generated prose is
+# just a presentation layer over the retrieved data; the data is the real test. The answer
+# text is still recorded in the report for human review, but never gates pass/fail.
 
 DEFAULT_ROUND_DIGITS = 3
 
@@ -105,106 +125,6 @@ def _canonicalize_value(value: Any, ndigits: int) -> str:
     return json.dumps(_round_floats(_canonical(value), ndigits), sort_keys=True, ensure_ascii=False, default=str)
 
 
-def value_set(rows: Iterable[Any], *, answer_key: str | None, ndigits: int) -> set[str]:
-    """Collect the set of canonical cell values across rows, ignoring column names.
-
-    When ``answer_key`` is present on a row, only that column's value is taken
-    (used to pin the gold side to the column the question actually asks about);
-    otherwise every cell value in the row is included. This asymmetry lets a gold
-    query declare its answer column without requiring the generated query — whose
-    aliases differ run-to-run — to reproduce it.
-    """
-    values: set[str] = set()
-    for row in rows:
-        if isinstance(row, Mapping):
-            cells = [row[answer_key]] if (answer_key and answer_key in row) else list(row.values())
-        else:
-            cells = [row]
-        for cell in cells:
-            values.add(_canonicalize_value(cell, ndigits))
-    return values
-
-
-@dataclass
-class RetrievalMetrics:
-    """Value-based comparison of predicted rows against gold rows.
-
-    The primary fields (precision/recall/F1/Jaccard/exact_match) compare *cell
-    values* ignoring column names and tolerating float formatting. ``strict_*``
-    fields compare whole rows verbatim (column names, all columns and exact value
-    formatting) and are reported only as a secondary diagnostic.
-    """
-
-    gold_count: int
-    predicted_count: int
-    true_positives: int
-    false_positives: int
-    false_negatives: int
-    precision: float
-    recall: float
-    f1: float
-    jaccard: float
-    exact_match: bool
-    strict_exact_match: bool
-    strict_f1: float
-
-
-def _prf(predicted: set[str], gold: set[str]) -> tuple[int, int, int, float, float, float, float, bool]:
-    """Shared precision/recall/F1/Jaccard/exact-match over two string sets."""
-    tp = len(predicted & gold)
-    fp = len(predicted - gold)
-    fn = len(gold - predicted)
-    if predicted or gold:
-        precision = tp / len(predicted) if predicted else 0.0
-        recall = tp / len(gold) if gold else 1.0
-    else:
-        precision = recall = 1.0
-    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
-    union = len(predicted | gold)
-    jaccard = (tp / union) if union else 1.0
-    return tp, fp, fn, precision, recall, f1, jaccard, predicted == gold
-
-
-def retrieval_metrics(
-    predicted: Iterable[Any],
-    gold: Iterable[Any],
-    *,
-    answer_key: str | None = None,
-    ndigits: int = DEFAULT_ROUND_DIGITS,
-) -> RetrievalMetrics:
-    """Score retrieved rows against gold rows (value-based primary, strict secondary).
-
-    When both sets are empty the result is a perfect match (the agent correctly
-    retrieved nothing); when only the gold set is empty, recall is defined as 1.0
-    and precision as 0.0.
-    """
-    predicted_rows = list(predicted)
-    gold_rows = list(gold)
-
-    predicted_values = value_set(predicted_rows, answer_key=answer_key, ndigits=ndigits)
-    gold_values = value_set(gold_rows, answer_key=answer_key, ndigits=ndigits)
-    tp, fp, fn, precision, recall, f1, jaccard, exact = _prf(predicted_values, gold_values)
-
-    predicted_strict = {canonicalize_row(row) for row in predicted_rows}
-    gold_strict = {canonicalize_row(row) for row in gold_rows}
-    _, _, _, _, _, strict_f1, _, strict_exact = _prf(predicted_strict, gold_strict)
-
-    return RetrievalMetrics(
-        gold_count=len(gold_values),
-        predicted_count=len(predicted_values),
-        true_positives=tp,
-        false_positives=fp,
-        false_negatives=fn,
-        precision=precision,
-        recall=recall,
-        f1=f1,
-        jaccard=jaccard,
-        exact_match=exact,
-        strict_exact_match=strict_exact,
-        strict_f1=strict_f1,
-    )
-
-
 def _value_variants(value: Any) -> set[str]:
     """Surface forms a fact value might take in free text (e.g. ``1157`` / ``1,157``)."""
     variants = {str(value)}
@@ -223,58 +143,146 @@ def value_in_text(value: Any, text: str) -> bool:
     return any(variant.casefold() in haystack for variant in _value_variants(value))
 
 
-@dataclass
-class AnswerMetrics:
-    """How well the generated answer reflects the expected facts.
+def values_in_records(values: Sequence[Any], records: Iterable[Any]) -> list[Any]:
+    """Return the subset of ``values`` that appear in the *raw retrieved rows*.
 
-    ``coverage`` and ``groundedness`` are ``None`` when not applicable (no expected
-    values, or no expected value found in the answer respectively), so aggregates
-    can skip them rather than averaging in a misleading zero.
+    Matches against the canonicalised record data (not the natural-language answer), so the
+    check is a deterministic test of what the query actually returned. Used both to confirm
+    expected facts are present in the data and to assert forbidden facts are absent from it.
     """
-
-    expected_count: int
-    matched: list[Any]
-    missing: list[Any]
-    coverage: float | None
-    grounded: list[Any]
-    ungrounded: list[Any]
-    groundedness: float | None
-
-
-def answer_metrics(answer: str, expected_values: Sequence[Any], records: Iterable[Any]) -> AnswerMetrics:
-    """Score the answer text against expected fact values and the retrieved rows."""
-    text = answer or ""
     record_text = canonicalize_row(list(records))
+    return [value for value in values if value_in_text(value, record_text)]
 
-    matched = [value for value in expected_values if value_in_text(value, text)]
-    missing = [value for value in expected_values if value not in matched]
-    grounded = [value for value in matched if value_in_text(value, record_text)]
-    ungrounded = [value for value in matched if value not in grounded]
 
-    coverage = (len(matched) / len(expected_values)) if expected_values else None
-    groundedness = (len(grounded) / len(matched)) if matched else None
+def values_in_text(values: Sequence[Any], text: str) -> list[Any]:
+    """Return the subset of ``values`` that appear in ``text`` (e.g. document content)."""
+    return [value for value in values if value_in_text(value, text)]
 
-    return AnswerMetrics(
-        expected_count=len(expected_values),
-        matched=matched,
-        missing=missing,
-        coverage=coverage,
-        grounded=grounded,
-        ungrounded=ungrounded,
-        groundedness=groundedness,
+
+def value_matches(expected: Any, actual: Any, *, ndigits: int = DEFAULT_ROUND_DIGITS) -> bool:
+    """Whether a single retrieved cell ``actual`` satisfies an ``expected`` ground-truth value.
+
+    Structured record cells are compared by **exact canonical equality** (not substring), so a
+    field assertion proves the value, not a coincidental overlap: ``180`` does not match
+    ``1180`` and ``"IO-360"`` does not match ``"NOT-IO-360"``. Numbers are normalised so
+    ``1157``/``1157.0`` and float-rounding noise compare equal (the same tolerance the row F1
+    uses). Substring/``contains`` matching is opt-in via an explicit matcher object so it can
+    never be the silent default:
+
+    * ``{"contains": "Lycoming"}`` — case-insensitive substring of the cell's text form.
+    * ``{"equals": <value>}`` — explicit exact equality (the default for a bare value).
+    """
+    if isinstance(expected, Mapping):
+        if "contains" in expected:
+            return value_in_text(expected["contains"], str(actual))
+        if "equals" in expected:
+            expected = expected["equals"]
+        else:
+            raise ValueError(f"Unsupported output matcher {expected!r} (use 'equals' or 'contains').")
+    return _canonicalize_value(expected, ndigits) == _canonicalize_value(actual, ndigits)
+
+
+def row_matches(spec: Mapping[str, Any], record: Mapping[str, Any], *, ndigits: int = DEFAULT_ROUND_DIGITS) -> bool:
+    """Whether one retrieved ``record`` satisfies a partial-row ``spec``.
+
+    Every field named in ``spec`` must be present in the *same* record and match its expected
+    value. Requiring all the fields in a single record is what preserves row-level association
+    (so ``model=IO-360`` and ``hp=180`` must describe the *same* engine, not two different
+    rows that each happen to carry one of the facts).
+    """
+    return all(
+        field_name in record and value_matches(expected, record[field_name], ndigits=ndigits) for field_name, expected in spec.items()
     )
 
 
-def mean(values: Iterable[float | None]) -> float | None:
-    """Mean of the non-``None`` values, or ``None`` when there are none."""
-    present = [value for value in values if value is not None]
-    return (sum(present) / len(present)) if present else None
+def unmatched_output_rows(
+    expected_rows: Sequence[Mapping[str, Any]], records: Sequence[Mapping[str, Any]], *, ndigits: int = DEFAULT_ROUND_DIGITS
+) -> list[Mapping[str, Any]]:
+    """Return the expected partial-rows that no retrieved record satisfies (empty = all found)."""
+    return [spec for spec in expected_rows if not any(row_matches(spec, record, ndigits=ndigits) for record in records)]
+
+
+def unexpected_output_rows(
+    expected_rows: Sequence[Mapping[str, Any]], records: Sequence[Mapping[str, Any]], *, ndigits: int = DEFAULT_ROUND_DIGITS
+) -> list[Mapping[str, Any]]:
+    """Return the retrieved records that satisfy *none* of the expected partial-rows.
+
+    This is the over-fetch / precision guard: with the ground truth's ``expected_output_rows``
+    enumerating the complete known answer set, any returned record that matches no expected
+    spec is a row the agent should not have fetched (it pulled extra or wrong data). Matching
+    is partial-row (a record only needs to satisfy *some* expected spec on the spec's named
+    fields), so legitimately projecting extra *columns* is fine — only extra *rows* are flagged.
+    Returned empty when every record is accounted for. Only meaningful for ``exact_output`` cases.
+    """
+    return [record for record in records if not any(row_matches(spec, record, ndigits=ndigits) for spec in expected_rows)]
+
+
+def unmatched_output_fields(
+    expected_fields: Mapping[str, Any], records: Sequence[Mapping[str, Any]], *, ndigits: int = DEFAULT_ROUND_DIGITS
+) -> dict[str, list[Any]]:
+    """Per-column coverage check, ignoring row identity.
+
+    For each ``field -> expected`` entry (``expected`` is a single value or a list of values),
+    every expected value must appear somewhere in *that column* across the retrieved records.
+    Returns ``{field: [values still missing]}`` for any field with gaps (empty = all covered).
+    Use this for independent multi-row coverage (e.g. a set of aerodrome names in one column);
+    use ``expected_output_rows`` when fields must co-occur in the same row.
+    """
+    missing: dict[str, list[Any]] = {}
+    for field_name, expected in expected_fields.items():
+        wanted = list(expected) if isinstance(expected, list) else [expected]
+        column = [record[field_name] for record in records if field_name in record]
+        absent = [value for value in wanted if not any(value_matches(value, cell, ndigits=ndigits) for cell in column)]
+        if absent:
+            missing[field_name] = absent
+    return missing
+
+
+def document_content(documents: Iterable[Mapping[str, Any]]) -> str:
+    """Concatenate the content of the selected documents into one searchable string.
+
+    The document tool's *output* is the body of the document it chose; joining the bodies of
+    every document fetched in a turn gives a single haystack to check expected output values
+    against — the document-side equivalent of the rows a query returns.
+    """
+    return "\n".join(str(doc.get("content", "")) for doc in documents)
+
+
+def selected_document_ids(documents: Iterable[Mapping[str, Any]]) -> list[str]:
+    """The ids of the documents the agent selected, in order (for which-document scoring)."""
+    return [str(doc["documentId"]) for doc in documents if doc.get("documentId") is not None]
+
+
+def intent_match(expected: Any, actual: Any, *, ndigits: int = DEFAULT_ROUND_DIGITS) -> bool:
+    """Whether the LLM-emitted query ``intent`` satisfies the ground-truth ``expected`` intent.
+
+    The comparison is value-based and order-independent, and treats ``expected`` as a partial
+    contract: only the keys the ground truth declares are checked, so a case can assert (say)
+    the entity and aggregate without pinning every field. ``None`` values in ``expected`` are
+    skipped (declare a key only to require it). Scalars are compared with float tolerance;
+    lists (``fields``/``filters``) are compared as sets so element order does not matter and a
+    filter's serialised shape (``{"field": ..., "op": "=", "value": ...}``) must match exactly.
+    """
+    if isinstance(expected, Mapping):
+        if not isinstance(actual, Mapping):
+            return False
+        return all(intent_match(value, actual.get(key), ndigits=ndigits) for key, value in expected.items() if value is not None)
+    if isinstance(expected, (list, tuple)):
+        if not isinstance(actual, (list, tuple)):
+            return False
+        return {_canonicalize_value(item, ndigits) for item in expected} == {_canonicalize_value(item, ndigits) for item in actual}
+    return _canonicalize_value(expected, ndigits) == _canonicalize_value(actual, ndigits)
+
+
+def any_intent_matches(expected: Any, intents: Sequence[Any], *, ndigits: int = DEFAULT_ROUND_DIGITS) -> bool:
+    """True if any of the emitted ``intents`` satisfies the ``expected`` intent contract."""
+    return any(intent_match(expected, intent, ndigits=ndigits) for intent in intents)
 
 
 def _normalize_whitespace(text: str) -> str:
     """Collapse all runs of whitespace (incl. newlines) into single spaces and strip.
 
-    Applied to the generated/gold Cypher and the answer text in the report so they are
+    Applied to the generated/gold query and the answer text in the report so they are
     stored as single, readable lines free of the model's formatting and line breaks.
     """
     return " ".join(text.split())
@@ -285,14 +293,103 @@ def _normalize_whitespace(text: str) -> str:
 
 @dataclass(frozen=True)
 class GoldQuestion:
-    """One evaluation case: a question, its gold Cypher, and expected answer facts."""
+    """One evaluation case.
+
+    Three kinds of case are supported, distinguished by :meth:`mode` (driven by the declared
+    ``expected_tools``). None of them score the natural-language answer — only tool selection,
+    intent, query validity and the tool's *output* against a hand-written known answer:
+
+    * **retrieval** — a graph question (``expected_tools`` includes ``query_knowledge_graph``).
+      The rows the agent fetched are scored against the case's hand-written
+      ``expected_output_rows`` / ``expected_output_fields`` (column-aware known answers), with
+      an optional ``exact_output`` over-fetch guard. This is the real test.
+    * **document** — a question whose content lives outside the graph (``expected_tools``
+      includes ``fetch_document_content``). Scored on selecting the right tool, the fetch
+      actually returning a document, and — when the case declares them — the *output* of that
+      fetch: the right document was selected (``expected_document_id``) and its content carries
+      the expected facts (``expected_output_values``). The answer wording is never scored (that
+      would need an LLM-as-judge); the document the tool returned is.
+    * **refusal** — an authorization case (``expect_refusal``) where the *correct* outcome is
+      that the request is denied; scored on the pipeline actually denying (a typed
+      authorization denial in the audit trail) and no ``forbidden_answer_values`` reaching the
+      retrieved data.
+
+    ``user`` drives the case as a specific identity (defaulting to the run identity), and
+    ``as_of`` evaluates it against the graph as it existed on that date — so authorization and
+    temporal behaviour can be evaluated, not just retrieval quality.
+
+    ``expected_tools`` lists the tool name(s) a correct answer should invoke (e.g.
+    ``["query_knowledge_graph"]`` or ``["fetch_document_content"]``); required for every
+    non-refusal case. It both selects the case's :meth:`mode` and is checked against the tools
+    the agent actually invoked — picking the right tool is part of being correct.
+
+    ``forbidden_answer_values`` (optional) are values that must NOT appear in the retrieved
+    data (a deterministic data-leak guard for authorization cases, e.g. a clearance-gated
+    aerodrome that should have been nulled out of the rows).
+
+    ``expected_intent`` (optional, retrieval cases) is the structured query intent a correct
+    answer should emit (entity/fields/filters/aggregate/limit). It is matched value-based and
+    order-independent against the intent the LLM actually produced — scoring the model's
+    *retrieval decision* (what to fetch), separately from the rows it returned. Declared keys
+    form a partial contract (see :func:`intent_match`), so a case can pin just the parts that
+    matter (e.g. entity + aggregate) without over-fitting to incidental fields.
+
+    ``expected_output_values`` (optional, document cases) are values that must appear in the
+    document tool's *output* — i.e. the selected document's content (a case-insensitive
+    substring check, since a document body has no columns). For retrieval cases the tool's
+    output is rows, so it is scored more precisely by ``expected_output_rows`` /
+    ``expected_output_fields`` below instead.
+
+    ``expected_output_rows`` (optional, retrieval cases) is the hand-written known answer: a
+    list of *partial rows* the retrieved data must contain. Each spec must be satisfied by a
+    single returned record where **every** named field matches (exact canonical equality,
+    numeric-tolerant; ``{"contains": ...}`` opts into substring). Keys are the agent's
+    deterministic, entity-qualified output columns — ``<entityCamel><FieldPascal>`` for a
+    projection (``pistonEngineRatedHorsepower``), ``<entityCamel>Result`` for an aggregate
+    (``flightResult``), or ``<codeAlias>Name`` for a resolved aerodrome companion
+    (``flightDestinationAerodromeName``). This is the precise "right value in the right field,
+    in the same row" check (see :func:`row_matches`).
+
+    ``exact_output`` (optional, retrieval cases, default ``false``) turns ``expected_output_rows``
+    into a *closed set*: the case additionally fails if the agent returned any record matching
+    none of the expected rows (an over-fetch / precision guard). Set it when the expected rows
+    enumerate the complete answer (e.g. a single aggregate value or the one matching node);
+    leave it off for open-ended coverage scored via ``expected_output_fields``.
+
+    ``expected_output_fields`` (optional, retrieval cases) asserts per-column coverage without
+    pinning row identity: ``{column: value | [values]}`` requires each value to appear in that
+    column across the returned records (see :func:`unmatched_output_fields`). Use it for
+    independent multi-row sets (e.g. a list of aerodrome names) where rows need not co-occur.
+
+    ``expected_document_id`` (optional, document cases) is the id of the document a correct
+    answer should select — scoring *which* document the tool returned.
+
+    The known-answer values are fixed data, derived once by hand from the seeded graph; the
+    derivation queries live in ``eval/ground_truth_provenance.json`` for traceability and are
+    never executed here.
+    """
 
     id: str
     question: str
-    gold_cypher: str
-    tags: list[str] = field(default_factory=list)
-    expected_answer_values: list[Any] = field(default_factory=list)
-    answer_key: str | None = None
+    user: str | None = None
+    as_of: str | None = None
+    expect_refusal: bool = False
+    forbidden_answer_values: list[Any] = field(default_factory=list)
+    expected_tools: list[str] = field(default_factory=list)
+    expected_intent: dict[str, Any] | None = None
+    expected_output_values: list[Any] = field(default_factory=list)
+    expected_output_rows: list[dict[str, Any]] = field(default_factory=list)
+    expected_output_fields: dict[str, Any] = field(default_factory=dict)
+    exact_output: bool = False
+    expected_document_id: str | None = None
+
+    @property
+    def mode(self) -> str:
+        if self.expect_refusal:
+            return "refusal"
+        if "fetch_document_content" in self.expected_tools:
+            return "document"
+        return "retrieval"
 
 
 def load_ground_truth(path: Path) -> list[GoldQuestion]:
@@ -306,38 +403,92 @@ def load_ground_truth(path: Path) -> list[GoldQuestion]:
     questions: list[GoldQuestion] = []
     seen: set[str] = set()
     for entry in raw_questions:
-        for key in ("id", "question", "gold_cypher"):
+        for key in ("id", "question"):
             if not entry.get(key):
                 raise ValueError(f"Ground-truth entry is missing required field '{key}': {entry!r}")
+        expect_refusal = bool(entry.get("expect_refusal", False))
+        # Every non-refusal case must declare expected_tools: it both selects the case mode
+        # (document vs retrieval) and is the tool the agent is required to invoke. A refusal
+        # case needs neither a tool nor an output expectation.
+        if not expect_refusal and not entry.get("expected_tools"):
+            raise ValueError(
+                f"Ground-truth entry {entry['id']!r} must declare 'expected_tools' "
+                "(retrieval or document case), or 'expect_refusal' (authorization case)"
+            )
         if entry["id"] in seen:
             raise ValueError(f"Duplicate question id in ground truth: {entry['id']!r}")
         seen.add(entry["id"])
+        _validate_output_expectations(entry, expect_refusal)
         questions.append(
             GoldQuestion(
                 id=entry["id"],
                 question=entry["question"],
-                gold_cypher=entry["gold_cypher"],
-                tags=list(entry.get("tags", [])),
-                expected_answer_values=list(entry.get("expected_answer_values", [])),
-                answer_key=entry.get("answer_key"),
+                user=entry.get("user"),
+                as_of=entry.get("as_of"),
+                expect_refusal=expect_refusal,
+                forbidden_answer_values=list(entry.get("forbidden_answer_values", [])),
+                expected_tools=list(entry.get("expected_tools", [])),
+                expected_intent=entry.get("expected_intent"),
+                expected_output_values=list(entry.get("expected_output_values", [])),
+                expected_output_rows=list(entry.get("expected_output_rows", [])),
+                expected_output_fields=dict(entry.get("expected_output_fields", {})),
+                exact_output=bool(entry.get("exact_output", False)),
+                expected_document_id=entry.get("expected_document_id"),
             )
         )
     return questions
 
 
-async def _drive_agent(agent: KnowledgeGraphAgent, question: str, principal: Principal) -> dict[str, Any]:
+def _validate_output_expectations(entry: Mapping[str, Any], expect_refusal: bool) -> None:
+    """Enforce that each output expectation is used in the mode it was designed for.
+
+    The tool's output is shaped differently per mode: a retrieval case returns columnar rows
+    (scored precisely by ``expected_output_rows`` / ``expected_output_fields``), while a
+    document case returns free text (scored by ``expected_output_values`` substring). Mixing
+    them is a fixture mistake, so reject it loudly rather than silently never matching.
+    """
+    tools = entry.get("expected_tools") or []
+    is_document = not expect_refusal and "fetch_document_content" in tools
+    is_retrieval = not expect_refusal and not is_document
+    eid = entry["id"]
+    record_keys = ("expected_output_rows", "expected_output_fields")
+    if entry.get("expected_output_values") and not is_document:
+        raise ValueError(
+            f"Ground-truth entry {eid!r}: 'expected_output_values' (document-content substring check) "
+            "is only valid on a document case; a retrieval case must use 'expected_output_rows'."
+        )
+    for key in record_keys:
+        if entry.get(key) and not is_retrieval:
+            raise ValueError(f"Ground-truth entry {eid!r}: {key!r} is only valid on a retrieval case.")
+    if entry.get("exact_output") and not entry.get("expected_output_rows"):
+        raise ValueError(f"Ground-truth entry {eid!r}: 'exact_output' requires 'expected_output_rows' to enumerate the answer.")
+    rows = entry.get("expected_output_rows") or []
+    if not isinstance(rows, list) or any(not isinstance(spec, dict) or not spec for spec in rows):
+        raise ValueError(f"Ground-truth entry {eid!r}: 'expected_output_rows' must be a list of non-empty objects.")
+    fields = entry.get("expected_output_fields") or {}
+    if not isinstance(fields, dict):
+        raise ValueError(f"Ground-truth entry {eid!r}: 'expected_output_fields' must be an object keyed by output column.")
+
+
+async def _drive_agent(agent: KnowledgeGraphAgent, question: str, principal: Principal, *, as_of: str | None = None) -> dict[str, Any]:
     """Consume the agent's streamed events into the pieces the metrics need."""
     answer_parts: list[str] = []
     cypher_used: list[str] = []
     records: list[dict[str, Any]] = []
+    tools_used: list[str] = []
+    intents_used: list[dict[str, Any]] = []
+    documents_used: list[dict[str, Any]] = []
     stats: dict[str, Any] = {}
     error: str | None = None
 
-    async for event in agent.ask(question, principal=principal):
+    async for event in agent.ask(question, principal=principal, as_of=as_of):
         kind = event.get("type")
         if kind == "metadata":
             cypher_used = event.get("cypher_used", [])
             records = event.get("records", [])
+            tools_used = event.get("tools_used", [])
+            intents_used = event.get("intents_used", [])
+            documents_used = event.get("documents_used", [])
         elif kind == "token":
             answer_parts.append(event.get("text", ""))
         elif kind == "stats":
@@ -349,6 +500,9 @@ async def _drive_agent(agent: KnowledgeGraphAgent, question: str, principal: Pri
         "answer": "".join(answer_parts),
         "cypher_used": cypher_used,
         "records": records,
+        "tools_used": tools_used,
+        "intents_used": intents_used,
+        "documents_used": documents_used,
         "stats": stats,
         "error": error,
     }
@@ -356,29 +510,151 @@ async def _drive_agent(agent: KnowledgeGraphAgent, question: str, principal: Pri
 
 async def evaluate_question(
     agent: KnowledgeGraphAgent,
-    client: Neo4jClient,
     question: GoldQuestion,
     *,
-    principal: Principal,
-    f1_threshold: float,
+    policy: PolicyStore,
+    default_principal: Principal,
     round_digits: int = DEFAULT_ROUND_DIGITS,
 ) -> dict[str, Any]:
-    """Run one question through the pipeline and score it."""
-    logger.info("Evaluating '%s': %s", question.id, question.question)
+    """Run one question through the pipeline and score it according to its mode."""
+    principal = policy.resolve_principal(question.user) if question.user else default_principal
+    logger.info(
+        "Evaluating '%s' (mode=%s, as=%s%s): %s",
+        question.id,
+        question.mode,
+        principal.id,
+        f", as_of={question.as_of}" if question.as_of else "",
+        question.question,
+    )
 
-    _, gold_records = await client.run_query(question.gold_cypher)
-    outcome = await _drive_agent(agent, question.question, principal)
+    outcome = await _drive_agent(agent, question.question, principal, as_of=question.as_of)
     answer_text = _normalize_whitespace(outcome["answer"])
-
-    retrieval = retrieval_metrics(outcome["records"], gold_records, answer_key=question.answer_key, ndigits=round_digits)
-    answer = answer_metrics(answer_text, question.expected_answer_values, outcome["records"])
-
-    generated_cypher = _normalize_whitespace(outcome["cypher_used"][0]) if outcome["cypher_used"] else None
-    cypher_valid = generated_cypher is not None and outcome["error"] is None
-    empty_retrieval = len(outcome["records"]) == 0
-    passed = retrieval.f1 >= f1_threshold
-
+    records = outcome["records"]
+    documents = outcome["documents_used"]
     stats = outcome["stats"]
+    audit_denied = (stats.get("audit") or {}).get("denied") or []
+    # Data-leak guard: forbidden values are checked against the *retrieved rows*, not the
+    # answer prose — authorization is enforced on the data, so the data is where a leak shows.
+    leaked = values_in_records(question.forbidden_answer_values, records)
+
+    generated_query = _normalize_whitespace(outcome["cypher_used"][0]) if outcome["cypher_used"] else None
+    query_valid = generated_query is not None and outcome["error"] is None
+    empty_retrieval = len(records) == 0
+    # Refusal is detected from the deterministic authorization signal (a typed denial recorded
+    # in the audit trail), never from reading the answer prose.
+    refused = bool(audit_denied)
+
+    # Intent selection: the structured query intent the LLM emitted (entity/fields/filters/
+    # aggregate) is the model's retrieval *decision*, scored separately from the rows it
+    # returned. When the case declares ``expected_intent`` (retrieval cases only), require one
+    # of the emitted intents to satisfy it (value-based, order-independent partial match).
+    intents_used = list(outcome["intents_used"])
+    intent_selection_ok: bool | None = None
+    if question.expected_intent is not None:
+        intent_selection_ok = any_intent_matches(question.expected_intent, intents_used, ndigits=round_digits)
+
+    # Tool selection: now the agent chooses between the graph-query and document-content
+    # tools, so picking the right one is part of being correct. When the case declares
+    # ``expected_tools``, require the agent to have invoked exactly that set (order-insensitive).
+    tools_used = list(outcome["tools_used"])
+    tool_selection_ok: bool | None = None
+    if question.expected_tools:
+        tool_selection_ok = set(tools_used) == set(question.expected_tools)
+
+    # Output scoring: evaluate what the chosen tool actually *returned* against fixed
+    # ground-truth values — and, for a query, in the right column/row. This is the value-of-the-
+    # output check that complements tool/intent selection: it asserts the answer's source data
+    # is right, not just that the right tool ran.
+    doc_ids = selected_document_ids(documents)
+    missing_output_values: list[Any] = []
+    missing_output_rows: list[Mapping[str, Any]] = []
+    missing_output_fields: dict[str, list[Any]] = {}
+    unexpected_rows: list[Mapping[str, Any]] = []
+    output_values_ok: bool | None = None
+    if question.mode == "document":
+        # A document body has no columns, so its content is scored by substring presence.
+        output_haystack = document_content(documents)
+        present = values_in_text(question.expected_output_values, output_haystack)
+        missing_output_values = [value for value in question.expected_output_values if value not in present]
+        if question.expected_output_values:
+            output_values_ok = not missing_output_values
+    else:
+        # Query rows are columnar, so the output is scored against the agent's deterministic
+        # output columns: partial rows must match within a single record (right value, right
+        # field, same row); field specs check per-column coverage across records.
+        if question.expected_output_rows:
+            missing_output_rows = unmatched_output_rows(question.expected_output_rows, records, ndigits=round_digits)
+            # Over-fetch / precision guard: with a closed expected set, any returned record
+            # outside it means the agent pulled extra or wrong rows.
+            if question.exact_output:
+                unexpected_rows = unexpected_output_rows(question.expected_output_rows, records, ndigits=round_digits)
+        if question.expected_output_fields:
+            missing_output_fields = unmatched_output_fields(question.expected_output_fields, records, ndigits=round_digits)
+        if question.expected_output_rows or question.expected_output_fields:
+            output_values_ok = not missing_output_rows and not missing_output_fields and not unexpected_rows
+    # Which-document selection (document cases): did the tool return the expected document?
+    document_id_ok: bool | None = None
+    if question.expected_document_id is not None:
+        document_id_ok = question.expected_document_id in doc_ids
+
+    # Pass criteria differ by mode. None of them inspect the natural-language answer.
+    if question.mode == "refusal":
+        # Correct when the pipeline denied the request AND no forbidden value reached the data.
+        passed = refused and not leaked
+    elif question.mode == "document":
+        # Correct when the right tool was chosen, the fetch ran without error and actually
+        # returned a document (non-empty rows), and the request was not wrongly denied/leaked.
+        passed = query_valid and not empty_retrieval and not refused and not leaked
+    else:  # retrieval
+        # Correct when the query ran without error and no forbidden value leaked; the hand-
+        # written output expectations (enforced just below) are what verify the actual values.
+        passed = query_valid and not refused and not leaked
+
+    # The wrong intent fails a retrieval case: the model fetched the wrong thing, even if the
+    # rows happened to score. Only enforced when the case declares an expected_intent.
+    if intent_selection_ok is False:
+        passed = False
+
+    # The tool's output must carry the expected values, and a document case must have selected
+    # the expected document. Only enforced when the case declares the corresponding expectation.
+    if output_values_ok is False:
+        passed = False
+    if document_id_ok is False:
+        passed = False
+
+    # The wrong tool fails the case (a refusal may legitimately deny before any tool runs).
+    if tool_selection_ok is False and question.mode != "refusal":
+        passed = False
+
+    tools_label = "ok" if tool_selection_ok else ("BAD" if tool_selection_ok is False else "-")
+    intent_label = "ok" if intent_selection_ok else ("BAD" if intent_selection_ok is False else "-")
+    output_label = "ok" if output_values_ok else ("BAD" if output_values_ok is False else "-")
+    if question.mode == "retrieval":
+        logger.info(
+            "  %s | valid=%s rows=%d overfetch=%d leaked=%s tools=%s intent=%s output=%s",
+            "PASS" if passed else "FAIL",
+            query_valid,
+            len(records),
+            len(unexpected_rows),
+            bool(leaked),
+            tools_label,
+            intent_label,
+            output_label,
+        )
+    else:
+        doc_label = "ok" if document_id_ok else ("BAD" if document_id_ok is False else "-")
+        logger.info(
+            "  %s | mode=%s refused=%s rows=%d leaked=%s tools=%s output=%s doc=%s",
+            "PASS" if passed else "FAIL",
+            question.mode,
+            refused,
+            len(records),
+            bool(leaked),
+            tools_label,
+            output_label,
+            doc_label,
+        )
+
     cost = {
         "model": stats.get("model"),
         "llm_calls": stats.get("llm_calls"),
@@ -386,88 +662,131 @@ async def evaluate_question(
         "durations_ms": stats.get("durations_ms", {}),
     }
 
-    logger.info(
-        "  %s | F1=%.2f P=%.2f R=%.2f exact=%s strict_exact=%s valid=%s coverage=%s",
-        "PASS" if passed else "FAIL",
-        retrieval.f1,
-        retrieval.precision,
-        retrieval.recall,
-        retrieval.exact_match,
-        retrieval.strict_exact_match,
-        cypher_valid,
-        "n/a" if answer.coverage is None else f"{answer.coverage:.2f}",
-    )
-
     return {
         "id": question.id,
         "question": question.question,
-        "tags": question.tags,
+        "mode": question.mode,
+        "user": principal.id,
+        "as_of": question.as_of,
         "passed": passed,
-        "cypher_valid": cypher_valid,
+        "refused": refused,
+        "leaked_values": leaked,
+        "tools_used": tools_used,
+        "expected_tools": question.expected_tools,
+        "tool_selection_ok": tool_selection_ok,
+        "expected_intent": question.expected_intent,
+        "intents_used": intents_used,
+        "intent_selection_ok": intent_selection_ok,
+        "expected_output_values": question.expected_output_values,
+        "missing_output_values": missing_output_values,
+        "expected_output_rows": question.expected_output_rows,
+        "missing_output_rows": missing_output_rows,
+        "expected_output_fields": question.expected_output_fields,
+        "missing_output_fields": missing_output_fields,
+        "exact_output": question.exact_output,
+        "unexpected_output_rows": unexpected_rows,
+        "output_values_ok": output_values_ok,
+        "expected_document_id": question.expected_document_id,
+        "documents_used": doc_ids,
+        "document_id_ok": document_id_ok,
+        "query_valid": query_valid,
         "empty_retrieval": empty_retrieval,
         "error": outcome["error"],
-        "gold_cypher": _normalize_whitespace(question.gold_cypher),
-        "generated_cypher": generated_cypher,
-        "gold_record_count": len(gold_records),
-        "predicted_record_count": len(outcome["records"]),
-        "retrieval": asdict(retrieval),
-        "answer": {"text": answer_text, **asdict(answer)},
+        "generated_query": generated_query,
+        "predicted_record_count": len(records),
+        # The rows the query actually returned, recorded for human review (the redacted,
+        # entity-aliased output the agent saw); scoring compares these to expected_output_*.
+        "records": records,
+        # The answer text is recorded for human review only — it is never scored.
+        "answer_text": answer_text,
         "cost": cost,
     }
 
 
 def _aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
-    """Roll per-question metrics up into a summary block."""
+    """Roll per-question metrics up into a summary block.
+
+    Operational metrics (query validity, empty-retrieval) are averaged over retrieval-mode
+    questions; the document-fetch rate over document cases; authorization, tool-selection,
+    intent and output metrics over the cases that exercise them. The natural-language answer is
+    never scored.
+    """
     count = len(results)
     if count == 0:
         return {"question_count": 0}
 
-    retrievals = [r["retrieval"] for r in results]
-    answers = [r["answer"] for r in results]
+    retrieval_results = [r for r in results if r["mode"] == "retrieval"]
+    retrieval_count = len(retrieval_results)
     token_totals = [r["cost"]["tokens"].get("total") for r in results]
     latency_totals = [r["cost"]["durations_ms"].get("total") for r in results]
 
     total_tokens = sum(value for value in token_totals if value is not None)
     total_latency_ms = sum(value for value in latency_totals if value is not None)
 
-    return {
+    summary: dict[str, Any] = {
         "question_count": count,
         "pass_rate": sum(r["passed"] for r in results) / count,
-        "mean_precision": mean(r["precision"] for r in retrievals),
-        "mean_recall": mean(r["recall"] for r in retrievals),
-        "mean_f1": mean(r["f1"] for r in retrievals),
-        "mean_jaccard": mean(r["jaccard"] for r in retrievals),
-        "exact_match_rate": sum(r["exact_match"] for r in retrievals) / count,
-        "strict_exact_match_rate": sum(r["strict_exact_match"] for r in retrievals) / count,
-        "cypher_valid_rate": sum(r["cypher_valid"] for r in results) / count,
-        "empty_retrieval_rate": sum(r["empty_retrieval"] for r in results) / count,
-        "mean_answer_coverage": mean(a["coverage"] for a in answers),
-        "mean_answer_groundedness": mean(a["groundedness"] for a in answers),
+        "retrieval_question_count": retrieval_count,
+        "query_valid_rate": (sum(r["query_valid"] for r in retrieval_results) / retrieval_count) if retrieval_count else None,
+        "empty_retrieval_rate": (sum(r["empty_retrieval"] for r in retrieval_results) / retrieval_count) if retrieval_count else None,
+        "overfetch_count": sum(1 for r in retrieval_results if r["unexpected_output_rows"]),
         "total_tokens": total_tokens,
         "total_latency_ms": round(total_latency_ms, 1),
         "mean_latency_ms": round(total_latency_ms / count, 1),
     }
 
+    # Document signal: of the document cases, how many actually fetched a document (non-empty),
+    # and — where the case pinned it — how often the *expected* document was selected.
+    document_cases = [r for r in results if r["mode"] == "document"]
+    if document_cases:
+        summary["document_question_count"] = len(document_cases)
+        summary["document_fetch_rate"] = sum(not r["empty_retrieval"] for r in document_cases) / len(document_cases)
+    document_id_cases = [r for r in results if r["document_id_ok"] is not None]
+    if document_id_cases:
+        summary["document_selection_accuracy"] = sum(r["document_id_ok"] for r in document_id_cases) / len(document_id_cases)
 
-def _aggregate_by_tag(results: list[dict[str, Any]]) -> dict[str, Any]:
-    """Per-tag aggregates so weak query classes stand out."""
-    tags = sorted({tag for r in results for tag in r["tags"]})
-    return {tag: _aggregate([r for r in results if tag in r["tags"]]) for tag in tags}
+    # Authorization signal: of the cases that should refuse, how many did; and across all
+    # cases, did any forbidden value reach the retrieved data (should always be zero).
+    refusal_cases = [r for r in results if r["mode"] == "refusal"]
+    if refusal_cases:
+        summary["refusal_correct_rate"] = sum(r["refused"] for r in refusal_cases) / len(refusal_cases)
+    leak_cases = [r for r in results if r["leaked_values"]]
+    summary["forbidden_leak_count"] = len(leak_cases)
+
+    # Tool selection: over the cases that declared expected_tools, how often did the agent
+    # invoke exactly the right tool(s)?
+    tool_cases = [r for r in results if r["tool_selection_ok"] is not None]
+    if tool_cases:
+        summary["tool_selection_question_count"] = len(tool_cases)
+        summary["tool_selection_accuracy"] = sum(r["tool_selection_ok"] for r in tool_cases) / len(tool_cases)
+
+    # Intent selection: over the cases that declared expected_intent, how often did the model
+    # emit a structured intent matching the expected one?
+    intent_cases = [r for r in results if r["intent_selection_ok"] is not None]
+    if intent_cases:
+        summary["intent_selection_question_count"] = len(intent_cases)
+        summary["intent_selection_accuracy"] = sum(r["intent_selection_ok"] for r in intent_cases) / len(intent_cases)
+
+    # Output values: over the cases that declared expected_output_values, how often did the
+    # tool's output (rows or document content) carry all of them?
+    output_cases = [r for r in results if r["output_values_ok"] is not None]
+    if output_cases:
+        summary["output_value_question_count"] = len(output_cases)
+        summary["output_value_accuracy"] = sum(r["output_values_ok"] for r in output_cases) / len(output_cases)
+    return summary
 
 
-def build_report(results: list[dict[str, Any]], *, ground_truth: Path, f1_threshold: float) -> dict[str, Any]:
+def build_report(results: list[dict[str, Any]], *, ground_truth: Path) -> dict[str, Any]:
     """Assemble the full evaluation report document."""
     models = {r["cost"].get("model") for r in results if r["cost"].get("model")}
     return {
         "run": {
             "timestamp": datetime.now(UTC).isoformat(),
             "ground_truth": str(ground_truth),
-            "f1_threshold": f1_threshold,
             "model": next(iter(models)) if len(models) == 1 else sorted(models),
             "question_count": len(results),
         },
         "summary": _aggregate(results),
-        "by_tag": _aggregate_by_tag(results),
         "questions": results,
     }
 
@@ -482,15 +801,22 @@ def log_summary(report: dict[str, Any]) -> None:
     logger.info("=" * 60)
     logger.info("Evaluation summary (%d questions)", summary.get("question_count", 0))
     logger.info("  pass rate           : %s", _fmt(summary.get("pass_rate")))
-    logger.info("  mean F1 (value)     : %s", _fmt(summary.get("mean_f1")))
-    logger.info("  mean precision      : %s", _fmt(summary.get("mean_precision")))
-    logger.info("  mean recall         : %s", _fmt(summary.get("mean_recall")))
-    logger.info("  exact-match (value) : %s", _fmt(summary.get("exact_match_rate")))
-    logger.info("  exact-match (strict): %s", _fmt(summary.get("strict_exact_match_rate")))
-    logger.info("  cypher valid rate   : %s", _fmt(summary.get("cypher_valid_rate")))
+    logger.info("  query valid rate    : %s", _fmt(summary.get("query_valid_rate")))
     logger.info("  empty retrieval rate: %s", _fmt(summary.get("empty_retrieval_rate")))
-    logger.info("  answer coverage     : %s", _fmt(summary.get("mean_answer_coverage")))
-    logger.info("  answer groundedness : %s", _fmt(summary.get("mean_answer_groundedness")))
+    if "output_value_accuracy" in summary:
+        logger.info("  output value acc    : %s", _fmt(summary.get("output_value_accuracy")))
+    logger.info("  over-fetch cases    : %s", summary.get("overfetch_count", 0))
+    if "tool_selection_accuracy" in summary:
+        logger.info("  tool selection acc  : %s", _fmt(summary.get("tool_selection_accuracy")))
+    if "intent_selection_accuracy" in summary:
+        logger.info("  intent selection acc: %s", _fmt(summary.get("intent_selection_accuracy")))
+    if "document_fetch_rate" in summary:
+        logger.info("  document fetch rate : %s", _fmt(summary.get("document_fetch_rate")))
+    if "document_selection_accuracy" in summary:
+        logger.info("  document select acc : %s", _fmt(summary.get("document_selection_accuracy")))
+    if "refusal_correct_rate" in summary:
+        logger.info("  refusal correct rate: %s", _fmt(summary.get("refusal_correct_rate")))
+    logger.info("  forbidden leaks     : %s", summary.get("forbidden_leak_count", 0))
     logger.info("  total tokens        : %s", summary.get("total_tokens"))
     logger.info("  mean latency (ms)   : %s", summary.get("mean_latency_ms"))
     logger.info("=" * 60)
@@ -516,39 +842,44 @@ async def run(args: argparse.Namespace) -> int:
     questions = load_ground_truth(args.ground_truth)
     if args.question_id:
         questions = [q for q in questions if q.id in set(args.question_id)]
-    if args.tag:
-        questions = [q for q in questions if args.tag in q.tags]
     if not questions:
         logger.error("No questions matched the given filters")
         return 1
 
     neo4j_settings = Neo4jSettings.from_env()
     client = Neo4jClient(neo4j_settings)
+    # Pre-flight connectivity check so the run fails fast (with a clear error) if the graph the
+    # agent will query is unreachable — the harness itself no longer issues any gold queries.
     await client.verify_connectivity()
+    await client.close()
     policy = PolicyStore.load()
-    # Evaluate against the gold Cypher (which sees the whole graph), so drive the agent as
-    # the configured identity — defaulting to the most-privileged one so authorization does
-    # not mask retrieval-quality regressions. Use ``--user`` to evaluate a scoped identity.
+    # Drive the agent as the configured identity — defaulting to the most-privileged one so
+    # authorization does not mask retrieval-quality regressions. Use ``--user`` to scope it.
     if args.user is not None:
         principal = policy.resolve_principal(args.user)
     else:
         most_privileged = max(policy.list_identities(), key=lambda identity: policy.clearance_rank(identity.clearance))
         principal = policy.resolve_principal(most_privileged.id)
-    logger.info("Driving the pipeline as identity '%s' (clearance=%s)", principal.id, principal.clearance)
+    logger.info(
+        "Driving the pipeline as default identity '%s' (clearance=%s); per-question 'user' overrides it", principal.id, principal.clearance
+    )
     agent = KnowledgeGraphAgent.from_settings(AzureOpenAISettings.from_env(), neo4j_settings, policy)
 
     try:
         results = [
             await evaluate_question(
-                agent, client, question, principal=principal, f1_threshold=args.f1_threshold, round_digits=args.round_digits
+                agent,
+                question,
+                policy=policy,
+                default_principal=principal,
+                round_digits=args.round_digits,
             )
             for question in questions
         ]
     finally:
         agent.close()
-        await client.close()
 
-    report = build_report(results, ground_truth=args.ground_truth, f1_threshold=args.f1_threshold)
+    report = build_report(results, ground_truth=args.ground_truth)
     log_summary(report)
     _write_report(report, args.output)
     return 0
@@ -562,14 +893,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Output path for the JSON report; '-' writes to stdout (default: eval/results/eval-<timestamp>.json)",
     )
-    parser.add_argument("--f1-threshold", type=float, default=DEFAULT_F1_THRESHOLD, help="Retrieval F1 at/above which a question passes")
     parser.add_argument(
         "--round-digits",
         type=int,
         default=DEFAULT_ROUND_DIGITS,
         help="Decimal places to round floats to before value comparison (float tolerance)",
     )
-    parser.add_argument("--tag", default=None, help="Only evaluate questions carrying this tag")
     parser.add_argument("--question-id", action="append", default=None, help="Only evaluate this question id (repeatable)")
     parser.add_argument("--env-file", type=Path, default=None, help="Path to a .env file with Neo4j/Azure OpenAI settings")
     parser.add_argument(

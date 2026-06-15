@@ -23,8 +23,10 @@ from authz.query_builder import (
     Filter,
     QueryIntent,
     aerodrome_name_field,
+    aggregate_alias,
     attach_aerodrome_names,
     build_query,
+    output_alias,
     redact_records,
 )
 from authz.store import ENV_ACCESS_POLICY_PATH, PolicyError, PolicyStore
@@ -48,7 +50,9 @@ __all__ = [
     "Principal",
     "QueryIntent",
     "aerodrome_name_field",
+    "aggregate_alias",
     "attach_aerodrome_names",
     "build_query",
+    "output_alias",
     "redact_records",
 ]

@@ -1,8 +1,19 @@
 {
   "version": "2026-06-10.5",
   "description": "External, versioned access policy for the knowledge-graph PoC and the authorization trust boundary's source of truth. Kept OUTSIDE the graph and versioned separately from both the data and the ontology. Authorization is two-dimensional: role-based capability grants (which sensitivity CATEGORIES of fields, which ENTITIES, and whether aggregates are allowed) plus CLEARANCE (gated against each node's in-graph `classification` for row-level visibility). An identity may optionally mark categories as `clearanceGatedCategories`: those fields are redacted per-row on classified rows above its clearance instead of the whole row being hidden, so the row stays visible (and counts in aggregates) while the gated fields are protected. The `catalog` is the curated, queryable surface the structured-intent query builder validates typed queries against; a field absent from the catalog is queryable by no one (default-deny).",
-  "clearanceLevels": ["unclassified", "official", "secret"],
-  "sensitivityCategories": ["basic", "duration", "route", "maintenance", "performance", "document"],
+  "clearanceLevels": [
+    "unclassified",
+    "official",
+    "secret"
+  ],
+  "sensitivityCategories": [
+    "basic",
+    "duration",
+    "route",
+    "maintenance",
+    "performance",
+    "document"
+  ],
   "defaultIdentity": "public",
   "catalog": {
     "Aircraft": {
@@ -13,7 +24,7 @@
         "manufacturer": "basic",
         "model": "basic",
         "engineCount": "basic",
-        "mtow_kg": "basic"
+        "maxTakeoffWeight_kg": "basic"
       }
     },
     "Specification": {
@@ -24,8 +35,7 @@
         "maxCruiseSpeed_kt": "performance",
         "maxRange_nm": "performance",
         "serviceCeiling_ft": "performance",
-        "maxTakeoffWeight_lb": "performance",
-        "maxLandingWeight_lb": "performance",
+        "maxLandingWeight_kg": "performance",
         "usableFuel_gal": "performance",
         "cruiseFuelBurn_gph": "performance",
         "maxEndurance_hours": "performance",
@@ -81,6 +91,19 @@
         "fuelCapacity_litres": "performance"
       }
     },
+    "PistonEngine": {
+      "description": "The aircraft's piston engine (the powerplant), a specialised component.",
+      "fields": {
+        "name": "basic",
+        "manufacturer": "basic",
+        "model": "basic",
+        "cylinders": "basic",
+        "displacement_ci": "performance",
+        "fuelInjected": "basic",
+        "totalTime_hours": "maintenance",
+        "ratedHorsepower": "performance"
+      }
+    },
     "Document": {
       "description": "A maintenance or reference document (manual, AD, service bulletin). Only metadata lives in the graph (it acts as the index): the document body is stored externally and fetched backend-side via the document tool, NOT through a graph query. Reading the body requires the `document` sensitivity category; an identity without it can still see a document exists and its title/version but not its text. The body is never a graph field, so it is absent from this catalog by design.",
       "fields": {
@@ -120,8 +143,14 @@
       "displayName": "Public (least privilege)",
       "role": "public",
       "clearance": "unclassified",
-      "categories": ["basic"],
-      "entities": ["Aircraft", "Specification", "Aerodrome"],
+      "categories": [
+        "basic"
+      ],
+      "entities": [
+        "Aircraft",
+        "Specification",
+        "Aerodrome"
+      ],
       "allowAggregates": false,
       "description": "Default identity for unknown or unselected users. Least privilege: basic reference data about the aircraft, its published specifications, and aerodromes. No maintenance history, no flight durations, no flight routes, no aggregates. Unrecognised user ids resolve to this identity (default-deny)."
     },
@@ -130,9 +159,26 @@
       "displayName": "Maintenance Engineer",
       "role": "maintenance",
       "clearance": "unclassified",
-      "categories": ["basic", "duration", "maintenance", "performance", "document"],
-      "clearanceGatedCategories": ["route"],
-      "entities": ["Aircraft", "Specification", "System", "Component", "Document", "Flight", "Aerodrome"],
+      "categories": [
+        "basic",
+        "duration",
+        "maintenance",
+        "performance",
+        "document"
+      ],
+      "clearanceGatedCategories": [
+        "route"
+      ],
+      "entities": [
+        "Aircraft",
+        "Specification",
+        "System",
+        "Component",
+        "PistonEngine",
+        "Document",
+        "Flight",
+        "Aerodrome"
+      ],
       "allowAggregates": true,
       "description": "Maintains the airframe, engine and components. Sees flight durations, maintenance history (components, documents, performance) and the routes of ordinary flights, and may run aggregates. Classified (e.g. military) flights stay visible as records and count toward totals such as flying hours, but their route (departure/destination/distance/altitude) is redacted."
     },
@@ -141,8 +187,24 @@
       "displayName": "Restricted Operations",
       "role": "operations",
       "clearance": "secret",
-      "categories": ["basic", "duration", "route", "maintenance", "performance", "document"],
-      "entities": ["Aircraft", "Specification", "System", "Component", "Document", "Flight", "Aerodrome"],
+      "categories": [
+        "basic",
+        "duration",
+        "route",
+        "maintenance",
+        "performance",
+        "document"
+      ],
+      "entities": [
+        "Aircraft",
+        "Specification",
+        "System",
+        "Component",
+        "PistonEngine",
+        "Document",
+        "Flight",
+        "Aerodrome"
+      ],
       "allowAggregates": true,
       "description": "Operations role cleared to the highest level. May see everything maintenance can, PLUS flight routes, aerodrome coordinates, and classified (e.g. military) flights that other identities cannot see at all."
     }

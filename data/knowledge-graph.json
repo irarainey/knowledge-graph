@@ -11,7 +11,7 @@
         "registration": "G-ECHO",
         "manufacturer": "Cessna",
         "model": "172S Skyhawk",
-        "mtow_kg": 1157,
+        "maxTakeoffWeight_kg": 1157,
         "engineCount": 1
       }
     },
@@ -94,6 +94,7 @@
       ],
       "properties": {
         "name": "Lycoming IO-360",
+        "manufacturer": "Lycoming",
         "ratedHorsepower": 180,
         "totalTime_hours": 1240.5,
         "model": "IO-360-L2A",
@@ -1545,7 +1546,7 @@
       ],
       "properties": {
         "name": "Baggage Compartment",
-        "maxLoad_lb": 120
+        "maxLoad_kg": 54
       }
     },
     {
@@ -2988,12 +2989,12 @@
       ],
       "properties": {
         "name": "Weight & Balance",
-        "maxTakeoffWeight_lb": 2550,
-        "maxRampWeight_lb": 2558,
-        "maxLandingWeight_lb": 2550,
-        "standardEmptyWeight_lb": 1680,
-        "maxUsefulLoad_lb": 878,
-        "maxBaggage_lb": 120,
+        "maxTakeoffWeight_kg": 1157,
+        "maxRampWeight_kg": 1160,
+        "maxLandingWeight_kg": 1157,
+        "standardEmptyWeight_kg": 762,
+        "maxUsefulLoad_kg": 398,
+        "maxBaggage_kg": 54,
         "usableFuel_gal": 53,
         "logicalId": "weights",
         "version": 1,

@@ -119,9 +119,13 @@ class BuiltQuery(BaseModel):
 
     cypher: str
     parameters: dict[str, FilterValue | list[str] | int]
-    returned_fields: list[str] = Field(description="The field names the query projects (for redaction).")
+    returned_fields: list[str] = Field(description="The aliased output columns the query projects (for redaction).")
     entity: str
     aggregated: bool = False
+    aerodrome_columns: dict[str, str] = Field(
+        default_factory=dict,
+        description="Map of aerodrome code column alias -> companion name column alias, for name attachment.",
+    )
     versioned: bool = Field(default=False, description="True if the entity is temporally versioned (a temporal filter was injected).")
     version_mode: str = Field(default="current", description="Temporal mode applied: 'current', or 'as-of' when a date was supplied.")
     as_of: str | None = Field(default=None, description="The as-of date the temporal filter used, if any.")
@@ -160,6 +164,26 @@ _EVENT_DATE_FIELD = "date"
 # "<field>Name" (see :func:`attach_aerodrome_names`), so the answer model receives both the
 # code and the name from a single retrieval instead of issuing a follow-up lookup per code.
 AERODROME_CODE_FIELDS: frozenset[str] = frozenset({"departureAerodrome", "destinationAerodrome"})
+
+
+def output_alias(entity: str, field: str) -> str:
+    """The deterministic, entity-qualified camelCase column alias a field is projected under.
+
+    Output columns are aliased ``<entityCamel><FieldPascal>`` (e.g. ``(Flight, distance_nm)``
+    → ``flightDistance_nm``; ``(PistonEngine, ratedHorsepower)`` → ``pistonEngineRatedHorsepower``)
+    so every returned column is globally unique and self-describing: a consumer (or the
+    evaluation harness) can tell which entity and field a value belongs to from the column name
+    alone, instead of relying on bare field names that collide across entities. This is an
+    output-side concern only — the LLM-facing intent vocabulary stays in catalog-field-name space.
+    """
+    entity_camel = entity[0].lower() + entity[1:] if entity else entity
+    field_pascal = field[0].upper() + field[1:] if field else field
+    return f"{entity_camel}{field_pascal}"
+
+
+def aggregate_alias(entity: str) -> str:
+    """The entity-qualified alias an aggregate result is projected under, e.g. ``flightResult``."""
+    return output_alias(entity, "result")
 
 
 def aerodrome_name_field(code_field: str) -> str:
@@ -293,14 +317,15 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
             # protected values (e.g. military routes/distance) never contribute to the result.
             if has_gated and store.is_field_clearance_gated(principal, entity, agg_field):
                 where.append(classification_predicate())
-            return_clause = f"{agg.func.value}(n.`{field}`) AS result"
+            return_clause = f"{agg.func.value}(n.`{field}`) AS `{aggregate_alias(entity)}`"
         elif agg.func is AggregateFunc.COUNT:
-            return_clause = "count(n) AS result"
+            return_clause = f"count(n) AS `{aggregate_alias(entity)}`"
         else:
             raise AuthorizationError(f"Aggregate '{agg.func.value}' requires a field.")
-        returned_fields = ["result"]
+        returned_fields = [aggregate_alias(entity)]
         aggregated = True
         limit_clause = ""
+        aerodrome_columns: dict[str, str] = {}
     else:
         if intent.fields:
             projection = list(dict.fromkeys(_canonical_field(field_name) for field_name in intent.fields))
@@ -311,16 +336,21 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
         if not projection:
             raise AuthorizationError(f"No visible fields on '{entity}' for this identity.")
         projected_terms: list[str] = []
+        returned_fields = []
+        aerodrome_columns = {}
         for f in projection:
             safe = _safe_identifier(f, "field")
+            alias = output_alias(entity, f)
             # Redact clearance-gated fields on rows above the principal's clearance (the row
             # stays visible, the protected value becomes null).
             if has_gated and store.is_field_clearance_gated(principal, entity, f):
-                projected_terms.append(f"CASE WHEN {classification_predicate()} THEN n.`{safe}` ELSE null END AS `{f}`")
+                projected_terms.append(f"CASE WHEN {classification_predicate()} THEN n.`{safe}` ELSE null END AS `{alias}`")
             else:
-                projected_terms.append(f"n.`{safe}` AS `{f}`")
+                projected_terms.append(f"n.`{safe}` AS `{alias}`")
+            returned_fields.append(alias)
+            if f in AERODROME_CODE_FIELDS:
+                aerodrome_columns[alias] = aerodrome_name_field(alias)
         return_clause = ", ".join(projected_terms)
-        returned_fields = projection
         aggregated = False
         cap = row_cap()
         limit = cap if intent.limit is None else max(1, min(intent.limit, cap))
@@ -341,6 +371,7 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
         returned_fields=returned_fields,
         entity=entity,
         aggregated=aggregated,
+        aerodrome_columns=aerodrome_columns,
         versioned=versioned,
         version_mode=version_mode,
         as_of=as_of if (versioned or event_dated) else None,
@@ -360,22 +391,22 @@ def redact_records(records: list[dict[str, object]], returned_fields: list[str])
 
 
 def attach_aerodrome_names(
-    records: list[dict[str, object]], returned_fields: list[str], name_map: dict[str, str]
+    records: list[dict[str, object]], aerodrome_columns: dict[str, str], name_map: dict[str, str]
 ) -> list[dict[str, object]]:
-    """Attach a resolved aerodrome name beside each returned aerodrome ICAO-code field.
+    """Attach a resolved aerodrome name beside each returned aerodrome ICAO-code column.
 
-    For every field in ``returned_fields`` that holds an aerodrome ICAO code (see
-    :data:`AERODROME_CODE_FIELDS`), add a sibling ``"<field>Name"`` key resolving the code via
-    ``name_map``. This lets the answer model receive both the code and the human name from a
-    single retrieval instead of issuing a follow-up lookup per code. The name inherits the
-    code's redaction: a code already nulled (e.g. a gated route on a classified flight) maps
-    to a null name, so no redacted route ever gains a name.
+    ``aerodrome_columns`` maps each aerodrome code column alias to its companion name column
+    alias (see :class:`BuiltQuery.aerodrome_columns`). For every such column holding an
+    aerodrome ICAO code, the companion key is populated by resolving the code via ``name_map``.
+    This lets the answer model receive both the code and the human name from a single retrieval
+    instead of issuing a follow-up lookup per code. The name inherits the code's redaction: a
+    code already nulled (e.g. a gated route on a classified flight) maps to a null name, so no
+    redacted route ever gains a name.
     """
-    code_fields = [field for field in returned_fields if field in AERODROME_CODE_FIELDS]
-    if not code_fields:
+    if not aerodrome_columns:
         return records
     for row in records:
-        for field in code_fields:
-            code = row.get(field)
-            row[aerodrome_name_field(field)] = name_map.get(code) if isinstance(code, str) else None
+        for code_alias, name_alias in aerodrome_columns.items():
+            code = row.get(code_alias)
+            row[name_alias] = name_map.get(code) if isinstance(code, str) else None
     return records

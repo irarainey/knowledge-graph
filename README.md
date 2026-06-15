@@ -319,14 +319,18 @@ records deprecated-but-retained terms and is attributed in each answer's telemet
 [backend README](backend/README.md#versioning-temporal-data-and-ontology) for the full model
 and Enterprise alternatives.
 
-## Evaluating answer quality
+## Evaluating the pipeline
 
 The backend ships an **offline, deterministic** evaluation harness (no LLM-as-judge) that
 scores the `/ask` pipeline against a pre-baked ground-truth file and writes a timestamped
-JSON report per run. Run it manually with `cd backend && uv run poe evaluate`. A
+JSON report per run. It grades only signals that don't need a judge — tool selection, the
+structured **query intent** the model emits, query validity and the **raw retrieved data**
+(or selected document content), compared against a hand-written known-answer oracle — and
+records the natural-language answer for human review without scoring it. Run it manually with
+`cd backend && uv run poe evaluate`. A
 dependency-free [`backend/eval/dashboard.html`](backend/eval/dashboard.html) visualizes
-every report — summary cards, a metric trend across runs, a per-tag breakdown and
-expandable per-question detail:
+every report — summary cards and expandable per-question detail that pairs each **expected**
+value against the agent's **actual** output side by side:
 
 ```bash
 cd backend/eval && python -m http.server 8000

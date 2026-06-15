@@ -55,10 +55,27 @@ def test_unknown_entity_is_denied() -> None:
 def test_granted_entity_projects_visible_fields_by_default() -> None:
     built = build_query(QueryIntent(entity="Aircraft"), PUBLIC, STORE)
     assert "MATCH (n:`Aircraft`)" in built.cypher
-    assert "n.`registration` AS `registration`" in built.cypher
+    assert "n.`registration` AS `aircraftRegistration`" in built.cypher
     # Always-present clearance filter.
     assert "n.classification IS NULL OR n.classification IN" in built.cypher
     assert built.parameters["__authz_classifications"] == ["unclassified"]
+
+
+def test_projection_alias_is_entity_qualified_eval_contract() -> None:
+    # CONTRACT: the builder aliases every projected field as an entity-qualified camelCase
+    # output column (``n.`field` AS `<entityCamel><FieldPascal>``) and every aggregate as
+    # ``<entityCamel>Result``. The offline evaluation harness keys its column-aware output
+    # expectations (expected_output_rows / expected_output_fields in eval/ground_truth.json)
+    # on exactly these deterministic output column names. If this aliasing ever changes, those
+    # expectations would silently stop matching — so this test locks the alias scheme the eval
+    # depends on.
+    built = build_query(QueryIntent(entity="Aircraft", fields=["registration", "maxTakeoffWeight_kg"]), PUBLIC, STORE)
+    for field_name, alias in (("registration", "aircraftRegistration"), ("maxTakeoffWeight_kg", "aircraftMaxTakeoffWeight_kg")):
+        assert f"n.`{field_name}` AS `{alias}`" in built.cypher
+        assert alias in built.returned_fields
+    counted = build_query(QueryIntent(entity="Flight", aggregate=Aggregate(func=AggregateFunc.COUNT)), MAINTENANCE, STORE)
+    assert "count(n) AS `flightResult`" in counted.cypher
+    assert counted.returned_fields == ["flightResult"]
 
 
 # --- Field gate ------------------------------------------------------------------------
@@ -120,9 +137,9 @@ def test_aggregate_denied_without_grant() -> None:
 def test_count_allowed_for_maintenance() -> None:
     intent = QueryIntent(entity="Flight", aggregate=Aggregate(func=AggregateFunc.COUNT))
     built = build_query(intent, MAINTENANCE, STORE)
-    assert "count(n) AS result" in built.cypher
+    assert "count(n) AS `flightResult`" in built.cypher
     assert built.aggregated is True
-    assert built.returned_fields == ["result"]
+    assert built.returned_fields == ["flightResult"]
 
 
 def test_aggregate_over_route_field_excludes_classified_for_maintenance() -> None:
@@ -130,7 +147,7 @@ def test_aggregate_over_route_field_excludes_classified_for_maintenance() -> Non
     # must exclude classified rows so military routes/distance never contribute to the result.
     intent = QueryIntent(entity="Flight", aggregate=Aggregate(func=AggregateFunc.AVG, field="distance_nm"))
     built = build_query(intent, MAINTENANCE, STORE)
-    assert "avg(n.`distance_nm`) AS result" in built.cypher
+    assert "avg(n.`distance_nm`) AS `flightResult`" in built.cypher
     assert "n.classification IN $__authz_classifications" in built.cypher
     assert built.parameters["__authz_classifications"] == ["unclassified"]
 
@@ -145,7 +162,7 @@ def test_aggregate_over_route_field_denied_for_public() -> None:
 def test_aggregate_over_visible_field_is_built() -> None:
     intent = QueryIntent(entity="Flight", aggregate=Aggregate(func=AggregateFunc.SUM, field="blockTime_minutes"))
     built = build_query(intent, MAINTENANCE, STORE)
-    assert "sum(n.`blockTime_minutes`) AS result" in built.cypher
+    assert "sum(n.`blockTime_minutes`) AS `flightResult`" in built.cypher
 
 
 def test_non_count_aggregate_without_field_is_denied() -> None:
@@ -179,7 +196,7 @@ def test_gated_route_field_is_redacted_not_hidden() -> None:
     built = build_query(QueryIntent(entity="Flight", fields=["destinationAerodrome"]), MAINTENANCE, STORE)
     assert (
         "CASE WHEN (n.classification IS NULL OR n.classification IN $__authz_classifications) "
-        "THEN n.`destinationAerodrome` ELSE null END AS `destinationAerodrome`" in built.cypher
+        "THEN n.`destinationAerodrome` ELSE null END AS `flightDestinationAerodrome`" in built.cypher
     )
     assert built.parameters["__authz_classifications"] == ["unclassified"]
     # No whole-row classification filter: the row is not hidden, only the field is redacted.
@@ -190,7 +207,7 @@ def test_non_gated_field_sees_classified_rows_for_maintenance() -> None:
     # A non-gated field (duration) is returned for every flight, including classified ones —
     # this is what lets maintenance see that a classified flight existed and count its hours.
     built = build_query(QueryIntent(entity="Flight", fields=["blockTime_minutes"]), MAINTENANCE, STORE)
-    assert "n.`blockTime_minutes` AS `blockTime_minutes`" in built.cypher
+    assert "n.`blockTime_minutes` AS `flightBlockTime_minutes`" in built.cypher
     assert "classification" not in built.cypher
     assert "__authz_classifications" not in built.parameters
 
@@ -199,7 +216,7 @@ def test_maintenance_count_includes_classified_rows() -> None:
     # With route clearance-gated, classified flights are no longer hidden from maintenance, so
     # a plain count includes them (the deliberate, audited relaxation) — no clearance filter.
     built = build_query(QueryIntent(entity="Flight", aggregate=Aggregate(func=AggregateFunc.COUNT)), MAINTENANCE, STORE)
-    assert "count(n) AS result" in built.cypher
+    assert "count(n) AS `flightResult`" in built.cypher
     assert "classification" not in built.cypher
     assert "__authz_classifications" not in built.parameters
 
@@ -209,7 +226,7 @@ def test_aggregate_over_non_gated_field_includes_classified_for_maintenance() ->
     built = build_query(
         QueryIntent(entity="Flight", aggregate=Aggregate(func=AggregateFunc.SUM, field="flightTime_hours")), MAINTENANCE, STORE
     )
-    assert "sum(n.`flightTime_hours`) AS result" in built.cypher
+    assert "sum(n.`flightTime_hours`) AS `flightResult`" in built.cypher
     assert "classification" not in built.cypher
     assert "__authz_classifications" not in built.parameters
 
@@ -231,7 +248,7 @@ def test_ops_route_field_is_not_redacted() -> None:
     # restricted_ops has route as a full (non-gated) grant and secret clearance, so it sees
     # routes directly with the standard whole-row filter — no CASE redaction.
     built = build_query(QueryIntent(entity="Flight", fields=["destinationAerodrome"]), OPS, STORE)
-    assert "n.`destinationAerodrome` AS `destinationAerodrome`" in built.cypher
+    assert "n.`destinationAerodrome` AS `flightDestinationAerodrome`" in built.cypher
     assert "CASE WHEN" not in built.cypher
     assert "n.classification IS NULL OR n.classification IN $__authz_classifications" in built.cypher
 
@@ -325,35 +342,42 @@ _AERODROME_NAMES = {"EGGD": "Bristol", "EGBP": "Cotswold Airport"}
 
 
 def test_attach_aerodrome_names_adds_resolved_name_beside_code() -> None:
-    records: list[dict[str, object]] = [{"destinationAerodrome": "EGGD"}, {"destinationAerodrome": "EGBP"}]
-    enriched = attach_aerodrome_names(records, ["destinationAerodrome"], _AERODROME_NAMES)
-    assert enriched[0] == {"destinationAerodrome": "EGGD", "destinationAerodromeName": "Bristol"}
-    assert enriched[1] == {"destinationAerodrome": "EGBP", "destinationAerodromeName": "Cotswold Airport"}
+    records: list[dict[str, object]] = [{"flightDestinationAerodrome": "EGGD"}, {"flightDestinationAerodrome": "EGBP"}]
+    columns = {"flightDestinationAerodrome": "flightDestinationAerodromeName"}
+    enriched = attach_aerodrome_names(records, columns, _AERODROME_NAMES)
+    assert enriched[0] == {"flightDestinationAerodrome": "EGGD", "flightDestinationAerodromeName": "Bristol"}
+    assert enriched[1] == {"flightDestinationAerodrome": "EGBP", "flightDestinationAerodromeName": "Cotswold Airport"}
 
 
 def test_attach_aerodrome_names_resolves_both_departure_and_destination() -> None:
-    records: list[dict[str, object]] = [{"departureAerodrome": "EGGD", "destinationAerodrome": "EGBP"}]
-    enriched = attach_aerodrome_names(records, ["departureAerodrome", "destinationAerodrome"], _AERODROME_NAMES)
-    assert enriched[0]["departureAerodromeName"] == "Bristol"
-    assert enriched[0]["destinationAerodromeName"] == "Cotswold Airport"
+    records: list[dict[str, object]] = [{"flightDepartureAerodrome": "EGGD", "flightDestinationAerodrome": "EGBP"}]
+    columns = {
+        "flightDepartureAerodrome": "flightDepartureAerodromeName",
+        "flightDestinationAerodrome": "flightDestinationAerodromeName",
+    }
+    enriched = attach_aerodrome_names(records, columns, _AERODROME_NAMES)
+    assert enriched[0]["flightDepartureAerodromeName"] == "Bristol"
+    assert enriched[0]["flightDestinationAerodromeName"] == "Cotswold Airport"
 
 
 def test_attach_aerodrome_names_keeps_redacted_code_nameless() -> None:
     # A gated route nulled on a classified row must not gain a name (no redaction bypass).
-    records: list[dict[str, object]] = [{"destinationAerodrome": None}]
-    enriched = attach_aerodrome_names(records, ["destinationAerodrome"], _AERODROME_NAMES)
-    assert enriched[0] == {"destinationAerodrome": None, "destinationAerodromeName": None}
+    records: list[dict[str, object]] = [{"flightDestinationAerodrome": None}]
+    columns = {"flightDestinationAerodrome": "flightDestinationAerodromeName"}
+    enriched = attach_aerodrome_names(records, columns, _AERODROME_NAMES)
+    assert enriched[0] == {"flightDestinationAerodrome": None, "flightDestinationAerodromeName": None}
 
 
 def test_attach_aerodrome_names_unknown_code_resolves_to_none() -> None:
-    records: list[dict[str, object]] = [{"destinationAerodrome": "ZZZZ"}]
-    enriched = attach_aerodrome_names(records, ["destinationAerodrome"], _AERODROME_NAMES)
-    assert enriched[0]["destinationAerodromeName"] is None
+    records: list[dict[str, object]] = [{"flightDestinationAerodrome": "ZZZZ"}]
+    columns = {"flightDestinationAerodrome": "flightDestinationAerodromeName"}
+    enriched = attach_aerodrome_names(records, columns, _AERODROME_NAMES)
+    assert enriched[0]["flightDestinationAerodromeName"] is None
 
 
 def test_attach_aerodrome_names_noop_without_aerodrome_fields() -> None:
     records: list[dict[str, object]] = [{"name": "Flight 001", "flightTime_hours": 1.2}]
-    enriched = attach_aerodrome_names(records, ["name", "flightTime_hours"], _AERODROME_NAMES)
+    enriched = attach_aerodrome_names(records, {}, _AERODROME_NAMES)
     assert enriched == [{"name": "Flight 001", "flightTime_hours": 1.2}]
 
 
@@ -362,8 +386,9 @@ def test_requested_name_companion_field_is_canonicalised_to_code() -> None:
     # builder must project the underlying code field rather than rejecting it as unknown.
     built = build_query(QueryIntent(entity="Flight", fields=["name", "destinationAerodromeName"]), MAINTENANCE, STORE)
     assert "n.`destinationAerodromeName`" not in built.cypher
-    assert "destinationAerodrome` ELSE null END AS `destinationAerodrome`" in built.cypher
-    assert "destinationAerodrome" in built.returned_fields
+    assert "destinationAerodrome` ELSE null END AS `flightDestinationAerodrome`" in built.cypher
+    assert "flightDestinationAerodrome" in built.returned_fields
+    assert built.aerodrome_columns == {"flightDestinationAerodrome": "flightDestinationAerodromeName"}
 
 
 def test_filter_on_name_companion_field_is_canonicalised_to_code() -> None:

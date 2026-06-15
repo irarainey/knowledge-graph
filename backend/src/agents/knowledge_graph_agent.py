@@ -47,7 +47,6 @@ from agent_framework.openai import OpenAIChatCompletionClient
 from neo4j import Driver, GraphDatabase, Query, RoutingControl
 
 from authz import (
-    AERODROME_CODE_FIELDS,
     Aggregate,
     AuthorizationError,
     Filter,
@@ -359,6 +358,10 @@ class KnowledgeGraphAgent:
         the builder injects the corresponding temporal filter deterministically.
         """
         tool_start = time.perf_counter()
+        # The structured intent the LLM emitted, recorded verbatim so the pipeline (and offline
+        # evaluation) can score the model's retrieval *decision* — what to fetch — independently
+        # of the deterministically built Cypher and the rows it returned.
+        intent_dump = intent.model_dump(mode="json")
         emit_progress(PROGRESS_CYPHER)
         try:
             built = build_query(intent, principal, self._policy, as_of=as_of)
@@ -367,7 +370,16 @@ class KnowledgeGraphAgent:
             emit_safety_denied(str(exc))
             sink = retrieval_sink.get()
             if sink is not None:
-                sink.append({"cypher": [], "records": [], "duration_ms": elapsed_ms(tool_start), "temporal_applied": False})
+                sink.append(
+                    {
+                        "tool": TOOL_NAME,
+                        "intent": intent_dump,
+                        "cypher": [],
+                        "records": [],
+                        "duration_ms": elapsed_ms(tool_start),
+                        "temporal_applied": False,
+                    }
+                )
             emit_progress(PROGRESS_ANSWERING)
             return f"Not permitted: {exc} The requested information is not available to this user."
 
@@ -380,6 +392,8 @@ class KnowledgeGraphAgent:
             if sink is not None:
                 sink.append(
                     {
+                        "tool": TOOL_NAME,
+                        "intent": intent_dump,
                         "cypher": [built.cypher],
                         "records": [],
                         "duration_ms": elapsed_ms(tool_start),
@@ -390,8 +404,8 @@ class KnowledgeGraphAgent:
             return "Retrieval failed; no rows are available for this question."
 
         records = redact_records(records, built.returned_fields)
-        if records and any(field in AERODROME_CODE_FIELDS for field in built.returned_fields):
-            records = attach_aerodrome_names(records, built.returned_fields, await self._aerodrome_name_map())
+        if records and built.aerodrome_columns:
+            records = attach_aerodrome_names(records, built.aerodrome_columns, await self._aerodrome_name_map())
         cap = row_cap()
         if len(records) > cap:
             logger.info("Capping retrieval rows from %d to %d (QUERY_ROW_CAP)", len(records), cap)
@@ -400,6 +414,8 @@ class KnowledgeGraphAgent:
         if sink is not None:
             sink.append(
                 {
+                    "tool": TOOL_NAME,
+                    "intent": intent_dump,
                     "cypher": [built.cypher],
                     "records": records,
                     "duration_ms": elapsed_ms(tool_start),
@@ -534,25 +550,40 @@ class KnowledgeGraphAgent:
         sink = retrieval_sink.get()
         if sink is None:
             return
+        # ``document`` carries the selected document's id + content so offline evaluation can
+        # score the *output* of the document tool (which document was chosen and what it said),
+        # mirroring how retrieval cases score the rows the query tool returned. It is kept off
+        # ``records`` (which stays provenance-only for the debug-panel table) and surfaced
+        # separately on the ``documents_used`` metadata field.
         if excerpt is None:
             descriptor = f"DOCUMENT FETCH (denied/failed): reference={reference!r}"
             records: list[dict[str, Any]] = []
+            document: dict[str, Any] | None = None
         else:
             descriptor = (
                 f"DOCUMENT FETCH: {excerpt.documentId} {excerpt.title!r} v{excerpt.version} "
                 f"({excerpt.charCount} chars{', truncated' if excerpt.truncated else ''}, checksum verified)"
             )
-            records = [
-                {
-                    "documentId": excerpt.documentId,
-                    "title": excerpt.title,
-                    "version": excerpt.version,
-                    "contentType": excerpt.contentType,
-                    "charCount": excerpt.charCount,
-                    "truncated": excerpt.truncated,
-                }
-            ]
-        sink.append({"cypher": [descriptor], "records": records, "duration_ms": duration_ms, "temporal_applied": False})
+            provenance = {
+                "documentId": excerpt.documentId,
+                "title": excerpt.title,
+                "version": excerpt.version,
+                "contentType": excerpt.contentType,
+                "charCount": excerpt.charCount,
+                "truncated": excerpt.truncated,
+            }
+            records = [provenance]
+            document = {**provenance, "content": excerpt.text}
+        sink.append(
+            {
+                "tool": DOCUMENT_TOOL_NAME,
+                "cypher": [descriptor],
+                "records": records,
+                "document": document,
+                "duration_ms": duration_ms,
+                "temporal_applied": False,
+            }
+        )
 
     @staticmethod
     def _record_document_access(principal: Principal, reference: str, excerpt: DocumentExcerpt | None, outcome: str) -> None:
@@ -661,8 +692,11 @@ class KnowledgeGraphAgent:
           through its stages (``planning`` → ``cypher`` → ``querying`` → ``answering``)
           so the client can show which stage is in flight. Off-topic questions skip
           these (no pipeline runs).
-        * ``{"type": "metadata", "cypher_used": [...], "records": [...]}`` — emitted
-          once, after the agent's forced retrieval tool runs, before any answer tokens.
+        * ``{"type": "metadata", "cypher_used": [...], "records": [...], "intents_used": [...],
+          "documents_used": [...]}`` — emitted once, after the agent's forced retrieval tool
+          runs, before any answer tokens. ``intents_used`` carries the structured query intents
+          the model emitted; ``documents_used`` carries the documents the document tool selected
+          (id + content) so the document tool's output can be evaluated like retrieval rows.
         * ``{"type": "token", "text": "..."}`` — repeated, the streamed answer.
         * ``{"type": "error", "message": "..."}`` — only on failure.
         * ``{"type": "stats", ...}`` — debug telemetry (model, acting principal, llm_calls,
@@ -692,7 +726,7 @@ class KnowledgeGraphAgent:
         # call or database query (deterministic, no LLM).
         if not is_relevant(question, self._vocabulary):
             logger.info("Question rejected by relevance guardrail (off-topic): %s", question)
-            yield {"type": "metadata", "cypher_used": [], "records": []}
+            yield {"type": "metadata", "cypher_used": [], "records": [], "tools_used": [], "intents_used": [], "documents_used": []}
             yield {"type": "token", "text": OFF_TOPIC_ANSWER}
             stats = _build_stats(
                 model=model,
@@ -707,6 +741,7 @@ class KnowledgeGraphAgent:
                 version_applied=False,
                 ontology_version=self._ontology.version,
             )
+            stats["tools_used"] = []
             stats["audit"] = log_audit(
                 build_audit(
                     principal=principal,
@@ -766,6 +801,27 @@ class KnowledgeGraphAgent:
             records = [row for entry in retrievals for row in entry["records"]]
             return cyphers, records
 
+        def selected_intents() -> list[dict[str, Any]]:
+            """The structured query intents the agent emitted, in call order."""
+            return [entry["intent"] for entry in retrievals if entry.get("intent") is not None]
+
+        def selected_documents() -> list[dict[str, Any]]:
+            """The documents the agent fetched (id + content), in call order.
+
+            Surfaces the document tool's *output* (which document was chosen and its content)
+            so offline evaluation can score it the way retrieval cases score returned rows.
+            """
+            return [entry["document"] for entry in retrievals if entry.get("document") is not None]
+
+        def selected_tools() -> list[str]:
+            """The tools the agent actually invoked, in first-call order (de-duplicated)."""
+            ordered: list[str] = []
+            for entry in retrievals:
+                name = entry.get("tool")
+                if name and name not in ordered:
+                    ordered.append(name)
+            return ordered
+
         async def pump() -> None:
             """Drive the agent run, forwarding each stream update onto the merged queue."""
             try:
@@ -801,7 +857,14 @@ class KnowledgeGraphAgent:
                     run_failed = True
                     if not metadata_emitted:
                         cyphers, records = aggregate_retrieval()
-                        yield {"type": "metadata", "cypher_used": cyphers, "records": records}
+                        yield {
+                            "type": "metadata",
+                            "cypher_used": cyphers,
+                            "records": records,
+                            "tools_used": selected_tools(),
+                            "intents_used": selected_intents(),
+                            "documents_used": selected_documents(),
+                        }
                         metadata_emitted = True
                     yield {"type": "error", "message": "Answer generation failed."}
                     break
@@ -815,7 +878,14 @@ class KnowledgeGraphAgent:
                     cyphers, records = aggregate_retrieval()
                     logger.info("Retrieval tool returned %d cypher query(ies), %d record(s)", len(cyphers), len(records))
                     logger.debug("Generated cypher: %s", cyphers)
-                    yield {"type": "metadata", "cypher_used": cyphers, "records": records}
+                    yield {
+                        "type": "metadata",
+                        "cypher_used": cyphers,
+                        "records": records,
+                        "tools_used": selected_tools(),
+                        "intents_used": selected_intents(),
+                        "documents_used": selected_documents(),
+                    }
                     metadata_emitted = True
                 text = getattr(update, "text", None)
                 if text:
@@ -842,7 +912,14 @@ class KnowledgeGraphAgent:
         # the debug panel after the stream ends and overwrites its holder on each metadata
         # event, so this final, complete set is what the panel shows.
         cyphers, records = aggregate_retrieval()
-        yield {"type": "metadata", "cypher_used": cyphers, "records": records}
+        yield {
+            "type": "metadata",
+            "cypher_used": cyphers,
+            "records": records,
+            "tools_used": selected_tools(),
+            "intents_used": selected_intents(),
+            "documents_used": selected_documents(),
+        }
 
         cypher_used, records = aggregate_retrieval()
         retrieval_ms = round(sum(entry["duration_ms"] for entry in retrievals), 1)
@@ -863,6 +940,7 @@ class KnowledgeGraphAgent:
             version_applied=version_applied,
             ontology_version=self._ontology.version,
         )
+        stats["tools_used"] = selected_tools()
         stats["audit"] = log_audit(
             build_audit(
                 principal=principal,

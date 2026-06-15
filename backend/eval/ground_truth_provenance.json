@@ -1,0 +1,59 @@
+{
+  "description": "Reference-only provenance for the hand-written known answers in ground_truth.json. These Cypher queries are how each expected value was derived once from the seeded knowledge graph; they are documentation for traceability and reproducibility and are NEVER executed by scripts/evaluate.py (the ground truth is fixed data, not a second live query run against the same database). Each query's RETURN aliases match the agent's DETERMINISTIC, entity-qualified output aliases (the same '<entityCamel><FieldPascal>' projection / '<entityCamel>Result' aggregate / '<codeAlias>Name' aerodrome-companion convention the structured-intent query builder emits), so the columns reproduce the keys in `value` exactly. Run them by hand (as a most-privileged identity, so no authorization redaction caps the result) against the seeded graph to verify or refresh an expected value after a data change.",
+  "derivations": {
+    "flight-count": {
+      "query": "MATCH (f:Flight) RETURN count(f) AS flightResult",
+      "value": { "flightResult": 12 }
+    },
+    "engine-model": {
+      "query": "MATCH (e:PistonEngine) RETURN e.manufacturer AS pistonEngineManufacturer, e.model AS pistonEngineModel, e.ratedHorsepower AS pistonEngineRatedHorsepower",
+      "value": { "pistonEngineManufacturer": "Lycoming", "pistonEngineModel": "IO-360-L2A", "pistonEngineRatedHorsepower": 180 }
+    },
+    "aircraft-mtow": {
+      "query": "MATCH (ac:Aircraft) RETURN ac.registration AS aircraftRegistration, ac.maxTakeoffWeight_kg AS aircraftMaxTakeoffWeight_kg",
+      "value": { "aircraftRegistration": "G-ECHO", "aircraftMaxTakeoffWeight_kg": 1157 }
+    },
+    "engine-cylinders": {
+      "query": "MATCH (e:PistonEngine) RETURN e.cylinders AS pistonEngineCylinders",
+      "value": { "pistonEngineCylinders": 4 }
+    },
+    "total-flight-hours": {
+      "query": "MATCH (f:Flight) RETURN sum(f.flightTime_hours) AS flightResult",
+      "note": "Mirrors the tool's plain aggregate (no rounding in Cypher). The raw sum is 6.599999999999999; the evaluation harness rounds floats to 3 decimal places when comparing, yielding 6.6.",
+      "value": { "flightResult": 6.6 }
+    },
+    "longest-flight": {
+      "query": "MATCH (f:Flight) RETURN max(f.distance_nm) AS flightResult",
+      "value": { "flightResult": 49 }
+    },
+    "flights-on-2026-05-20": {
+      "query": "MATCH (f:Flight) WHERE f.date = '2026-05-20' RETURN count(f) AS flightResult",
+      "value": { "flightResult": 1 }
+    },
+    "aerodromes-visited": {
+      "query": "MATCH (n:Flight) OPTIONAL MATCH (a:Aerodrome) WHERE a.icao = n.destinationAerodrome RETURN n.destinationAerodrome AS flightDestinationAerodrome, a.name AS flightDestinationAerodromeName",
+      "note": "Mirrors the tool's deterministic query for the 'destinationAerodrome' field: one row per Flight (no DISTINCT/ORDER BY), with the 'flightDestinationAerodromeName' companion the backend resolves from the ICAO code after retrieval. Twelve rows are returned with repeats; 'value' below is the per-column DISTINCT coverage the ground truth scores (every listed value must appear in its column), which is order- and duplicate-independent.",
+      "value": { "flightDestinationAerodrome": [ "EGBJ", "EGBP", "EGFF", "EGGD", "EGHH", "EGTE", "EGTK" ], "flightDestinationAerodromeName": [ "Bournemouth", "Bristol", "Cardiff", "Cotswold Airport", "Exeter", "Gloucestershire", "Oxford (Kidlington)" ] }
+    },
+    "powerplant-components": {
+      "query": "MATCH (c:Component) RETURN count(c) AS componentResult",
+      "value": { "componentResult": 112 }
+    },
+    "system-count": {
+      "query": "MATCH (s:System) RETURN count(s) AS systemResult",
+      "value": { "systemResult": 8 }
+    },
+    "flights-as-of-2020": {
+      "query": "MATCH (f:Flight) WHERE f.date <= '2020-12-31' RETURN count(f) AS flightResult",
+      "value": { "flightResult": 4 }
+    },
+    "poh-never-exceed-speed": {
+      "source": "Document DOC-0001 (POH) content; the never-exceed speed (VNE) is stated as 163 knots.",
+      "value": { "expected_output_values": [ "163" ] }
+    },
+    "maintenance-route-gating": {
+      "note": "Authorization leak-guard case (no positive expected output). The classified flight's destination is Oxford (Kidlington); for the maintenance_engineer (route is a clearance-gated category) those values must be redacted out of the retrieved rows.",
+      "forbidden_answer_values": [ "Oxford", "Kidlington" ]
+    }
+  }
+}

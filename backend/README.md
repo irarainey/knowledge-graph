@@ -784,71 +784,214 @@ same Neo4j and Azure OpenAI settings in `backend/.env`, and the graph must alrea
 imported.
 
 The point is a **repeatable, judge-free signal**: every metric is computed by comparing
-the agent's retrieved rows and answer text against hand-written gold data with plain set
-arithmetic and string matching, so a run is cheap, deterministic given the data, and
-diffable across code changes (the [dashboard](#dashboard) trends them over time). By
+the agent's tool selection, structured intent and retrieved rows (or selected document
+content) against hand-written gold data with plain set arithmetic and string matching — the
+streamed natural-language answer is recorded for human review but **never scored**. A run is
+cheap, deterministic given the data, and diffable across code changes (inspect any run in the
+[dashboard](#dashboard)). By
 default it drives the pipeline as the **most-privileged identity** so retrieval quality is
 measured without authorization capping the results; pass `--user <id>` to evaluate as a
-specific identity instead. Authorization *enforcement* itself is verified separately by the
-adversarial unit tests (`tests/test_query_builder.py`, `tests/test_knowledge_graph_agent.py`),
-not by this harness.
+specific identity instead. Individual ground-truth cases can override that identity (and
+the temporal snapshot) per question, so the harness also covers **authorization** and
+**temporal** behaviour, not just retrieval quality (see [Ground truth](#ground-truth)).
+Authorization *enforcement* itself is additionally verified by the
+adversarial unit tests (`tests/test_query_builder.py`, `tests/test_knowledge_graph_agent.py`).
 
-> **PoC caveat.** The ground-truth set is small and hand-curated, the answer metrics are
-> substring-based (not semantic), and runs cost real Azure OpenAI tokens. It is a
-> development feedback tool, not a statistically rigorous benchmark.
+> **PoC caveat.** The ground-truth set is small and hand-curated, scoring is deterministic
+> (it never grades the natural-language answer), and runs cost real Azure OpenAI tokens. It
+> is a development feedback tool, not a statistically rigorous benchmark.
 
 ```bash
 uv run poe evaluate                                   # eval/ground_truth.json -> eval/results/eval-<timestamp>.json
-uv run python scripts/evaluate.py --tag aggregation   # only questions tagged "aggregation"
 uv run python scripts/evaluate.py --question-id flight-count --output -   # one question, report to stdout
-uv run python scripts/evaluate.py --f1-threshold 0.7  # stricter pass bar
 ```
 
 ### Ground truth
 
-[`eval/ground_truth.json`](eval/ground_truth.json) holds a list of questions, each with
-a hand-written **gold Cypher** query (validated against the imported data) and optional
-`tags`, `expected_answer_values`, and `answer_key`:
+[`eval/ground_truth.json`](eval/ground_truth.json) holds a list of questions. Each one
+falls into one of three **modes**, inferred from its `expected_tools`, so a single file can
+exercise retrieval quality, document answers, authorization and temporal snapshots:
+
+- **retrieval** — `expected_tools` is `["query_knowledge_graph"]`; scored on the structured
+  query intent the model emitted (`expected_intent` — see [Intent scoring](#intent-scoring))
+  and on the **tool output** against a single, hand-written known answer
+  (`expected_output_rows` / `expected_output_fields` — see [Output scoring](#output-scoring)).
+  There is no second live "gold query": the expected values are fixed data, derived once from
+  the seeded graph. The derivation queries are kept in
+  [`eval/ground_truth_provenance.json`](eval/ground_truth_provenance.json) for traceability
+  only — they are documentation and are **never executed** by the harness.
+- **document** — `expected_tools` is `["fetch_document_content"]` (e.g. a question whose
+  content lives outside the graph); scored on selecting the document tool and performing a
+  successful, non-empty fetch, plus — when declared — the **output** of that fetch: that the
+  expected document was selected (`expected_document_id`) and its content carries the expected
+  facts (`expected_output_values`). The natural-language *wording* is never compared (that
+  would need an LLM judge); the document the tool returned is.
+- **refusal** — `expect_refusal: true`; the *correct* outcome is that the identity is told
+  the information is not available. Passes when the pipeline records an authorization
+  **denial** in its `stats` audit trail **and** no `forbidden_answer_values` reach the
+  retrieved data.
+
+Common optional fields: `forbidden_answer_values` (values that must **never**
+appear in the retrieved rows — an authorization-leak guard), `expected_tools` (the tool
+name(s) a correct answer should invoke — `["query_knowledge_graph"]` or
+`["fetch_document_content"]`; required for every non-refusal case), `expected_intent` (the
+structured query intent a correct answer should emit — see [Intent scoring](#intent-scoring)),
+`expected_output_rows` / `expected_output_fields` / `expected_output_values` /
+`expected_document_id` (the tool's **output** — see [Output scoring](#output-scoring)),
+`exact_output` (opt into the over-fetch/precision guard — see below), plus `user` (drive the
+case as a specific identity) and `as_of` (an `YYYY-MM-DD` temporal snapshot — only flights
+that had occurred by then participate):
 
 ```json
 {
   "id": "powerplant-components",
-  "question": "What components make up the powerplant system?",
-  "tags": ["multi-hop", "list"],
-  "gold_cypher": "MATCH (:PowerplantSystem)-[:HAS_COMPONENT]->(c:Component) RETURN DISTINCT c.name AS component ORDER BY component",
-  "answer_key": "component",
-  "expected_answer_values": ["Propeller", "Exhaust"]
+  "question": "How many components does the aircraft have?",
+  "expected_intent": { "entity": "Component", "aggregate": { "func": "count" } },
+  "expected_output_rows": [ { "componentResult": 112 } ],
+  "exact_output": true,
+  "expected_tools": ["query_knowledge_graph"]
 }
 ```
 
-`answer_key` (optional) pins the gold side of the retrieval comparison to a single
-column — useful when the natural query returns extra descriptive columns that the
-generated query may or may not include.
+#### Intent scoring
+
+Tool selection alone is necessary but not sufficient: the agent can pick the right tool yet
+choose the **wrong thing to fetch** (e.g. querying the `Specification` entity instead of
+`Aircraft`, or aggregating when the question asks for a row). Because the backend builds
+Cypher **deterministically** from the model's typed `QueryIntent` (entity + fields + filters
++ optional aggregate — there is no text-to-Cypher), that intent *is* the model's retrieval
+decision and is machine-checkable.
+
+A retrieval case may declare `expected_intent`, which is matched against the intent the model
+actually emitted. The match is **value-based, order-independent, and a partial contract** —
+only the keys you declare are checked, so you can pin just the part that matters (the
+`entity`, an `aggregate`, a specific `filter`) without over-fitting to incidental field
+selection. `fields`/`filters` are compared as sets; scalar values tolerate float formatting.
+The shipped ground truth declares the **complete** intent for each retrieval case — `entity`
+plus the exact `fields`, `filters` and any `aggregate` the correct query uses — so the
+expected intent mirrors the one the model emits and the [dashboard](#dashboard) can show them
+side by side; the partial-contract matcher still lets you pin only a subset when authoring new
+cases. When declared, a wrong intent **fails** the case even if the rows scored. The run summary
+reports `intent_selection_accuracy` over the cases that declared an `expected_intent`.
+
+#### Output scoring
+
+Tool selection and intent scoring check *what the agent decided to do*; output scoring checks
+*what the chosen tool actually returned* against fixed ground-truth values — the **value from
+the Cypher query** or the **content of the selected document**, depending on the tool.
+
+A query returns **columnar rows**, so its output is scored **column-aware** against the
+agent's *deterministic* output column names. Those names are not chosen by the LLM: the
+backend builds Cypher from the typed `QueryIntent`, and the builder aliases every projected
+field as an **entity-qualified camelCase** name — `<entityCamel><FieldPascal>` (e.g.
+`n.\`ratedHorsepower\` AS \`pistonEngineRatedHorsepower\``, `aircraftMaxTakeoffWeight_kg`), every
+aggregate as `<entityCamel>Result` (e.g. `flightResult`, `componentResult`), and a resolved
+aerodrome companion as `<codeAlias>Name` (e.g. `flightDestinationAerodromeName`). Qualifying
+the alias with the entity is what lets the output check prove *the right value in the right
+field for the right entity* — two entities that share a bare field name (`name`, `model`)
+no longer collide. (This alias contract is locked by a unit test in `test_query_builder.py`,
+since the eval depends on it.)
+
+- `expected_output_rows` — a list of **partial rows** the retrieved data must contain. Each
+  spec must be satisfied by a **single** returned record where **every** named field matches,
+  so it proves *the right value in the right field, in the same row* (a flat value check could
+  pass on facts split across different rows). Values match by **exact canonical equality**
+  (numbers are normalised so `1157` / `1157.0` and float-rounding noise compare equal; `180`
+  does **not** match `1180`). Substring matching is opt-in per field via `{ "contains": "…" }`.
+  Use the aggregate alias as the key for an aggregate (e.g. `[{ "flightResult": 12 }]`).
+- `exact_output` — when `true`, the case **also** fails if the agent returned any record that
+  matches **none** of the `expected_output_rows` (an over-fetch / precision guard). Set it
+  when the expected rows enumerate the *complete* answer, so a query that returns the right
+  row plus extra noise (e.g. reaching into a second entity) is caught. The run summary reports
+  `overfetch_count` across the cases that set it.
+- `expected_output_fields` — per-column coverage **without** pinning row identity:
+  `{ column: value | [values] }` requires each value to appear somewhere in that column across
+  the returned records. Use it for open-ended multi-row sets (e.g. a list of aerodrome names).
+- `expected_output_values` — **document cases only**: values that must appear in the selected
+  document's *content* (a document body has no columns). Matching is case-insensitive substring
+  and tolerates numeric surface forms (`1157` / `1,157`). The content is surfaced to the
+  harness on the `documents_used` metadata field.
+- `expected_document_id` — for a document case, the id of the document a correct answer should
+  select (e.g. `"DOC-0001"`), scoring *which* document the tool returned.
+
+When declared, a missing row/field/value, an over-fetched row (`exact_output`), or the wrong
+document **fails** the case. This catches answers that ran the right tool but produced the
+wrong data — e.g. a query that retrieves the wrong entity, omits the field the question asks
+for, returns the right number in the wrong column, or over-fetches; or a document fetch that
+pulled the wrong handbook. The run summary reports `output_value_accuracy` and
+`document_selection_accuracy` over the cases that declared each.
+
+```json
+{
+  "id": "engine-model",
+  "question": "What is the make and model of the engine, and how much horsepower does it produce?",
+  "expected_intent": { "entity": "PistonEngine", "fields": ["manufacturer", "model", "ratedHorsepower"] },
+  "expected_output_rows": [
+    { "pistonEngineManufacturer": "Lycoming", "pistonEngineModel": "IO-360-L2A", "pistonEngineRatedHorsepower": 180 }
+  ],
+  "exact_output": true,
+  "expected_tools": ["query_knowledge_graph"]
+}
+```
+
+```json
+{
+  "id": "poh-never-exceed-speed",
+  "question": "What does the POH say about the never-exceed speed?",
+  "user": "maintenance_engineer",
+  "expected_document_id": "DOC-0001",
+  "expected_output_values": ["163"],
+  "expected_tools": ["fetch_document_content"]
+}
+```
+
+```json
+{
+  "id": "public-denied-poh",
+  "question": "What does the POH say about the never-exceed speed?",
+  "user": "public",
+  "expect_refusal": true
+}
+```
 
 ### Metrics
 
-For each question the script runs the gold Cypher to get the expected rows, drives the
-agent to get its generated Cypher, retrieved rows and streamed answer (from the
+Scoring is **deterministic** and derives only from signals that don't need a judge: which
+tool the agent picked, the structured intent it emitted, whether the query was valid, and the
+**raw rows or document content it retrieved** — compared against fixed, hand-written
+ground-truth values. The streamed natural-language answer is recorded for human review but
+**never scored** — grading its wording would require an LLM-as-judge, which this harness
+deliberately avoids. There is **no live gold query**: the expected values are a single,
+hand-written known-answer oracle (`expected_output_rows` / `expected_output_fields`), derived
+once from the seeded graph and stored in the ground truth; the derivation Cypher lives in
+`eval/ground_truth_provenance.json` for traceability and is never run. For each question the
+script drives the agent to get its generated query, retrieved rows and answer (from the
 `metadata`/`token`/`stats` debug events), then computes:
 
-- **Retrieval — value-based (primary)**: precision, recall, **F1**, Jaccard and
-  exact-match comparing the *set of cell values* the agent retrieved against the gold
-  rows, **ignoring column names** and **tolerating float formatting** (rounded to
-  `--round-digits`, default `3`). This is the realistic measure: the agent's structured
-  intent aliases columns, reorders results and rounds differently run-to-run, so comparing
-  whole rows verbatim would punish correct answers. A wrong *value* (e.g. weight in lb
-  instead of kg) still counts as a miss. A question *passes* when its value F1 ≥
-  `--f1-threshold` (default `0.5`).
-- **Retrieval — strict (secondary diagnostic)**: `strict_exact_match` / `strict_f1`
-  compare whole rows verbatim (column names, every column, exact formatting). Reported
-  for insight into how much the built query's *shape* drifts from the gold; not used
-  for pass/fail.
-- **Answer** (string-matched, no judge): **coverage** — fraction of
-  `expected_answer_values` present in the answer text; **groundedness** — fraction of
-  those values also present in the retrieved rows (values stated in the answer but absent
-  from the rows are flagged as a hallucination signal).
-- **Operational**: Cypher **validity** rate, **empty-retrieval** rate, and token/latency
+- **Tool selection**: `tool_selection_accuracy` — over the cases that declared
+  `expected_tools`, how often the agent invoked exactly the right tool(s). Picking the wrong
+  tool (e.g. running a graph query for a document question) fails the case outright.
+- **Intent selection**: `intent_selection_accuracy` — over the cases that declared an
+  `expected_intent`, how often the model's emitted intent matched (see
+  [Intent scoring](#intent-scoring)).
+- **Output value**: `output_value_accuracy` — over the retrieval cases that declared
+  `expected_output_rows` / `expected_output_fields`, how often the retrieved rows carried the
+  expected values in the expected (entity-qualified) columns, plus `overfetch_count` — how
+  many `exact_output` cases returned a row outside the expected set (see
+  [Output scoring](#output-scoring)).
+- **Document**: `document_fetch_rate` — of the document-mode cases, the fraction that
+  selected the document tool and returned a non-empty fetch; and `document_selection_accuracy`
+  over the cases that declared `expected_document_id`.
+- **Operational**: query **validity** rate, **empty-retrieval** rate, and token/latency
   **cost** taken from the pipeline's own `stats` event.
+- **Authorization**: `refusal_correct_rate` — of the `refusal`-mode cases, the fraction the
+  pipeline correctly denied; and `forbidden_leak_count` — across *all* cases, how many
+  surfaced a `forbidden_answer_values` in the **retrieved data** (authorization is enforced
+  on the data, so a leak shows up there; should always be `0`).
+
+Each metric is averaged only over the cases that carry the relevant fields, so mixing
+retrieval, document, authorization and tool-selection cases in one file does not distort the
+numbers.
 
 The metric functions live alongside the CLI in
 [`scripts/evaluate.py`](scripts/evaluate.py) and are unit-tested in
@@ -857,16 +1000,20 @@ The metric functions live alongside the CLI in
 ### Output
 
 A single JSON report is written to `eval/results/` (git-ignored) containing run metadata,
-an overall `summary`, a per-tag breakdown (`by_tag`), and full per-question detail
-(both Cypher queries, both row counts, all metrics, the answer text and the cost). A
-compact summary is also logged at the end of the run.
+an overall `summary`, and full per-question detail
+(the generated query, the **actual retrieved rows**, retrieved row count, all metrics, the
+tools used, the unscored answer text and the cost). A compact summary is also logged at the
+end of the run.
 
 ### Dashboard
 
 [`eval/dashboard.html`](eval/dashboard.html) is a dependency-free HTML dashboard that
-loads **every** report in `eval/results/`, showing summary cards, a metric trend across
-runs, the per-tag breakdown and expandable per-question detail. A static file cannot list
-a directory over `file://`, so serve the folder:
+loads **every** report in `eval/results/`, showing summary cards and expandable
+per-question detail (pick a run from the dropdown). Each question lays the **expected**
+values out against the agent's **actual** output side by side — expected intent vs the
+emitted intent, expected rows/fields vs the actual retrieved rows, and (for document cases)
+expected content vs the selected document — with the unscored answer shown at the foot of the
+panel. A static file cannot list a directory over `file://`, so serve the folder:
 
 ```bash
 cd eval && python -m http.server 8000

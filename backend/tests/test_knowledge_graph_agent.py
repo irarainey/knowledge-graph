@@ -14,7 +14,8 @@ from authz import Aggregate, AggregateFunc, PolicyStore, QueryIntent
 from common.azure_openai import AzureOpenAISettings
 from common.graph_schema import fetch_schema_text
 from common.ontology import OntologyMeta
-from common.telemetry import maf_call_sink
+from common.telemetry import maf_call_sink, retrieval_sink
+from documents import DocumentExcerpt
 
 
 # ── fetch_schema_text ────────────────────────────────────────────────────────
@@ -313,7 +314,7 @@ async def test_ask_emits_metadata_tokens_and_done() -> None:
         usage_details={"input_token_count": 120, "output_token_count": 8, "total_token_count": 128},
         intent=_COUNT_INTENT,
     )
-    agent, driver, principal = _make_stream_agent(maf, records=[{"result": 6}])
+    agent, driver, principal = _make_stream_agent(maf, records=[{"flightResult": 6}])
 
     events = [event async for event in agent.ask("How many flights?", principal=principal)]
 
@@ -326,7 +327,15 @@ async def test_ask_emits_metadata_tokens_and_done() -> None:
     assert metadata["type"] == "metadata"
     # The Cypher is built deterministically by the backend (count aggregate over Flight).
     assert metadata["cypher_used"] and "count(n)" in metadata["cypher_used"][0]
-    assert metadata["records"] == [{"result": 6}]
+    assert metadata["records"] == [{"flightResult": 6}]
+    # The agent invoked the graph-query tool, surfaced for tool-selection evaluation.
+    assert metadata["tools_used"] == ["query_knowledge_graph"]
+    # The structured intent the model emitted is surfaced for intent-selection evaluation.
+    assert metadata["intents_used"] == [
+        {"entity": "Flight", "fields": [], "filters": [], "aggregate": {"func": "count", "field": None}, "limit": None}
+    ]
+    stats = next(event for event in events if event["type"] == "stats")
+    assert stats["tools_used"] == ["query_knowledge_graph"]
     tokens = [event["text"] for event in events if event["type"] == "token"]
     assert "".join(tokens) == "There are 6 flights."
     assert events[-1] == {"type": "done"}
@@ -428,7 +437,14 @@ async def test_ask_off_topic_question_is_refused() -> None:
 
     events = [event async for event in agent.ask("What is the capital of France?", principal=principal)]
 
-    assert events[0] == {"type": "metadata", "cypher_used": [], "records": []}
+    assert events[0] == {
+        "type": "metadata",
+        "cypher_used": [],
+        "records": [],
+        "tools_used": [],
+        "intents_used": [],
+        "documents_used": [],
+    }
     # Off-topic questions short-circuit before the pipeline runs, so no progress events.
     assert not any(event["type"] == "progress" for event in events)
     tokens = [event["text"] for event in events if event["type"] == "token"]
@@ -693,3 +709,62 @@ async def test_ask_endpoint_503_when_agent_unconfigured() -> None:
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post("/ask", json={"question": "anything"})
     assert response.status_code == 503
+
+
+# ── _append_document_retrieval (surfacing document output to evaluation) ──────
+
+
+def _bare_agent() -> KnowledgeGraphAgent:
+    return object.__new__(KnowledgeGraphAgent)
+
+
+def test_append_document_retrieval_surfaces_content_for_evaluation() -> None:
+    agent = _bare_agent()
+    excerpt = DocumentExcerpt(
+        documentId="DOC-0001",
+        title="Pilot Operating Handbook",
+        contentType="text/markdown",
+        version=1,
+        text="Never-exceed speed (Vne): 163 KIAS",
+        truncated=False,
+        charCount=34,
+    )
+    sink: list[dict[str, Any]] = []
+    token = retrieval_sink.set(sink)
+    try:
+        agent._append_document_retrieval("POH", excerpt, 12.0)
+    finally:
+        retrieval_sink.reset(token)
+
+    assert len(sink) == 1
+    entry = sink[0]
+    # The selected document's id + full content are surfaced for output scoring,
+    document = entry["document"]
+    assert document is not None
+    assert document["documentId"] == "DOC-0001"
+    assert "163 KIAS" in document["content"]
+    # but the provenance ``records`` table stays body-free.
+    assert entry["records"] == [
+        {
+            "documentId": "DOC-0001",
+            "title": "Pilot Operating Handbook",
+            "version": 1,
+            "contentType": "text/markdown",
+            "charCount": 34,
+            "truncated": False,
+        }
+    ]
+    assert "content" not in entry["records"][0]
+
+
+def test_append_document_retrieval_denied_fetch_has_no_document() -> None:
+    agent = _bare_agent()
+    sink: list[dict[str, Any]] = []
+    token = retrieval_sink.set(sink)
+    try:
+        agent._append_document_retrieval("Secret", None, 3.0)
+    finally:
+        retrieval_sink.reset(token)
+
+    assert sink[0]["document"] is None
+    assert sink[0]["records"] == []
