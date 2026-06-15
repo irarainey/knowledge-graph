@@ -200,6 +200,9 @@
         card("Questions", s.question_count ?? "—"),
         card("Pass rate", pct(s.pass_rate), metricColor(s.pass_rate)),
         card("Output values", pct(s.output_value_accuracy), metricColor(s.output_value_accuracy)),
+        card("Output precision", pct(s.output_precision_macro), metricColor(s.output_precision_macro)),
+        card("Output recall", pct(s.output_recall_macro), metricColor(s.output_recall_macro)),
+        card("Output F1", pct(s.output_f1_macro), metricColor(s.output_f1_macro)),
         card("Over-fetch cases", (s.overfetch_count ?? 0), s.overfetch_count ? "var(--bad)" : "var(--good)"),
         card("Query valid", pct(s.query_valid_rate), metricColor(s.query_valid_rate)),
         card("Empty retrieval", pct(s.empty_retrieval_rate), s.empty_retrieval_rate ? "var(--bad)" : "var(--good)"),
@@ -251,11 +254,17 @@
         }
         if ((q.expected_output_values && q.expected_output_values.length) || (q.documents_used && q.documents_used.length)) {
           const exp = esc((q.expected_output_values && q.expected_output_values.length) ? q.expected_output_values.join(", ") : "")
+            + ((q.present_output_values && q.present_output_values.length) ? "\n" + esc("found: " + q.present_output_values.join(", ")) : "")
             + ((q.missing_output_values && q.missing_output_values.length) ? "\n" + esc("missing: " + q.missing_output_values.join(", ")) : "");
           const docTitle = "Document selected" + (q.expected_document_id ? " (expected " + esc(q.expected_document_id) + ")" : "");
+          const selected = (q.documents_used && q.documents_used.length) ? q.documents_used.join(", ") : "(none)";
+          const body = (q.document_content && q.document_content.length)
+            ? esc(selected) + "\n\n" + esc(q.document_content)
+            : esc(selected) + "\n\n(no content returned)";
+          const docPanel = `<div><h4>${docTitle}</h4><pre style="max-height:320px;overflow:auto">${body}</pre></div>`;
           cmpPanels.push(cmp(
-            panel("Expected output (document content)", exp),
-            panel(docTitle, esc((q.documents_used && q.documents_used.length) ? q.documents_used.join(", ") : "")),
+            panel("Expected content values", exp),
+            docPanel,
           ));
         }
 
@@ -272,6 +281,8 @@
               <h4>Retrieval</h4>
               <table style="border:none">
                 <tr><td class="muted">Output values</td><td class="num">${q.output_values_ok == null ? "—" : (q.output_values_ok ? "ok" : "BAD")}</td></tr>
+                <tr><td class="muted">Precision / Recall / F1</td><td class="num">${q.output_f1 == null ? "—" : `${pct(q.output_precision)} / ${pct(q.output_recall)} / ${pct(q.output_f1)}`}</td></tr>
+                <tr><td class="muted">TP / FP / FN</td><td class="num">${q.output_f1 == null ? "—" : `${q.output_tp} / ${q.output_fp} / ${q.output_fn}`}</td></tr>
                 <tr><td class="muted">Exact output</td><td class="num">${q.exact_output ? "yes" : "no"}</td></tr>
                 <tr><td class="muted">Over-fetched rows</td><td class="num" ${overfetch ? `style="color:var(--bad)"` : ""}>${overfetch}</td></tr>
                 <tr><td class="muted">Predicted rows</td><td class="num">${q.predicted_record_count ?? "—"}</td></tr>

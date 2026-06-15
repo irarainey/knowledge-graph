@@ -979,6 +979,17 @@ script drives the agent to get its generated query, retrieved rows and answer (f
   expected values in the expected (entity-qualified) columns, plus `overfetch_count` — how
   many `exact_output` cases returned a row outside the expected set (see
   [Output scoring](#output-scoring)).
+- **Output precision / recall / F1**: `output_precision_macro` / `output_recall_macro` /
+  `output_f1_macro` (and their `_micro` counterparts) — a set-overlap view of the same
+  retrieval cases. For each case the harness counts true positives (expected row/field values
+  the agent returned), false negatives (expected values it missed) and false positives (values
+  it returned that the oracle does not list), then derives precision/recall/F1. **Macro** is
+  the unweighted mean of the per-case scores; **micro** pools the tp/fp/fn across all cases
+  before dividing. There is **no live gold query** — the counts come from the hand-written
+  oracle, so field-level precision assumes the listed values enumerate the column's complete
+  set. These complement (not replace) the boolean `output_value_accuracy` and over-fetch
+  guards: a case can pass the boolean check yet score &lt;1.0 F1 if it over- or under-fetches
+  values within the expected columns.
 - **Document**: `document_fetch_rate` — of the document-mode cases, the fraction that
   selected the document tool and returned a non-empty fetch; and `document_selection_accuracy`
   over the cases that declared `expected_document_id`.
@@ -1008,12 +1019,15 @@ end of the run.
 ### Dashboard
 
 [`eval/dashboard.html`](eval/dashboard.html) is a dependency-free HTML dashboard that
-loads **every** report in `eval/results/`, showing summary cards and expandable
-per-question detail (pick a run from the dropdown). Each question lays the **expected**
-values out against the agent's **actual** output side by side — expected intent vs the
-emitted intent, expected rows/fields vs the actual retrieved rows, and (for document cases)
-expected content vs the selected document — with the unscored answer shown at the foot of the
-panel. A static file cannot list a directory over `file://`, so serve the folder:
+loads **every** report in `eval/results/`, showing summary cards (pass rate, output values,
+output precision/recall/F1, over-fetch, tool/intent selection, document and authorization
+metrics) and expandable per-question detail (pick a run from the dropdown). Each question lays
+the **expected** values out against the agent's **actual** output side by side — expected
+intent vs the emitted intent, expected rows/fields vs the actual retrieved rows, and (for
+document cases) the expected content values (with which were found / missing) vs the **actual
+fetched document body** that those values were substring-matched against — with per-question
+precision/recall/F1 and tp/fp/fn in the retrieval table, and the unscored answer shown at the
+foot of the panel. A static file cannot list a directory over `file://`, so serve the folder:
 
 ```bash
 cd eval && python -m http.server 8000

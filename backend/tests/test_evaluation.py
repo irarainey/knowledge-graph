@@ -10,6 +10,8 @@ from evaluate import (
     canonicalize_row,
     document_content,
     intent_match,
+    output_set_counts,
+    prf_from_counts,
     row_matches,
     selected_document_ids,
     unexpected_output_rows,
@@ -221,3 +223,50 @@ def test_unexpected_output_rows_allows_extra_columns_not_extra_rows() -> None:
     expected = [{"pistonEngineModel": "IO-360-L2A", "pistonEngineRatedHorsepower": 180}]
     record = {"pistonEngineName": "Lycoming IO-360", "pistonEngineModel": "IO-360-L2A", "pistonEngineRatedHorsepower": 180}
     assert unexpected_output_rows(expected, [record]) == []
+
+
+# ── set-overlap scoring (precision / recall / F1) ────────────────────────────
+
+
+def test_prf_from_counts_computes_harmonic_mean() -> None:
+    assert prf_from_counts(4, 0, 0) == (1.0, 1.0, 1.0)
+    # 3 of 4 expected found (recall .75), 3 of 6 returned expected (precision .5).
+    precision, recall, f1 = prf_from_counts(3, 3, 1)
+    assert precision == 0.5
+    assert recall == 0.75
+    assert f1 == 0.6
+    # Nothing returned / nothing expected -> 0.0 by convention (no ZeroDivisionError).
+    assert prf_from_counts(0, 0, 0) == (0.0, 0.0, 0.0)
+
+
+def test_output_set_counts_returns_none_without_expectations() -> None:
+    assert output_set_counts([], {}, [{"flightResult": 12}]) is None
+
+
+def test_output_set_counts_rows_count_tp_fp_fn() -> None:
+    # One expected row matched, plus one surplus returned row -> tp=1, fp=1, fn=0.
+    expected = [{"flightResult": 12}]
+    counts = output_set_counts(expected, {}, [{"flightResult": 12}, {"flightResult": 99}])
+    assert counts == (1, 1, 0)
+    # Expected row missing entirely -> tp=0, fp=1 (the wrong row), fn=1.
+    assert output_set_counts(expected, {}, [{"flightResult": 99}]) == (0, 1, 1)
+
+
+def test_output_set_counts_fields_count_per_value_overlap() -> None:
+    records = [
+        {"flightDestinationAerodromeName": "Gloucestershire"},
+        {"flightDestinationAerodromeName": "Oxford"},
+        {"flightDestinationAerodromeName": "Gloucestershire"},  # duplicate, not double-counted
+    ]
+    # One expected value present, one missing; one unexpected distinct value returned.
+    counts = output_set_counts([], {"flightDestinationAerodromeName": ["Gloucestershire", "Bristol"]}, records)
+    assert counts == (1, 1, 1)  # Gloucestershire found; Bristol missing (fn); Oxford surplus (fp)
+    precision, recall, f1 = prf_from_counts(*counts)
+    assert precision == 0.5 and recall == 0.5 and f1 == 0.5
+
+
+def test_output_set_counts_perfect_coverage_scores_one() -> None:
+    records = [{"col": "A"}, {"col": "B"}, {"col": "A"}]
+    counts = output_set_counts([], {"col": ["A", "B"]}, records)
+    assert counts == (2, 0, 0)
+    assert prf_from_counts(*counts) == (1.0, 1.0, 1.0)

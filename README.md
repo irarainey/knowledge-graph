@@ -325,7 +325,8 @@ The backend ships an **offline, deterministic** evaluation harness (no LLM-as-ju
 scores the `/ask` pipeline against a pre-baked ground-truth file and writes a timestamped
 JSON report per run. It grades only signals that don't need a judge — tool selection, the
 structured **query intent** the model emits, query validity and the **raw retrieved data**
-(or selected document content), compared against a hand-written known-answer oracle — and
+(or selected document content), compared against a hand-written known-answer oracle (reported
+as boolean accuracy plus set-overlap precision/recall/F1) — and
 records the natural-language answer for human review without scoring it. Run it manually with
 `cd backend && uv run poe evaluate`. A
 dependency-free [`backend/eval/dashboard.html`](backend/eval/dashboard.html) visualizes

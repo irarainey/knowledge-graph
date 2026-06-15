@@ -238,6 +238,67 @@ def unmatched_output_fields(
     return missing
 
 
+def output_set_counts(
+    expected_rows: Sequence[Mapping[str, Any]],
+    expected_fields: Mapping[str, Any],
+    records: Sequence[Mapping[str, Any]],
+    *,
+    ndigits: int = DEFAULT_ROUND_DIGITS,
+) -> tuple[int, int, int] | None:
+    """True/false positive/negative counts for **set-overlap** scoring of query output.
+
+    Treats the retrieved rows as a *retrieval set* compared to the ground-truth answer set, so
+    precision/recall/F1 can be derived (see :func:`prf_from_counts`). Returns ``None`` when the
+    case declares no row/field output expectation (nothing to score against).
+
+    Row specs (``expected_output_rows``) count one expected answer per spec: a **true positive**
+    is an expected spec satisfied by some record, a **false negative** an expected spec no record
+    satisfies, and a **false positive** a returned record that satisfies no expected spec (the
+    over-fetch signal). Field specs (``expected_output_fields``) count per-column *values*: a
+    true positive is an expected value present in its column, a false negative an expected value
+    missing, and a false positive a distinct value in that column that was *not* expected — so
+    precision over field specs assumes the listed values enumerate the column's complete set.
+    """
+    if not expected_rows and not expected_fields:
+        return None
+    tp = fp = fn = 0
+    if expected_rows:
+        unmatched_specs = unmatched_output_rows(expected_rows, records, ndigits=ndigits)
+        fn += len(unmatched_specs)
+        tp += len(expected_rows) - len(unmatched_specs)
+        fp += len(unexpected_output_rows(expected_rows, records, ndigits=ndigits))
+    if expected_fields:
+        for field_name, expected in expected_fields.items():
+            wanted = list(expected) if isinstance(expected, list) else [expected]
+            column = [record[field_name] for record in records if field_name in record]
+            distinct_actual: list[Any] = []
+            for cell in column:
+                if not any(value_matches(seen, cell, ndigits=ndigits) for seen in distinct_actual):
+                    distinct_actual.append(cell)
+            for value in wanted:
+                if any(value_matches(value, cell, ndigits=ndigits) for cell in column):
+                    tp += 1
+                else:
+                    fn += 1
+            for cell in distinct_actual:
+                if not any(value_matches(value, cell, ndigits=ndigits) for value in wanted):
+                    fp += 1
+    return tp, fp, fn
+
+
+def prf_from_counts(tp: int, fp: int, fn: int) -> tuple[float, float, float]:
+    """Derive (precision, recall, F1) from true/false positive/negative counts.
+
+    Precision is ``tp / (tp + fp)`` (how much of what was returned was expected), recall is
+    ``tp / (tp + fn)`` (how much of the expected answer was returned), and F1 their harmonic
+    mean. A zero denominator (nothing returned / nothing expected) yields ``0.0`` by convention.
+    """
+    precision = tp / (tp + fp) if (tp + fp) else 0.0
+    recall = tp / (tp + fn) if (tp + fn) else 0.0
+    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+    return precision, recall, f1
+
+
 def document_content(documents: Iterable[Mapping[str, Any]]) -> str:
     """Concatenate the content of the selected documents into one searchable string.
 
@@ -571,10 +632,15 @@ async def evaluate_question(
     missing_output_fields: dict[str, list[Any]] = {}
     unexpected_rows: list[Mapping[str, Any]] = []
     output_values_ok: bool | None = None
+    # The document body the substring check actually ran against (the scored haystack),
+    # recorded so the dashboard can show *what* was evaluated, not just the document id.
+    document_content_text: str | None = None
+    present_output_values: list[Any] = []
     if question.mode == "document":
         # A document body has no columns, so its content is scored by substring presence.
-        output_haystack = document_content(documents)
-        present = values_in_text(question.expected_output_values, output_haystack)
+        document_content_text = document_content(documents)
+        present = values_in_text(question.expected_output_values, document_content_text)
+        present_output_values = list(present)
         missing_output_values = [value for value in question.expected_output_values if value not in present]
         if question.expected_output_values:
             output_values_ok = not missing_output_values
@@ -592,6 +658,14 @@ async def evaluate_question(
             missing_output_fields = unmatched_output_fields(question.expected_output_fields, records, ndigits=round_digits)
         if question.expected_output_rows or question.expected_output_fields:
             output_values_ok = not missing_output_rows and not missing_output_fields and not unexpected_rows
+    # Set-overlap scoring (precision/recall/F1) over the same expected rows/fields — a
+    # continuous diagnostic that complements the pass/fail output check (only meaningful for
+    # retrieval cases, whose output is a columnar set; a document body has no comparable set).
+    output_counts = (
+        output_set_counts(question.expected_output_rows, question.expected_output_fields, records, ndigits=round_digits)
+        if question.mode != "document"
+        else None
+    )
     # Which-document selection (document cases): did the tool return the expected document?
     document_id_ok: bool | None = None
     if question.expected_document_id is not None:
@@ -678,6 +752,7 @@ async def evaluate_question(
         "intents_used": intents_used,
         "intent_selection_ok": intent_selection_ok,
         "expected_output_values": question.expected_output_values,
+        "present_output_values": present_output_values,
         "missing_output_values": missing_output_values,
         "expected_output_rows": question.expected_output_rows,
         "missing_output_rows": missing_output_rows,
@@ -686,9 +761,19 @@ async def evaluate_question(
         "exact_output": question.exact_output,
         "unexpected_output_rows": unexpected_rows,
         "output_values_ok": output_values_ok,
+        # Set-overlap diagnostics (None when the case declares no row/field output to score).
+        "output_tp": output_counts[0] if output_counts else None,
+        "output_fp": output_counts[1] if output_counts else None,
+        "output_fn": output_counts[2] if output_counts else None,
+        "output_precision": prf_from_counts(*output_counts)[0] if output_counts else None,
+        "output_recall": prf_from_counts(*output_counts)[1] if output_counts else None,
+        "output_f1": prf_from_counts(*output_counts)[2] if output_counts else None,
         "expected_document_id": question.expected_document_id,
         "documents_used": doc_ids,
         "document_id_ok": document_id_ok,
+        # The fetched document body the expected_output_values were substring-matched against,
+        # persisted so the dashboard can surface the *evaluated* content (document cases only).
+        "document_content": document_content_text,
         "query_valid": query_valid,
         "empty_retrieval": empty_retrieval,
         "error": outcome["error"],
@@ -773,6 +858,24 @@ def _aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
     if output_cases:
         summary["output_value_question_count"] = len(output_cases)
         summary["output_value_accuracy"] = sum(r["output_values_ok"] for r in output_cases) / len(output_cases)
+
+    # Set-overlap quality: precision/recall/F1 over the retrieval cases whose output is a
+    # scorable row/field set. Reported both macro (mean of per-case scores — every case counts
+    # equally) and micro (from pooled tp/fp/fn — every expected/returned item counts equally).
+    prf_cases = [r for r in results if r["output_f1"] is not None]
+    if prf_cases:
+        n = len(prf_cases)
+        summary["output_set_question_count"] = n
+        summary["output_precision_macro"] = sum(r["output_precision"] for r in prf_cases) / n
+        summary["output_recall_macro"] = sum(r["output_recall"] for r in prf_cases) / n
+        summary["output_f1_macro"] = sum(r["output_f1"] for r in prf_cases) / n
+        tp = sum(r["output_tp"] for r in prf_cases)
+        fp = sum(r["output_fp"] for r in prf_cases)
+        fn = sum(r["output_fn"] for r in prf_cases)
+        micro_p, micro_r, micro_f1 = prf_from_counts(tp, fp, fn)
+        summary["output_precision_micro"] = micro_p
+        summary["output_recall_micro"] = micro_r
+        summary["output_f1_micro"] = micro_f1
     return summary
 
 
@@ -805,6 +908,20 @@ def log_summary(report: dict[str, Any]) -> None:
     logger.info("  empty retrieval rate: %s", _fmt(summary.get("empty_retrieval_rate")))
     if "output_value_accuracy" in summary:
         logger.info("  output value acc    : %s", _fmt(summary.get("output_value_accuracy")))
+    if "output_f1_macro" in summary:
+        logger.info(
+            "  output precision    : %s (macro) / %s (micro)",
+            _fmt(summary.get("output_precision_macro")),
+            _fmt(summary.get("output_precision_micro")),
+        )
+        logger.info(
+            "  output recall       : %s (macro) / %s (micro)",
+            _fmt(summary.get("output_recall_macro")),
+            _fmt(summary.get("output_recall_micro")),
+        )
+        logger.info(
+            "  output F1           : %s (macro) / %s (micro)", _fmt(summary.get("output_f1_macro")), _fmt(summary.get("output_f1_micro"))
+        )
     logger.info("  over-fetch cases    : %s", summary.get("overfetch_count", 0))
     if "tool_selection_accuracy" in summary:
         logger.info("  tool selection acc  : %s", _fmt(summary.get("tool_selection_accuracy")))
