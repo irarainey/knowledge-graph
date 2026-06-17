@@ -107,7 +107,7 @@ def test_seeded_documents_match_recorded_checksums() -> None:
     """The bundled content files agree with the checksums stored on the graph nodes."""
     import json
 
-    graph = json.loads((Path(__file__).resolve().parents[2] / "data" / "knowledge-graph.json").read_text())
+    graph = json.loads((Path(__file__).resolve().parents[2] / "data" / "aircraft-knowledge-graph.json").read_text())
     docs_dir = Path(__file__).resolve().parents[2] / "data" / "documents"
     documents = [n["properties"] for n in graph["nodes"] if "Document" in n.get("labels", [])]
     assert documents, "expected Document nodes in the seed graph"

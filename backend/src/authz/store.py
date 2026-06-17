@@ -15,7 +15,7 @@ import json
 import os
 from pathlib import Path
 
-from authz.models import AccessPolicy, EntityCatalog, Identity, Principal
+from authz.models import AccessPolicy, EntityCatalog, Identity, Principal, RelationshipCatalogEntry
 from common.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -77,6 +77,16 @@ class PolicyStore:
             for entity in identity.entities:
                 if entity not in policy.catalog:
                     raise PolicyError(f"Identity {identity.id!r} grants unknown entity {entity!r}.")
+        # Every relationship-catalog endpoint must reference a catalog entity, so a traversal
+        # hop can never be validated against a label that has no queryable surface.
+        for rel, entry in policy.relationshipCatalog.items():
+            if not entry.endpoints:
+                raise PolicyError(f"Relationship {rel!r} declares no endpoints.")
+            for endpoint in entry.endpoints:
+                if endpoint.from_ not in policy.catalog:
+                    raise PolicyError(f"Relationship {rel!r} endpoint 'from' {endpoint.from_!r} is not a catalog entity.")
+                if endpoint.to not in policy.catalog:
+                    raise PolicyError(f"Relationship {rel!r} endpoint 'to' {endpoint.to!r} is not a catalog entity.")
 
     @classmethod
     def load(cls, path: str | Path | None = None) -> PolicyStore:
@@ -142,6 +152,41 @@ class PolicyStore:
     def entity_catalog(self, entity: str) -> EntityCatalog | None:
         """The catalog entry for an entity label, or ``None`` if it is not queryable."""
         return self._policy.catalog.get(entity)
+
+    def relationship_catalog(self, relationship: str) -> RelationshipCatalogEntry | None:
+        """The catalog entry for a relationship type, or ``None`` if it is not traversable."""
+        return self._policy.relationshipCatalog.get(relationship)
+
+    def is_relationship_permitted(self, principal: Principal, from_entity: str, relationship: str, to_entity: str) -> bool:
+        """True if ``principal`` may traverse ``(from_entity)-[relationship]->(to_entity)``.
+
+        A hop is permitted only when the relationship type exists in the catalog with a
+        matching ``(from, to)`` endpoint pair AND the principal is granted *both* endpoint
+        entities. Relationships carry no separate grant: they are gated by the entities they
+        connect, so a principal that cannot query either end can never traverse the edge (its
+        existence stays hidden).
+        """
+        entry = self._policy.relationshipCatalog.get(relationship)
+        if entry is None:
+            return False
+        if from_entity not in principal.entities or to_entity not in principal.entities:
+            return False
+        return any(endpoint.from_ == from_entity and endpoint.to == to_entity for endpoint in entry.endpoints)
+
+    def visible_relationships(self, principal: Principal) -> list[tuple[str, str, str, str]]:
+        """The relationship hops ``principal`` may traverse, as ``(from, rel, to, description)``.
+
+        Only endpoints whose *both* ends are visible entities (granted, with at least one
+        visible field) are listed, so a relationship a principal cannot reach is never even
+        named to it. Returned in policy order for stable prompts.
+        """
+        visible = set(self.visible_entities(principal))
+        hops: list[tuple[str, str, str, str]] = []
+        for relationship, entry in self._policy.relationshipCatalog.items():
+            for endpoint in entry.endpoints:
+                if endpoint.from_ in visible and endpoint.to in visible:
+                    hops.append((endpoint.from_, relationship, endpoint.to, entry.description))
+        return hops
 
     def field_category(self, entity: str, field: str) -> str | None:
         """The sensitivity category gating a field, or ``None`` if it is not in the catalog."""
@@ -211,4 +256,16 @@ class PolicyStore:
             lines.append(f"- {entity}{description}\n  fields: {fields}")
         body = "\n".join(lines) if lines else "- (no entities are available to this identity)"
         aggregates = "permitted" if principal.allowAggregates else "NOT permitted"
-        return f"{body}\n\nAggregates (count/avg/sum/min/max): {aggregates}."
+        rel_lines: list[str] = []
+        for from_entity, relationship, to_entity, description in self.visible_relationships(principal):
+            note = f" — {description}" if description else ""
+            rel_lines.append(f"- ({from_entity})-[:{relationship}]->({to_entity}){note}")
+        if rel_lines:
+            relationships = "\n".join(rel_lines)
+            rel_section = (
+                "\n\nRelationships you can traverse (use these in 'traverse' to filter an entity by what it "
+                f"is connected to):\n{relationships}"
+            )
+        else:
+            rel_section = ""
+        return f"{body}\n\nAggregates (count/avg/sum/min/max): {aggregates}.{rel_section}"

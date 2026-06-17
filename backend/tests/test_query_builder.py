@@ -16,10 +16,12 @@ from authz import (
     AggregateFunc,
     AuthorizationError,
     Comparator,
+    Direction,
     Filter,
     PolicyStore,
     Principal,
     QueryIntent,
+    RelationshipHop,
     attach_aerodrome_names,
     build_query,
     redact_records,
@@ -405,3 +407,156 @@ def test_filter_on_name_companion_field_is_canonicalised_to_code() -> None:
     # synthetic name companion — so the query builds instead of being denied.
     assert "n.`departureAerodrome` = $p0" in built.cypher
     assert "departureAerodromeName" not in built.cypher
+
+
+# --- Cross-domain traversal (relationship-existence constraints) ------------------------
+
+ENGINEER = principal("software_engineer")
+
+
+def test_traverse_emits_nested_exists_constraint_on_anchor() -> None:
+    # "Which hazard endangers the fuel system?" — anchor Hazard, OUT hop to System filtered
+    # by name. The traversal is a nested EXISTS constraint; only the anchor is projected.
+    built = build_query(
+        QueryIntent(
+            entity="Hazard",
+            fields=["identifier", "criticality"],
+            traverse=[
+                RelationshipHop(
+                    relationship="ENDANGERS", entity="System", filters=[Filter(field="name", op=Comparator.EQ, value="Fuel System")]
+                )
+            ],
+        ),
+        ENGINEER,
+        STORE,
+    )
+    assert "MATCH (n:`Hazard`)" in built.cypher
+    assert "EXISTS { MATCH (n)-[:`ENDANGERS`]->(t0:`System`)" in built.cypher
+    assert "t0.`name` = $p0" in built.cypher
+    # Only the anchor's fields are returned — the hop node is never projected.
+    assert built.returned_fields == ["hazardIdentifier", "hazardCriticality"]
+    assert "t0.`name` AS" not in built.cypher
+
+
+def test_traverse_in_direction_flips_the_arrow() -> None:
+    # "Which system does HAZ-FCS-001 endanger?" — anchor System, IN hop from Hazard.
+    built = build_query(
+        QueryIntent(
+            entity="System",
+            fields=["name"],
+            traverse=[
+                RelationshipHop(
+                    relationship="ENDANGERS",
+                    direction=Direction.IN,
+                    entity="Hazard",
+                    filters=[Filter(field="identifier", op=Comparator.EQ, value="HAZ-FCS-001")],
+                )
+            ],
+        ),
+        ENGINEER,
+        STORE,
+    )
+    assert "EXISTS { MATCH (n)<-[:`ENDANGERS`]-(t0:`Hazard`)" in built.cypher
+
+
+def test_traverse_unknown_relationship_is_denied() -> None:
+    with pytest.raises(AuthorizationError, match="Relationship"):
+        build_query(
+            QueryIntent(entity="Hazard", traverse=[RelationshipHop(relationship="NOT_A_REL", entity="System")]),
+            ENGINEER,
+            STORE,
+        )
+
+
+def test_traverse_endpoint_mismatch_is_denied() -> None:
+    # ENDANGERS connects Hazard->System, not Hazard->Component, so the hop is rejected even
+    # though both Hazard and Component are granted to the engineer.
+    with pytest.raises(AuthorizationError, match="Relationship"):
+        build_query(
+            QueryIntent(entity="Hazard", traverse=[RelationshipHop(relationship="ENDANGERS", entity="Component")]),
+            ENGINEER,
+            STORE,
+        )
+
+
+def test_traverse_to_ungranted_entity_is_denied() -> None:
+    # public may not reach an engineering entity through a traversal hop (entity gate per hop).
+    with pytest.raises(AuthorizationError, match="not permitted"):
+        build_query(
+            QueryIntent(
+                entity="Aircraft",
+                traverse=[RelationshipHop(relationship="ENDANGERS", direction=Direction.IN, entity="Hazard")],
+            ),
+            PUBLIC,
+            STORE,
+        )
+
+
+def test_traverse_hop_filter_field_is_gated() -> None:
+    # A filter on a field that is not visible on the hop entity is rejected (field gate per hop).
+    with pytest.raises(AuthorizationError):
+        build_query(
+            QueryIntent(
+                entity="Hazard",
+                traverse=[
+                    RelationshipHop(
+                        relationship="ENDANGERS", entity="System", filters=[Filter(field="nonexistentField", op=Comparator.EQ, value="x")]
+                    )
+                ],
+            ),
+            ENGINEER,
+            STORE,
+        )
+
+
+def test_traverse_multi_hop_nests_exists() -> None:
+    # Two hops chain into nested EXISTS: WorkItem implemented-by a PullRequest that merges a
+    # CodeModule named X.
+    built = build_query(
+        QueryIntent(
+            entity="WorkItem",
+            fields=["identifier"],
+            traverse=[
+                RelationshipHop(relationship="IMPLEMENTED_BY", entity="PullRequest"),
+                RelationshipHop(relationship="MERGES", entity="CodeModule", filters=[Filter(field="name", op=Comparator.EQ, value="X")]),
+            ],
+        ),
+        ENGINEER,
+        STORE,
+    )
+    assert "EXISTS { MATCH (n)-[:`IMPLEMENTED_BY`]->(t0:`PullRequest`)" in built.cypher
+    assert "EXISTS { MATCH (t0)-[:`MERGES`]->(t1:`CodeModule`)" in built.cypher
+    assert "t1.`name` = $p0" in built.cypher
+
+
+def test_traverse_applies_classification_filter_to_hop_nodes() -> None:
+    # A non-gated principal gets the whole-row classification filter on every hop node, so an
+    # anchor cannot be discovered through a classified connected node.
+    built = build_query(
+        QueryIntent(entity="Hazard", traverse=[RelationshipHop(relationship="ENDANGERS", entity="System")]),
+        ENGINEER,
+        STORE,
+    )
+    assert "t0.classification IS NULL OR t0.classification IN $__authz_classifications" in built.cypher
+
+
+def test_traverse_hop_params_do_not_collide_with_anchor_filters() -> None:
+    # Anchor filter takes p0; the hop filter must get a distinct param (p1), not overwrite it.
+    built = build_query(
+        QueryIntent(
+            entity="Hazard",
+            fields=["identifier"],
+            filters=[Filter(field="criticality", op=Comparator.EQ, value="Catastrophic")],
+            traverse=[
+                RelationshipHop(
+                    relationship="ENDANGERS", entity="System", filters=[Filter(field="name", op=Comparator.EQ, value="Fuel System")]
+                )
+            ],
+        ),
+        ENGINEER,
+        STORE,
+    )
+    assert "n.`criticality` = $p0" in built.cypher
+    assert "t0.`name` = $p1" in built.cypher
+    assert built.parameters["p0"] == "Catastrophic"
+    assert built.parameters["p1"] == "Fuel System"

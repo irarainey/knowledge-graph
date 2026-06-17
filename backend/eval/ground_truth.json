@@ -1,105 +1,264 @@
 {
-  "description": "Ground-truth questions for offline evaluation of the /ask pipeline. Scoring is deterministic and never grades the natural-language answer (which would need an LLM judge). Each question is scored on tool selection (expected_tools), the structured query intent the model emits (expected_intent, retrieval cases — a value-based, order-independent partial match of entity/fields/filters/aggregate against the model's emitted intent, scoring WHAT it chose to fetch), and the TOOL OUTPUT against a single, hand-written known answer. There is no second live 'gold query': the expected values are fixed data derived once from the seeded graph (the derivation queries are kept in eval/ground_truth_provenance.json for traceability only and are never executed here). Output scoring is column-aware for queries: expected_output_rows is a list of partial rows, each of which must be satisfied by a SINGLE returned record where every named field matches by exact canonical equality (numeric-tolerant; {\"contains\": ...} opts into substring) — proving the right value in the right field, in the same row. When exact_output is true, the case ALSO fails if the agent returned any record that matches none of the expected rows (an over-fetch / precision guard); set it when the expected rows enumerate the complete answer. expected_output_fields asserts per-column coverage across records without pinning row identity (use it for open-ended multi-row sets). Output-column keys are the agent's DETERMINISTIC, entity-qualified camelCase aliases produced by the structured-intent query builder (NOT chosen by the LLM): '<entityCamel><FieldPascal>' for a projection (e.g. pistonEngineRatedHorsepower, aircraftMaxTakeoffWeight_kg), '<entityCamel>Result' for an aggregate (e.g. flightResult), or '<codeAlias>Name' for a resolved aerodrome companion (e.g. flightDestinationAerodromeName). Document cases instead use expected_output_values (a case-insensitive substring check against the selected document's content, which has no columns) and may pin which document was selected via expected_document_id. Document cases require a successful non-empty fetch; refusal cases require an authorization denial. forbidden_answer_values must never appear in the retrieved data (an authorization-leak guard).",
+  "description": "Ground-truth questions for offline evaluation of the /ask pipeline. Scoring is deterministic and never grades the natural-language answer (which would need an LLM judge). Each question is scored on tool selection (expected_tools), the structured query intent the model emits (expected_intent, retrieval cases \u2014 a value-based, order-independent partial match of entity/fields/filters/aggregate against the model's emitted intent, scoring WHAT it chose to fetch), and the TOOL OUTPUT against a single, hand-written known answer. There is no second live 'gold query': the expected values are fixed data derived once from the seeded graph (the derivation queries are kept in eval/ground_truth_provenance.json for traceability only and are never executed here). Output scoring is column-aware for queries: expected_output_rows is a list of partial rows, each of which must be satisfied by a SINGLE returned record where every named field matches by exact canonical equality (numeric-tolerant; {\"contains\": ...} opts into substring) \u2014 proving the right value in the right field, in the same row. When exact_output is true, the case ALSO fails if the agent returned any record that matches none of the expected rows (an over-fetch / precision guard); set it when the expected rows enumerate the complete answer. expected_output_fields asserts per-column coverage across records without pinning row identity (use it for open-ended multi-row sets). Output-column keys are the agent's DETERMINISTIC, entity-qualified camelCase aliases produced by the structured-intent query builder (NOT chosen by the LLM): '<entityCamel><FieldPascal>' for a projection (e.g. pistonEngineRatedHorsepower, aircraftMaxTakeoffWeight_kg), '<entityCamel>Result' for an aggregate (e.g. flightResult), or '<codeAlias>Name' for a resolved aerodrome companion (e.g. flightDestinationAerodromeName). Document cases instead use expected_output_values (a case-insensitive substring check against the selected document's content, which has no columns) and may pin which document was selected via expected_document_id. Document cases require a successful non-empty fetch; refusal cases require an authorization denial. forbidden_answer_values must never appear in the retrieved data (an authorization-leak guard).",
   "questions": [
     {
       "id": "flight-count",
       "question": "How many flights are recorded?",
-      "expected_intent": { "entity": "Flight", "aggregate": { "func": "count" } },
-      "expected_output_rows": [ { "flightResult": 12 } ],
+      "expected_intent": {
+        "entity": "Flight",
+        "aggregate": {
+          "func": "count"
+        }
+      },
+      "expected_output_rows": [
+        {
+          "flightResult": 12
+        }
+      ],
       "exact_output": true,
-      "expected_tools": [ "query_knowledge_graph" ]
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
     },
     {
       "id": "engine-model",
       "question": "What is the make and model of the engine, and how much horsepower does it produce?",
-      "expected_intent": { "entity": "PistonEngine", "fields": [ "manufacturer", "model", "ratedHorsepower" ] },
-      "expected_output_rows": [ { "pistonEngineManufacturer": "Lycoming", "pistonEngineModel": "IO-360-L2A", "pistonEngineRatedHorsepower": 180 } ],
+      "expected_intent": {
+        "entity": "PistonEngine",
+        "fields": [
+          "manufacturer",
+          "model",
+          "ratedHorsepower"
+        ]
+      },
+      "expected_output_rows": [
+        {
+          "pistonEngineManufacturer": "Lycoming",
+          "pistonEngineModel": "IO-360-L2A",
+          "pistonEngineRatedHorsepower": 180
+        }
+      ],
       "exact_output": true,
-      "expected_tools": [ "query_knowledge_graph" ]
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
     },
     {
       "id": "aircraft-mtow",
       "question": "What is the registration and maximum take-off weight of the aircraft?",
-      "expected_intent": { "entity": "Aircraft", "fields": [ "registration", "maxTakeoffWeight_kg" ] },
-      "expected_output_rows": [ { "aircraftRegistration": "G-ECHO", "aircraftMaxTakeoffWeight_kg": 1157 } ],
+      "expected_intent": {
+        "entity": "Aircraft",
+        "fields": [
+          "registration",
+          "maxTakeoffWeight_kg"
+        ]
+      },
+      "expected_output_rows": [
+        {
+          "aircraftRegistration": "G-ECHO",
+          "aircraftMaxTakeoffWeight_kg": 1157
+        }
+      ],
       "exact_output": true,
-      "expected_tools": [ "query_knowledge_graph" ]
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
     },
     {
       "id": "engine-cylinders",
       "question": "How many cylinders does the engine have?",
-      "expected_intent": { "entity": "PistonEngine", "fields": [ "cylinders" ] },
-      "expected_output_rows": [ { "pistonEngineCylinders": 4 } ],
+      "expected_intent": {
+        "entity": "PistonEngine",
+        "fields": [
+          "cylinders"
+        ]
+      },
+      "expected_output_rows": [
+        {
+          "pistonEngineCylinders": 4
+        }
+      ],
       "exact_output": true,
-      "expected_tools": [ "query_knowledge_graph" ]
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
     },
     {
       "id": "total-flight-hours",
       "question": "What is the total number of flying hours across all recorded flights?",
-      "expected_intent": { "entity": "Flight", "aggregate": { "func": "sum", "field": "flightTime_hours" } },
-      "expected_output_rows": [ { "flightResult": 6.6 } ],
+      "expected_intent": {
+        "entity": "Flight",
+        "aggregate": {
+          "func": "sum",
+          "field": "flightTime_hours"
+        }
+      },
+      "expected_output_rows": [
+        {
+          "flightResult": 6.6
+        }
+      ],
       "exact_output": true,
-      "expected_tools": [ "query_knowledge_graph" ]
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
     },
     {
       "id": "longest-flight",
       "question": "What is the greatest distance flown on any single flight, in nautical miles?",
-      "expected_intent": { "entity": "Flight", "aggregate": { "func": "max", "field": "distance_nm" } },
-      "expected_output_rows": [ { "flightResult": 49 } ],
+      "expected_intent": {
+        "entity": "Flight",
+        "aggregate": {
+          "func": "max",
+          "field": "distance_nm"
+        }
+      },
+      "expected_output_rows": [
+        {
+          "flightResult": 49
+        }
+      ],
       "exact_output": true,
-      "expected_tools": [ "query_knowledge_graph" ]
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
     },
     {
       "id": "flights-on-2026-05-20",
       "question": "How many flights took place on 20 May 2026?",
-      "expected_intent": { "entity": "Flight", "filters": [ { "field": "date", "op": "=", "value": "2026-05-20" } ], "aggregate": { "func": "count" } },
-      "expected_output_rows": [ { "flightResult": 1 } ],
+      "expected_intent": {
+        "entity": "Flight",
+        "filters": [
+          {
+            "field": "date",
+            "op": "=",
+            "value": "2026-05-20"
+          }
+        ],
+        "aggregate": {
+          "func": "count"
+        }
+      },
+      "expected_output_rows": [
+        {
+          "flightResult": 1
+        }
+      ],
       "exact_output": true,
-      "expected_tools": [ "query_knowledge_graph" ]
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
     },
     {
       "id": "aerodromes-visited",
       "question": "Which aerodromes has the aircraft flown to?",
-      "expected_intent": { "entity": "Flight", "fields": [ "destinationAerodrome" ] },
-      "expected_output_fields": {
-        "flightDestinationAerodrome": [ "EGBJ", "EGBP", "EGFF", "EGGD", "EGHH", "EGTE", "EGTK" ],
-        "flightDestinationAerodromeName": [ "Bournemouth", "Bristol", "Cardiff", "Cotswold Airport", "Exeter", "Gloucestershire", "Oxford (Kidlington)" ]
+      "expected_intent": {
+        "entity": "Flight",
+        "fields": [
+          "destinationAerodrome"
+        ]
       },
-      "expected_tools": [ "query_knowledge_graph" ]
+      "expected_output_fields": {
+        "flightDestinationAerodrome": [
+          "EGBJ",
+          "EGBP",
+          "EGFF",
+          "EGGD",
+          "EGHH",
+          "EGTE",
+          "EGTK"
+        ],
+        "flightDestinationAerodromeName": [
+          "Bournemouth",
+          "Bristol",
+          "Cardiff",
+          "Cotswold Airport",
+          "Exeter",
+          "Gloucestershire",
+          "Oxford (Kidlington)"
+        ]
+      },
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
     },
     {
       "id": "powerplant-components",
       "question": "How many components does the aircraft have?",
-      "expected_intent": { "entity": "Component", "aggregate": { "func": "count" } },
-      "expected_output_rows": [ { "componentResult": 112 } ],
+      "expected_intent": {
+        "entity": "Component",
+        "aggregate": {
+          "func": "count"
+        }
+      },
+      "expected_output_rows": [
+        {
+          "componentResult": 112
+        }
+      ],
       "exact_output": true,
-      "expected_tools": [ "query_knowledge_graph" ]
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
     },
     {
       "id": "system-count",
       "question": "How many systems does the aircraft have?",
-      "expected_intent": { "entity": "System", "aggregate": { "func": "count" } },
-      "expected_output_rows": [ { "systemResult": 8 } ],
+      "expected_intent": {
+        "entity": "System",
+        "aggregate": {
+          "func": "count"
+        }
+      },
+      "expected_output_rows": [
+        {
+          "systemResult": 8
+        }
+      ],
       "exact_output": true,
-      "expected_tools": [ "query_knowledge_graph" ]
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
     },
     {
       "id": "flights-as-of-2020",
       "question": "How many flights had taken place by the end of 2020?",
       "user": "maintenance_engineer",
       "as_of": "2020-12-31",
-      "expected_intent": { "entity": "Flight", "filters": [ { "field": "date", "op": "<=", "value": "2020-12-31" } ], "aggregate": { "func": "count" } },
-      "expected_output_rows": [ { "flightResult": 4 } ],
+      "expected_intent": {
+        "entity": "Flight",
+        "filters": [
+          {
+            "field": "date",
+            "op": "<=",
+            "value": "2020-12-31"
+          }
+        ],
+        "aggregate": {
+          "func": "count"
+        }
+      },
+      "expected_output_rows": [
+        {
+          "flightResult": 4
+        }
+      ],
       "exact_output": true,
-      "expected_tools": [ "query_knowledge_graph" ]
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
     },
     {
       "id": "poh-never-exceed-speed",
       "question": "What does the POH say about the never-exceed speed?",
       "user": "maintenance_engineer",
       "expected_document_id": "DOC-0001",
-      "expected_output_values": [ "163" ],
-      "expected_tools": [ "fetch_document_content" ]
+      "expected_output_values": [
+        "163"
+      ],
+      "expected_tools": [
+        "fetch_document_content"
+      ]
     },
     {
       "id": "public-denied-poh",
@@ -111,9 +270,283 @@
       "id": "maintenance-route-gating",
       "question": "Which aerodromes has the aircraft flown to?",
       "user": "maintenance_engineer",
-      "expected_intent": { "entity": "Flight", "fields": [ "destinationAerodrome" ] },
-      "forbidden_answer_values": [ "Oxford", "Kidlington" ],
-      "expected_tools": [ "query_knowledge_graph" ]
+      "expected_intent": {
+        "entity": "Flight",
+        "fields": [
+          "destinationAerodrome"
+        ]
+      },
+      "forbidden_answer_values": [
+        "Oxford",
+        "Kidlington"
+      ],
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
+    },
+    {
+      "id": "sdlc-workitem-count",
+      "question": "How many work items are there?",
+      "user": "software_engineer",
+      "expected_intent": {
+        "entity": "WorkItem",
+        "aggregate": {
+          "func": "count"
+        }
+      },
+      "expected_output_rows": [
+        {
+          "workItemResult": 3
+        }
+      ],
+      "exact_output": true,
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
+    },
+    {
+      "id": "sdlc-pullrequest-count",
+      "question": "How many pull requests are recorded?",
+      "user": "software_engineer",
+      "expected_intent": {
+        "entity": "PullRequest",
+        "aggregate": {
+          "func": "count"
+        }
+      },
+      "expected_output_rows": [
+        {
+          "pullRequestResult": 3
+        }
+      ],
+      "exact_output": true,
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
+    },
+    {
+      "id": "sdlc-hazard-criticality",
+      "question": "What is the criticality of hazard HAZ-FCS-001?",
+      "user": "software_engineer",
+      "expected_intent": {
+        "entity": "Hazard",
+        "filters": [
+          {
+            "field": "identifier",
+            "op": "=",
+            "value": "HAZ-FCS-001"
+          }
+        ]
+      },
+      "expected_output_rows": [
+        {
+          "hazardCriticality": "Catastrophic"
+        }
+      ],
+      "exact_output": true,
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
+    },
+    {
+      "id": "sdlc-failed-test",
+      "question": "Which test results failed?",
+      "user": "software_engineer",
+      "expected_intent": {
+        "entity": "TestResult",
+        "filters": [
+          {
+            "field": "resultStatus",
+            "op": "=",
+            "value": "FAILED"
+          }
+        ]
+      },
+      "expected_output_rows": [
+        {
+          "testResultIdentifier": "TR-FCS-002",
+          "testResultResultStatus": "FAILED"
+        }
+      ],
+      "exact_output": true,
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
+    },
+    {
+      "id": "sdlc-dal-a-software-requirements",
+      "question": "List the DAL-A software requirements.",
+      "user": "software_engineer",
+      "expected_intent": {
+        "entity": "SoftwareRequirement",
+        "filters": [
+          {
+            "field": "assuranceLevel",
+            "op": "=",
+            "value": "DAL-A"
+          }
+        ]
+      },
+      "expected_output_rows": [
+        {
+          "softwareRequirementIdentifier": "SWR-FCS-001"
+        },
+        {
+          "softwareRequirementIdentifier": "SWR-FCS-002"
+        }
+      ],
+      "exact_output": true,
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
+    },
+    {
+      "id": "sdlc-release-status",
+      "question": "What is the status of the Fuel Monitoring Release R1 baseline?",
+      "user": "software_engineer",
+      "expected_intent": {
+        "entity": "ReleaseBaseline",
+        "filters": [
+          {
+            "field": "identifier",
+            "op": "=",
+            "value": "BASE-FUEL-R1"
+          }
+        ]
+      },
+      "expected_output_rows": [
+        {
+          "releaseBaselineStatus": "Blocked"
+        }
+      ],
+      "exact_output": true,
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
+    },
+    {
+      "id": "xdomain-hazard-endangering-system",
+      "question": "Which hazard endangers the Flight Controls system?",
+      "user": "software_engineer",
+      "expected_intent": {
+        "entity": "Hazard",
+        "traverse": [
+          {
+            "relationship": "ENDANGERS",
+            "entity": "System",
+            "direction": "out",
+            "filters": [
+              {
+                "field": "name",
+                "op": "=",
+                "value": "Flight Controls"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_output_rows": [
+        {
+          "hazardIdentifier": "HAZ-FCS-001"
+        }
+      ],
+      "exact_output": true,
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
+    },
+    {
+      "id": "xdomain-system-endangered-by-hazard",
+      "question": "Which system does hazard HAZ-FCS-001 endanger?",
+      "user": "software_engineer",
+      "expected_intent": {
+        "entity": "System",
+        "traverse": [
+          {
+            "relationship": "ENDANGERS",
+            "entity": "Hazard",
+            "direction": "in",
+            "filters": [
+              {
+                "field": "identifier",
+                "op": "=",
+                "value": "HAZ-FCS-001"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_output_rows": [
+        {
+          "systemName": "Flight Controls"
+        }
+      ],
+      "exact_output": true,
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
+    },
+    {
+      "id": "xdomain-aircraft-for-release",
+      "question": "Which aircraft is the Fuel Monitoring Release R1 installed on?",
+      "user": "software_engineer",
+      "expected_intent": {
+        "entity": "Aircraft",
+        "traverse": [
+          {
+            "relationship": "INSTALLED_ON",
+            "entity": "ReleaseBaseline",
+            "direction": "in",
+            "filters": [
+              {
+                "field": "identifier",
+                "op": "=",
+                "value": "BASE-FUEL-R1"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_output_rows": [
+        {
+          "aircraftRegistration": "G-ECHO"
+        }
+      ],
+      "exact_output": true,
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
+    },
+    {
+      "id": "xdomain-software-component-realising-system",
+      "question": "Which software component realises the Fuel System?",
+      "user": "software_engineer",
+      "expected_intent": {
+        "entity": "SoftwareComponent",
+        "traverse": [
+          {
+            "relationship": "REALISES",
+            "entity": "System",
+            "direction": "out",
+            "filters": [
+              {
+                "field": "name",
+                "op": "=",
+                "value": "Fuel System"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_output_rows": [
+        {
+          "softwareComponentIdentifier": "SWC-FUEL-001"
+        }
+      ],
+      "exact_output": true,
+      "expected_tools": [
+        "query_knowledge_graph"
+      ]
     }
   ]
 }

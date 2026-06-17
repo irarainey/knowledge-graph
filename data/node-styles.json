@@ -10,6 +10,15 @@
     "Aerodrome":   { "color": "#7fd060", "dimColor": "#284a18", "label": "AERODROME",   "size": 14 },
     "Runway":      { "color": "#9aa0a8", "dimColor": "#33373c", "label": "RUNWAY",      "size": 8 },
     "ATC":         { "color": "#f070c0", "dimColor": "#5a1042", "label": "ATC",         "size": 10 },
-    "Specification": { "color": "#c0c060", "dimColor": "#4a4a18", "label": "SPECIFICATION", "size": 10 }
+    "Specification": { "color": "#c0c060", "dimColor": "#4a4a18", "label": "SPECIFICATION", "size": 10 },
+
+    "Requirement":           { "color": "#8597ff", "dimColor": "#1b2470", "label": "REQUIREMENT",            "size": 11 },
+    "ImplementationArtifact":{ "color": "#c98bff", "dimColor": "#341a64", "label": "IMPLEMENTATION",         "size": 10 },
+    "VerificationArtifact":  { "color": "#5fd6c0", "dimColor": "#0f4a40", "label": "VERIFICATION",           "size": 9 },
+    "AssuranceArtifact":     { "color": "#ffcf5f", "dimColor": "#5a4508", "label": "ASSURANCE",              "size": 10 },
+    "SafetyArtifact":        { "color": "#ff5a5a", "dimColor": "#5a0d0d", "label": "SAFETY",                 "size": 11 },
+    "WorkManagementEntity":  { "color": "#ff9a3c", "dimColor": "#5a3008", "label": "WORK MANAGEMENT",        "size": 8 },
+    "ConfigurationArtifact": { "color": "#c0b86b", "dimColor": "#44400f", "label": "CONFIGURATION",          "size": 11 },
+    "Actor":                 { "color": "#8a70d8", "dimColor": "#2a1a55", "label": "ACTOR",                  "size": 9 }
   }
 }

@@ -28,7 +28,7 @@ uv run pytest tests/test_example.py::test_name -v
 
 ## Importing the knowledge graph into Neo4j
 
-`scripts/import_graph.py` loads `data/knowledge-graph.json` into a running Neo4j
+`scripts/import_graph.py` loads `data/aircraft-knowledge-graph.json` into a running Neo4j
 instance. It reads connection settings from `backend/.env` (copy `.env.example`
 to get started):
 
@@ -50,6 +50,27 @@ uv run poe import-graph            # update / upsert (idempotent)
 uv run poe import-graph --clear    # delete everything first, then import
 ```
 
+To also load the **engineering / SDLC overlay** (`data/sdlc-knowledge-graph.json` —
+requirements, implementation, verification, assurance, safety, configuration and work
+management for the aircraft's software), import it *after* the aircraft graph so its
+cross-domain edges (e.g. a release `INSTALLED_ON` the aircraft) resolve:
+
+```bash
+uv run poe import-graph --clear    # 1. aircraft (operational) graph first
+uv run poe import-sdlc             # 2. then the SDLC overlay (no --clear)
+```
+
+Or do both in the correct order with one command:
+
+```bash
+uv run poe import-all              # wipe, import aircraft, then import SDLC overlay
+```
+
+Order matters: relationships are upserted with `MATCH (a {id})...MATCH (b {id})`, so a
+cross-domain edge is silently skipped if its aircraft endpoint is not already present. The
+two datasets share no node ids, so no namespacing is needed. The SDLC entities are
+queryable via `/ask` by the `software_engineer` identity (see the access policy below).
+
 The import upserts by default — nodes are matched on their `id` property and
 relationships on the (start node, type, end node) triple — so re-running is safe.
 Because upsert only adds and overwrites, use `--clear` after removing or renaming
@@ -59,7 +80,7 @@ values are passed as parameters. The import uses plain Cypher only (no APOC), so
 against a stock Community container.
 
 **Classification overlay.** Node sensitivity is *not* carried in the shared
-`data/knowledge-graph.json` export (which also feeds the public Vue renderer). Instead it
+`data/aircraft-knowledge-graph.json` export (which also feeds the public Vue renderer). Instead it
 is a **backend-owned overlay**, [`policy/graph-classification.json`](policy/graph-classification.json),
 applied as a second pass after the graph is imported: it sets a `classification` property
 (and `securityLabels`) on the listed node ids, which the row-level clearance filter then
@@ -73,7 +94,7 @@ for why existence constraints would harden this).
 
 Additional flags:
 
-- `--file <path>` — import a different JSON export (defaults to `data/knowledge-graph.json`).
+- `--file <path>` — import a different JSON export (defaults to `data/aircraft-knowledge-graph.json`).
 - `--env-file <path>` — load Neo4j settings from a specific `.env` file.
 - `--classification <path>` — use a different classification overlay (defaults to `policy/graph-classification.json`).
 
@@ -302,6 +323,40 @@ Step by step, in `src/agents/knowledge_graph_agent.py`:
 Both LLM calls (planning and answer) target the same Azure OpenAI deployment via the
 Microsoft Agent Framework chat client.
 
+### Cross-domain traversal (relationship constraints)
+
+A typed intent can also carry a `traverse` chain — a list of **relationship hops** that
+constrain the queried entity by *what it is connected to*, so questions can span a
+connection or cross the two domains (e.g. *"which hazard endangers the Flight Controls
+system?"*, *"which aircraft is the Fuel Monitoring Release R1 installed on?"*). The model
+still picks **one** entity to return; each hop adds a relationship type, the connected entity
+at the far end, a direction (`out` follows `entity-[:REL]->hop`, `in` follows
+`entity<-[:REL]-hop`) and optional filters on the hop entity. Only the chosen entity's
+fields are returned, so to report a property of a connected node you make *that* node the
+queried entity.
+
+The builder turns the chain into **nested `EXISTS` path filters** on the anchor — never a
+widened projection:
+
+```cypher
+MATCH (n:`Hazard`)
+WHERE (n.classification IS NULL OR n.classification IN $__authz_classifications)
+  AND EXISTS { MATCH (n)-[:`ENDANGERS`]->(t0:`System`)
+               WHERE (t0.classification IS NULL OR t0.classification IN $__authz_classifications)
+                 AND t0.`name` = $p0 }
+RETURN n.`identifier` AS `hazardIdentifier`, n.`criticality` AS `hazardCriticality`
+```
+
+Each hop is authorized independently, so traversal opens no new leak: the relationship type
+and its endpoint labels are validated against a **relationship catalog** in the access policy
+(`relationshipCatalog` — relationship type → legal `(from, to)` entity-label pairs), the hop's
+target entity must be in the principal's granted entities (the same **entity gate**), each hop
+filter field must pass the **field gate**, and the row-level **clearance filter** is mirrored
+onto every hop node so an anchor can never be discovered through a node above the caller's
+clearance. Relationships carry no separate grant — they are gated by the entities they connect,
+so a principal that cannot query *either* end can neither traverse nor even see the edge. Only
+relationships whose both ends are visible to the identity are described in the prompt surface.
+
 ### External document storage (Area 4)
 
 Large document **bodies** are kept **out of the graph** so it scales as a metadata index
@@ -482,11 +537,12 @@ curl http://localhost:8080/users
 
 ```json
 {
-  "version": "2026-06-10.5",
+  "version": "2026-06-18.1",
   "users": [
     {"id": "public", "displayName": "Public (least privilege)", "role": "public", "clearance": "unclassified", "description": "..."},
     {"id": "maintenance_engineer", "displayName": "Maintenance Engineer", "role": "maintenance", "clearance": "unclassified", "description": "..."},
-    {"id": "restricted_ops", "displayName": "Restricted Operations", "role": "operations", "clearance": "secret", "description": "..."}
+    {"id": "restricted_ops", "displayName": "Restricted Operations", "role": "operations", "clearance": "secret", "description": "..."},
+    {"id": "software_engineer", "displayName": "Software Engineer", "role": "engineering", "clearance": "unclassified", "description": "..."}
   ]
 }
 ```
@@ -520,22 +576,24 @@ The access policy lives in [`policy/access-policy.json`](policy/access-policy.js
 (override with `ACCESS_POLICY_PATH`). It is **versioned separately** from the graph data
 and the ontology, so *who may see what* can change without re-importing the graph, and
 every answer records the `policyVersion` it was resolved under. It is loaded and validated
-at startup; an invalid or missing policy **fails the service closed**. Its four parts:
+at startup; an invalid or missing policy **fails the service closed**. Its five parts:
 
 | Key | What it defines |
 |---|---|
 | `clearanceLevels` | The ordered clearance ladder (`unclassified` < `official` < `secret`). |
-| `sensitivityCategories` | The field-sensitivity labels (`basic`, `duration`, `route`, `maintenance`, `performance`) plus `document`, the capability that gates reading an externalised document **body**. |
+| `sensitivityCategories` | The field-sensitivity labels (`basic`, `duration`, `route`, `maintenance`, `performance`) plus `document`, the capability that gates reading an externalised document **body**, and `engineering`, which gates the SDLC domain. |
 | `catalog` | The **curated, queryable surface**: every entity, each field on it, and the one sensitivity category that field belongs to. *A field absent from the catalog is queryable by no one* (default-deny). |
+| `relationshipCatalog` | The **traversable surface**: each relationship type and the legal `(from, to)` entity-label pairs it may connect. A hop is only allowed if it matches an entry here *and* the identity is granted both endpoint entities — relationships have no separate grant (see [Cross-domain traversal](#cross-domain-traversal-relationship-constraints)). |
 | `identities` | The selectable identities, each with a `role`, a `clearance`, the `categories` and `entities` it is granted, whether any of those categories are `clearanceGatedCategories` (see below), and whether it `allowAggregates`. |
 
-The three demo identities make the two dimensions concrete:
+The demo identities make the two dimensions concrete:
 
 | Identity | Clearance | Entities | Categories | Aggregates | Cannot see |
 |---|---|---|---|---|---|
 | `public` | unclassified | Aircraft, Specification, Aerodrome | `basic` | ❌ | maintenance, durations, routes, classified flights, document content |
 | `maintenance_engineer` | unclassified | + System, Component, Document, Flight | + duration, maintenance, performance, **document**, **route (clearance-gated)** | ✅ | route details **on classified flights** |
 | `restricted_ops` | secret | (same entities) | + route (full) (incl. **document**) | ✅ | — (sees everything, incl. classified flights) |
+| `software_engineer` | unclassified | Aircraft, System, Component, PistonEngine, Specification, Aerodrome **+ the SDLC entities** (Requirements, Implementation, Verification, Assurance, Safety, Configuration, Work Management, Actor) | `basic`, **`engineering`** | ✅ | flights, routes, durations, maintenance and document content |
 
 So a maintenance engineer can ask for *total flight time* (a `duration` field, aggregated)
 and *can* see where the aircraft flew — but only on **unclassified** flights: `route` is a
@@ -544,7 +602,12 @@ classified (military) flights it isn't cleared for, while a flying-hours total s
 those flights. It also holds the `document` category, so it may read document **bodies** via
 `fetch_document_content` (the POH, manuals, ADs); `public` holds neither the `Document` entity
 nor the `document` category, so document content is refused at the entity gate.
-`restricted_ops` holds `route` outright and sees route details on every flight.
+`restricted_ops` holds `route` outright and sees route details on every flight. The
+`software_engineer` persona is the entry point to the **engineering domain**: it holds the
+`engineering` category and the SDLC entities, so it can ask about requirements, work items,
+pull requests, hazards, test results, release baselines and the like, plus `basic`
+operational facts about the aircraft and its systems — but it has no access to the flight,
+route, maintenance or document data the operational identities hold.
 
 #### Clearance-gated categories
 
@@ -591,6 +654,12 @@ Enforcement happens entirely in the backend, in two places, both outside the LLM
   not even in a `count` or existence check. (For a **clearance-gated** category the whole-row
   filter is replaced by per-field `CASE WHEN` redaction plus clearance guards on gated-field
   filters and aggregates, so classified rows stay visible with only the gated fields nulled.)
+  A `traverse` chain adds a **relationship gate** per hop — the relationship type and its
+  endpoint labels are validated against the policy's `relationshipCatalog`, the hop's target
+  entity must be granted (the entity gate again), hop filter fields pass the field gate, and
+  the clearance filter is mirrored onto every hop node — all emitted as nested `EXISTS`
+  constraints that never widen the projection (see
+  [Cross-domain traversal](#cross-domain-traversal-relationship-constraints)).
   Values are always parameterised; labels and field names come only from the controlled
   catalogue and are identifier-validated. A denied intent records an audit denial and returns
   a refusal string (never a 500). Returned rows are then **redacted** to the projected fields
@@ -633,7 +702,7 @@ divergent figures (max cruise speed 108 → 122 → 140 kt across the eras); the
 specifications are single-version. Every `Specification` node carries the version properties,
 so the temporal filter below never encounters a missing field.
 
-The full history lives in the shared `data/knowledge-graph.json` export (unlike the
+The full history lives in the shared `data/aircraft-knowledge-graph.json` export (unlike the
 classification overlay, versioning is graph structure, not a security secret), so the Vue
 graph renderer can show current vs as-of slices and per-entity history too.
 

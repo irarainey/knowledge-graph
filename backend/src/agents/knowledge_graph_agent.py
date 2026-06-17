@@ -53,6 +53,7 @@ from authz import (
     PolicyStore,
     Principal,
     QueryIntent,
+    RelationshipHop,
     attach_aerodrome_names,
     build_query,
     redact_records,
@@ -609,15 +610,23 @@ class KnowledgeGraphAgent:
         of the model's reach — the temporal mode is the backend's decision, not the LLM's.
         """
 
-        @tool(name=TOOL_NAME, description="Query the aircraft knowledge graph by describing what to fetch; returns matching rows.")
+        @tool(name=TOOL_NAME, description="Query the knowledge graph by describing what to fetch; returns matching rows.")
         async def query_knowledge_graph(
             entity: Annotated[str, "The entity (node label) to query, e.g. 'Flight'. Must be one listed in the catalog."],
             fields: Annotated[list[str], "Fields to return; leave empty to return all available fields for the entity."] = [],  # noqa: B006
             filters: Annotated[list[Filter], "Optional field comparisons to narrow the rows."] = [],  # noqa: B006
             aggregate: Annotated[Aggregate | None, "Optional aggregate (count/avg/sum/min/max) instead of returning rows."] = None,
             limit: Annotated[int | None, "Optional maximum number of rows to return."] = None,
+            traverse: Annotated[
+                list[RelationshipHop],
+                "Optional chain of relationship hops that constrain the entity by what it is connected to. Each hop has a "
+                "relationship (from the catalog's relationship list), an entity (the connected node label), a direction "
+                "('out' follows entity-[:REL]->hop, 'in' follows entity<-[:REL]-hop) and optional filters on the hop entity. "
+                "The query still returns only the chosen entity's fields. Use this for cross-domain or connection questions, "
+                "e.g. which hazard endangers a named system, or which system a release is installed on.",
+            ] = [],  # noqa: B006
         ) -> str:
-            intent = QueryIntent(entity=entity, fields=fields, filters=filters, aggregate=aggregate, limit=limit)
+            intent = QueryIntent(entity=entity, fields=fields, filters=filters, aggregate=aggregate, limit=limit, traverse=traverse)
             return await self._run_query_tool(principal, intent, as_of)
 
         return query_knowledge_graph

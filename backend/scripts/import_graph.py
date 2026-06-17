@@ -6,7 +6,7 @@ idempotent: nodes are matched on their ``id`` property and relationships on the
 (start node, type, end node) triple.
 
 Usage:
-    uv run poe import-graph                 # import data/knowledge-graph.json
+    uv run poe import-graph                 # import data/aircraft-knowledge-graph.json
     uv run python scripts/import_graph.py --clear
     uv run python scripts/import_graph.py --file path/to/graph.json
 """
@@ -35,8 +35,8 @@ from common.logging_config import get_logger, setup_logging
 
 logger = get_logger(__name__)
 
-# Repo layout: <repo>/backend/scripts/import_graph.py -> <repo>/data/knowledge-graph.json
-DEFAULT_JSON_PATH = Path(__file__).resolve().parents[2] / "data" / "knowledge-graph.json"
+# Repo layout: <repo>/backend/scripts/import_graph.py -> <repo>/data/aircraft-knowledge-graph.json
+DEFAULT_JSON_PATH = Path(__file__).resolve().parents[2] / "data" / "aircraft-knowledge-graph.json"
 
 # Backend-owned classification overlay applied after the graph is imported. It lives with
 # the access policy (security metadata), not in the shared graph export.

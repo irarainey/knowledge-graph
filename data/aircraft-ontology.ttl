@@ -484,7 +484,7 @@ spo:blockTime_minutes a owl:DatatypeProperty ;
 
 
 # ═════════════════════════════════════════════════════════════
-#  ADDITIONAL CLASSES  (auto-generated to mirror knowledge-graph.json)
+#  ADDITIONAL CLASSES  (auto-generated to mirror aircraft-knowledge-graph.json)
 # ═════════════════════════════════════════════════════════════
 
 spo:FuelInjectionServo a owl:Class ;
@@ -1501,7 +1501,7 @@ spo:source a owl:DatatypeProperty ;
 
 
 # ═════════════════════════════════════════════════════════════
-#  INDIVIDUALS  (instance graph — generated from knowledge-graph.json)
+#  INDIVIDUALS  (instance graph — generated from aircraft-knowledge-graph.json)
 # ═════════════════════════════════════════════════════════════
 
 spo:G-ECHO a spo:LightAircraft ;

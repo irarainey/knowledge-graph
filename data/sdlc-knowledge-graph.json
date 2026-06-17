@@ -1,0 +1,2236 @@
+{
+  "metadata": {
+    "name": "Aerospace SDLC Knowledge Graph (demo)",
+    "description": "Multiple DO-178C assurance threads (flight control, landing gear, fuel) linked to the operational aircraft graph.",
+    "schemaVersion": "0.2.0-demo",
+    "domain": "sdlc"
+  },
+  "nodes": [
+    {
+      "id": "OBJ-A5-1",
+      "labels": [
+        "AssuranceArtifact",
+        "CertificationObjective"
+      ],
+      "properties": {
+        "name": "DO-178C A-5.1",
+        "identifier": "OBJ-A5-1",
+        "description": "Source code complies with the software coding standards.",
+        "assuranceLevel": "DAL-A"
+      }
+    },
+    {
+      "id": "OBJ-A7-1",
+      "labels": [
+        "AssuranceArtifact",
+        "CertificationObjective"
+      ],
+      "properties": {
+        "name": "DO-178C A-7.1",
+        "identifier": "OBJ-A7-1",
+        "description": "Verification of the outputs of the software coding process.",
+        "assuranceLevel": "DAL-A"
+      }
+    },
+    {
+      "id": "OBJ-A7-2",
+      "labels": [
+        "AssuranceArtifact",
+        "CertificationObjective"
+      ],
+      "properties": {
+        "name": "DO-178C A-7.2",
+        "identifier": "OBJ-A7-2",
+        "description": "Test coverage of the software requirements is achieved.",
+        "assuranceLevel": "DAL-A"
+      }
+    },
+    {
+      "id": "TEAM-SQA",
+      "labels": [
+        "Actor",
+        "Team"
+      ],
+      "properties": {
+        "name": "Software Quality Assurance",
+        "identifier": "TEAM-SQA"
+      }
+    },
+    {
+      "id": "PERSON-DER",
+      "labels": [
+        "Actor",
+        "Person"
+      ],
+      "properties": {
+        "name": "D. Examiner",
+        "identifier": "PERSON-DER"
+      }
+    },
+    {
+      "id": "SYS-FCS-001",
+      "labels": [
+        "Requirement",
+        "SystemRequirement"
+      ],
+      "properties": {
+        "name": "Flight Control Requirement",
+        "identifier": "SYS-FCS-001",
+        "description": "The system shall limit commanded pitch rate to the certified envelope.",
+        "status": "Approved",
+        "assuranceLevel": "DAL-A",
+        "criticality": "Catastrophic"
+      }
+    },
+    {
+      "id": "SWR-FCS-001",
+      "labels": [
+        "Requirement",
+        "SoftwareRequirement"
+      ],
+      "properties": {
+        "name": "PitchRateLimiter Requirement",
+        "identifier": "SWR-FCS-001",
+        "description": "Software shall cap commanded pitch rate at 12 deg/s.",
+        "status": "Approved",
+        "assuranceLevel": "DAL-A"
+      }
+    },
+    {
+      "id": "SWR-FCS-002",
+      "labels": [
+        "Requirement",
+        "SoftwareRequirement"
+      ],
+      "properties": {
+        "name": "StallWarningMonitor Requirement",
+        "identifier": "SWR-FCS-002",
+        "description": "Software shall annunciate stall warning at 1.05 Vs.",
+        "status": "Approved",
+        "assuranceLevel": "DAL-A"
+      }
+    },
+    {
+      "id": "INT-FCS-001",
+      "labels": [
+        "Requirement",
+        "InterfaceRequirement"
+      ],
+      "properties": {
+        "name": "Flight Control Bus Interface",
+        "identifier": "INT-FCS-001",
+        "description": "Data exchanged with the avionics bus.",
+        "status": "Approved"
+      }
+    },
+    {
+      "id": "ARC-FCS-001",
+      "labels": [
+        "ImplementationArtifact",
+        "ArchitectureElement"
+      ],
+      "properties": {
+        "name": "Flight Control Design",
+        "identifier": "ARC-FCS-001",
+        "description": "Design of the flight control software.",
+        "status": "Approved"
+      }
+    },
+    {
+      "id": "SWC-FCS-001",
+      "labels": [
+        "ImplementationArtifact",
+        "SoftwareComponent"
+      ],
+      "properties": {
+        "name": "PitchRateLimiter",
+        "identifier": "SWC-FCS-001",
+        "version": "1.2.0",
+        "status": "Released",
+        "assuranceLevel": "DAL-A"
+      }
+    },
+    {
+      "id": "SWC-FCS-002",
+      "labels": [
+        "ImplementationArtifact",
+        "SoftwareComponent"
+      ],
+      "properties": {
+        "name": "StallWarningMonitor",
+        "identifier": "SWC-FCS-002",
+        "version": "1.2.0",
+        "status": "Released",
+        "assuranceLevel": "DAL-A"
+      }
+    },
+    {
+      "id": "CODE-FCS-001",
+      "labels": [
+        "ImplementationArtifact",
+        "CodeModule"
+      ],
+      "properties": {
+        "name": "pitchratelimiter.c",
+        "identifier": "CODE-FCS-001",
+        "commitSha": "fcsa1b2c3",
+        "version": "1.2.0"
+      }
+    },
+    {
+      "id": "CODE-FCS-002",
+      "labels": [
+        "ImplementationArtifact",
+        "CodeModule"
+      ],
+      "properties": {
+        "name": "stallwarningmonitor.c",
+        "identifier": "CODE-FCS-002",
+        "commitSha": "fcsd4e5f6",
+        "version": "1.2.0"
+      }
+    },
+    {
+      "id": "TC-FCS-001",
+      "labels": [
+        "VerificationArtifact",
+        "TestCase"
+      ],
+      "properties": {
+        "name": "PitchRateLimiter Test",
+        "identifier": "TC-FCS-001",
+        "description": "Verifies PitchRateLimiter."
+      }
+    },
+    {
+      "id": "TC-FCS-002",
+      "labels": [
+        "VerificationArtifact",
+        "TestCase"
+      ],
+      "properties": {
+        "name": "StallWarningMonitor Test",
+        "identifier": "TC-FCS-002",
+        "description": "Verifies StallWarningMonitor."
+      }
+    },
+    {
+      "id": "TR-FCS-001",
+      "labels": [
+        "VerificationArtifact",
+        "TestResult"
+      ],
+      "properties": {
+        "name": "PitchRateLimiter Result",
+        "identifier": "TR-FCS-001",
+        "resultStatus": "PASSED"
+      }
+    },
+    {
+      "id": "TR-FCS-002",
+      "labels": [
+        "VerificationArtifact",
+        "TestResult"
+      ],
+      "properties": {
+        "name": "StallWarningMonitor Result",
+        "identifier": "TR-FCS-002",
+        "resultStatus": "FAILED"
+      }
+    },
+    {
+      "id": "REV-FCS-001",
+      "labels": [
+        "VerificationArtifact",
+        "ReviewRecord"
+      ],
+      "properties": {
+        "name": "Flight Control Code Review",
+        "identifier": "REV-FCS-001",
+        "resultStatus": "Accepted"
+      }
+    },
+    {
+      "id": "SA-FCS-001",
+      "labels": [
+        "VerificationArtifact",
+        "StaticAnalysisResult"
+      ],
+      "properties": {
+        "name": "Flight Control MISRA C Analysis",
+        "identifier": "SA-FCS-001",
+        "resultStatus": "PASSED"
+      }
+    },
+    {
+      "id": "EVD-FCS-001",
+      "labels": [
+        "AssuranceArtifact",
+        "Evidence"
+      ],
+      "properties": {
+        "name": "PitchRateLimiter Test Report",
+        "identifier": "EVD-FCS-001",
+        "sourceSystem": "TestReport"
+      }
+    },
+    {
+      "id": "EVD-FCS-002",
+      "labels": [
+        "AssuranceArtifact",
+        "Evidence"
+      ],
+      "properties": {
+        "name": "Flight Control MISRA Report",
+        "identifier": "EVD-FCS-002",
+        "sourceSystem": "StaticAnalysis"
+      }
+    },
+    {
+      "id": "CLAIM-FCS-001",
+      "labels": [
+        "AssuranceArtifact",
+        "ComplianceClaim"
+      ],
+      "properties": {
+        "name": "Flight Control Verification Complete",
+        "identifier": "CLAIM-FCS-001",
+        "status": "Asserted"
+      }
+    },
+    {
+      "id": "CASE-FCS-001",
+      "labels": [
+        "AssuranceArtifact",
+        "AssuranceCase"
+      ],
+      "properties": {
+        "name": "Flight Control Assurance Case",
+        "identifier": "CASE-FCS-001",
+        "status": "InProgress"
+      }
+    },
+    {
+      "id": "HAZ-FCS-001",
+      "labels": [
+        "SafetyArtifact",
+        "Hazard"
+      ],
+      "properties": {
+        "name": "Uncommanded Pitch Up",
+        "identifier": "HAZ-FCS-001",
+        "criticality": "Catastrophic"
+      }
+    },
+    {
+      "id": "SC-FCS-001",
+      "labels": [
+        "SafetyArtifact",
+        "SafetyControl"
+      ],
+      "properties": {
+        "name": "Flight Control Protection",
+        "identifier": "SC-FCS-001",
+        "status": "Implemented"
+      }
+    },
+    {
+      "id": "WI-FCS-001",
+      "labels": [
+        "WorkManagementEntity",
+        "WorkItem"
+      ],
+      "properties": {
+        "name": "Implement PitchRateLimiter",
+        "identifier": "WI-FCS-001",
+        "status": "Done"
+      }
+    },
+    {
+      "id": "CR-FCS-001",
+      "labels": [
+        "WorkManagementEntity",
+        "ChangeRequest"
+      ],
+      "properties": {
+        "name": "Refine Flight Control Threshold",
+        "identifier": "CR-FCS-001",
+        "status": "Approved"
+      }
+    },
+    {
+      "id": "DEF-FCS-001",
+      "labels": [
+        "WorkManagementEntity",
+        "Defect"
+      ],
+      "properties": {
+        "name": "PitchRateLimiter Edge-case Defect",
+        "identifier": "DEF-FCS-001",
+        "status": "Open"
+      }
+    },
+    {
+      "id": "PR-FCS-001",
+      "labels": [
+        "WorkManagementEntity",
+        "PullRequest"
+      ],
+      "properties": {
+        "name": "PR PitchRateLimiter Fix",
+        "identifier": "PR-FCS-001",
+        "status": "Merged"
+      }
+    },
+    {
+      "id": "PIPE-FCS",
+      "labels": [
+        "WorkManagementEntity",
+        "PipelineRun"
+      ],
+      "properties": {
+        "name": "Flight Control CI Run",
+        "identifier": "PIPE-FCS",
+        "sourceSystem": "AzureDevOps",
+        "resultStatus": "FAILED"
+      }
+    },
+    {
+      "id": "BASE-FCS-R1",
+      "labels": [
+        "ConfigurationArtifact",
+        "ReleaseBaseline"
+      ],
+      "properties": {
+        "name": "Flight Control Release R1",
+        "identifier": "BASE-FCS-R1",
+        "baselineTag": "FCS-R1",
+        "status": "Approved"
+      }
+    },
+    {
+      "id": "CI-FCS-001",
+      "labels": [
+        "ConfigurationArtifact",
+        "ConfigurationItem"
+      ],
+      "properties": {
+        "name": "Flight Control Software Load",
+        "identifier": "CI-FCS-001",
+        "version": "1.2.0"
+      }
+    },
+    {
+      "id": "TEAM-FCS",
+      "labels": [
+        "Actor",
+        "Team"
+      ],
+      "properties": {
+        "name": "Flight Control Team",
+        "identifier": "TEAM-FCS"
+      }
+    },
+    {
+      "id": "PERSON-FCS",
+      "labels": [
+        "Actor",
+        "Person"
+      ],
+      "properties": {
+        "name": "Flight Control Engineer",
+        "identifier": "PERSON-FCS"
+      }
+    },
+    {
+      "id": "SYS-LGS-001",
+      "labels": [
+        "Requirement",
+        "SystemRequirement"
+      ],
+      "properties": {
+        "name": "Landing Gear Requirement",
+        "identifier": "SYS-LGS-001",
+        "description": "The system shall sequence gear retraction and extension safely.",
+        "status": "Approved",
+        "assuranceLevel": "DAL-C",
+        "criticality": "Hazardous"
+      }
+    },
+    {
+      "id": "SWR-LGS-001",
+      "labels": [
+        "Requirement",
+        "SoftwareRequirement"
+      ],
+      "properties": {
+        "name": "GearSequencer Requirement",
+        "identifier": "SWR-LGS-001",
+        "description": "Software shall inhibit retraction while weight-on-wheels is true.",
+        "status": "Approved",
+        "assuranceLevel": "DAL-C"
+      }
+    },
+    {
+      "id": "SWR-LGS-002",
+      "labels": [
+        "Requirement",
+        "SoftwareRequirement"
+      ],
+      "properties": {
+        "name": "WeightOnWheelsMonitor Requirement",
+        "identifier": "SWR-LGS-002",
+        "description": "Software shall confirm three-green before reporting gear down.",
+        "status": "Approved",
+        "assuranceLevel": "DAL-C"
+      }
+    },
+    {
+      "id": "INT-LGS-001",
+      "labels": [
+        "Requirement",
+        "InterfaceRequirement"
+      ],
+      "properties": {
+        "name": "Landing Gear Bus Interface",
+        "identifier": "INT-LGS-001",
+        "description": "Data exchanged with the electrical bus.",
+        "status": "Approved"
+      }
+    },
+    {
+      "id": "ARC-LGS-001",
+      "labels": [
+        "ImplementationArtifact",
+        "ArchitectureElement"
+      ],
+      "properties": {
+        "name": "Landing Gear Design",
+        "identifier": "ARC-LGS-001",
+        "description": "Design of the landing gear software.",
+        "status": "Approved"
+      }
+    },
+    {
+      "id": "SWC-LGS-001",
+      "labels": [
+        "ImplementationArtifact",
+        "SoftwareComponent"
+      ],
+      "properties": {
+        "name": "GearSequencer",
+        "identifier": "SWC-LGS-001",
+        "version": "2.0.1",
+        "status": "Released",
+        "assuranceLevel": "DAL-C"
+      }
+    },
+    {
+      "id": "SWC-LGS-002",
+      "labels": [
+        "ImplementationArtifact",
+        "SoftwareComponent"
+      ],
+      "properties": {
+        "name": "WeightOnWheelsMonitor",
+        "identifier": "SWC-LGS-002",
+        "version": "2.0.1",
+        "status": "Released",
+        "assuranceLevel": "DAL-C"
+      }
+    },
+    {
+      "id": "CODE-LGS-001",
+      "labels": [
+        "ImplementationArtifact",
+        "CodeModule"
+      ],
+      "properties": {
+        "name": "gearsequencer.c",
+        "identifier": "CODE-LGS-001",
+        "commitSha": "lgsa1b2c3",
+        "version": "2.0.1"
+      }
+    },
+    {
+      "id": "CODE-LGS-002",
+      "labels": [
+        "ImplementationArtifact",
+        "CodeModule"
+      ],
+      "properties": {
+        "name": "weightonwheelsmonitor.c",
+        "identifier": "CODE-LGS-002",
+        "commitSha": "lgsd4e5f6",
+        "version": "2.0.1"
+      }
+    },
+    {
+      "id": "TC-LGS-001",
+      "labels": [
+        "VerificationArtifact",
+        "TestCase"
+      ],
+      "properties": {
+        "name": "GearSequencer Test",
+        "identifier": "TC-LGS-001",
+        "description": "Verifies GearSequencer."
+      }
+    },
+    {
+      "id": "TC-LGS-002",
+      "labels": [
+        "VerificationArtifact",
+        "TestCase"
+      ],
+      "properties": {
+        "name": "WeightOnWheelsMonitor Test",
+        "identifier": "TC-LGS-002",
+        "description": "Verifies WeightOnWheelsMonitor."
+      }
+    },
+    {
+      "id": "TR-LGS-001",
+      "labels": [
+        "VerificationArtifact",
+        "TestResult"
+      ],
+      "properties": {
+        "name": "GearSequencer Result",
+        "identifier": "TR-LGS-001",
+        "resultStatus": "PASSED"
+      }
+    },
+    {
+      "id": "TR-LGS-002",
+      "labels": [
+        "VerificationArtifact",
+        "TestResult"
+      ],
+      "properties": {
+        "name": "WeightOnWheelsMonitor Result",
+        "identifier": "TR-LGS-002",
+        "resultStatus": "PASSED"
+      }
+    },
+    {
+      "id": "REV-LGS-001",
+      "labels": [
+        "VerificationArtifact",
+        "ReviewRecord"
+      ],
+      "properties": {
+        "name": "Landing Gear Code Review",
+        "identifier": "REV-LGS-001",
+        "resultStatus": "Accepted"
+      }
+    },
+    {
+      "id": "SA-LGS-001",
+      "labels": [
+        "VerificationArtifact",
+        "StaticAnalysisResult"
+      ],
+      "properties": {
+        "name": "Landing Gear MISRA C Analysis",
+        "identifier": "SA-LGS-001",
+        "resultStatus": "PASSED"
+      }
+    },
+    {
+      "id": "EVD-LGS-001",
+      "labels": [
+        "AssuranceArtifact",
+        "Evidence"
+      ],
+      "properties": {
+        "name": "GearSequencer Test Report",
+        "identifier": "EVD-LGS-001",
+        "sourceSystem": "TestReport"
+      }
+    },
+    {
+      "id": "EVD-LGS-002",
+      "labels": [
+        "AssuranceArtifact",
+        "Evidence"
+      ],
+      "properties": {
+        "name": "Landing Gear MISRA Report",
+        "identifier": "EVD-LGS-002",
+        "sourceSystem": "StaticAnalysis"
+      }
+    },
+    {
+      "id": "CLAIM-LGS-001",
+      "labels": [
+        "AssuranceArtifact",
+        "ComplianceClaim"
+      ],
+      "properties": {
+        "name": "Landing Gear Verification Complete",
+        "identifier": "CLAIM-LGS-001",
+        "status": "Asserted"
+      }
+    },
+    {
+      "id": "CASE-LGS-001",
+      "labels": [
+        "AssuranceArtifact",
+        "AssuranceCase"
+      ],
+      "properties": {
+        "name": "Landing Gear Assurance Case",
+        "identifier": "CASE-LGS-001",
+        "status": "InProgress"
+      }
+    },
+    {
+      "id": "HAZ-LGS-001",
+      "labels": [
+        "SafetyArtifact",
+        "Hazard"
+      ],
+      "properties": {
+        "name": "Gear Collapse On Landing",
+        "identifier": "HAZ-LGS-001",
+        "criticality": "Hazardous"
+      }
+    },
+    {
+      "id": "SC-LGS-001",
+      "labels": [
+        "SafetyArtifact",
+        "SafetyControl"
+      ],
+      "properties": {
+        "name": "Landing Gear Protection",
+        "identifier": "SC-LGS-001",
+        "status": "Implemented"
+      }
+    },
+    {
+      "id": "WI-LGS-001",
+      "labels": [
+        "WorkManagementEntity",
+        "WorkItem"
+      ],
+      "properties": {
+        "name": "Implement GearSequencer",
+        "identifier": "WI-LGS-001",
+        "status": "Done"
+      }
+    },
+    {
+      "id": "CR-LGS-001",
+      "labels": [
+        "WorkManagementEntity",
+        "ChangeRequest"
+      ],
+      "properties": {
+        "name": "Refine Landing Gear Threshold",
+        "identifier": "CR-LGS-001",
+        "status": "Approved"
+      }
+    },
+    {
+      "id": "DEF-LGS-001",
+      "labels": [
+        "WorkManagementEntity",
+        "Defect"
+      ],
+      "properties": {
+        "name": "GearSequencer Edge-case Defect",
+        "identifier": "DEF-LGS-001",
+        "status": "Closed"
+      }
+    },
+    {
+      "id": "PR-LGS-001",
+      "labels": [
+        "WorkManagementEntity",
+        "PullRequest"
+      ],
+      "properties": {
+        "name": "PR GearSequencer Fix",
+        "identifier": "PR-LGS-001",
+        "status": "Merged"
+      }
+    },
+    {
+      "id": "PIPE-LGS",
+      "labels": [
+        "WorkManagementEntity",
+        "PipelineRun"
+      ],
+      "properties": {
+        "name": "Landing Gear CI Run",
+        "identifier": "PIPE-LGS",
+        "sourceSystem": "AzureDevOps",
+        "resultStatus": "PASSED"
+      }
+    },
+    {
+      "id": "BASE-LGS-R1",
+      "labels": [
+        "ConfigurationArtifact",
+        "ReleaseBaseline"
+      ],
+      "properties": {
+        "name": "Landing Gear Release R1",
+        "identifier": "BASE-LGS-R1",
+        "baselineTag": "LGS-R1",
+        "status": "Approved"
+      }
+    },
+    {
+      "id": "CI-LGS-001",
+      "labels": [
+        "ConfigurationArtifact",
+        "ConfigurationItem"
+      ],
+      "properties": {
+        "name": "Landing Gear Software Load",
+        "identifier": "CI-LGS-001",
+        "version": "2.0.1"
+      }
+    },
+    {
+      "id": "TEAM-LGS",
+      "labels": [
+        "Actor",
+        "Team"
+      ],
+      "properties": {
+        "name": "Landing Gear Team",
+        "identifier": "TEAM-LGS"
+      }
+    },
+    {
+      "id": "PERSON-LGS",
+      "labels": [
+        "Actor",
+        "Person"
+      ],
+      "properties": {
+        "name": "Landing Gear Engineer",
+        "identifier": "PERSON-LGS"
+      }
+    },
+    {
+      "id": "SYS-FUEL-001",
+      "labels": [
+        "Requirement",
+        "SystemRequirement"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring Requirement",
+        "identifier": "SYS-FUEL-001",
+        "description": "The system shall compute and display usable fuel quantity.",
+        "status": "Approved",
+        "assuranceLevel": "DAL-B",
+        "criticality": "Hazardous"
+      }
+    },
+    {
+      "id": "SWR-FUEL-001",
+      "labels": [
+        "Requirement",
+        "SoftwareRequirement"
+      ],
+      "properties": {
+        "name": "FuelQuantityEstimator Requirement",
+        "identifier": "SWR-FUEL-001",
+        "description": "Software shall estimate usable fuel within +/- 2 percent.",
+        "status": "Approved",
+        "assuranceLevel": "DAL-B"
+      }
+    },
+    {
+      "id": "SWR-FUEL-002",
+      "labels": [
+        "Requirement",
+        "SoftwareRequirement"
+      ],
+      "properties": {
+        "name": "LowFuelAnnunciator Requirement",
+        "identifier": "SWR-FUEL-002",
+        "description": "Software shall annunciate low fuel at 5 US gal usable.",
+        "status": "Approved",
+        "assuranceLevel": "DAL-B"
+      }
+    },
+    {
+      "id": "INT-FUEL-001",
+      "labels": [
+        "Requirement",
+        "InterfaceRequirement"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring Bus Interface",
+        "identifier": "INT-FUEL-001",
+        "description": "Data exchanged with the avionics bus.",
+        "status": "Approved"
+      }
+    },
+    {
+      "id": "ARC-FUEL-001",
+      "labels": [
+        "ImplementationArtifact",
+        "ArchitectureElement"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring Design",
+        "identifier": "ARC-FUEL-001",
+        "description": "Design of the fuel monitoring software.",
+        "status": "Approved"
+      }
+    },
+    {
+      "id": "SWC-FUEL-001",
+      "labels": [
+        "ImplementationArtifact",
+        "SoftwareComponent"
+      ],
+      "properties": {
+        "name": "FuelQuantityEstimator",
+        "identifier": "SWC-FUEL-001",
+        "version": "0.9.0",
+        "status": "Released",
+        "assuranceLevel": "DAL-B"
+      }
+    },
+    {
+      "id": "SWC-FUEL-002",
+      "labels": [
+        "ImplementationArtifact",
+        "SoftwareComponent"
+      ],
+      "properties": {
+        "name": "LowFuelAnnunciator",
+        "identifier": "SWC-FUEL-002",
+        "version": "0.9.0",
+        "status": "Released",
+        "assuranceLevel": "DAL-B"
+      }
+    },
+    {
+      "id": "CODE-FUEL-001",
+      "labels": [
+        "ImplementationArtifact",
+        "CodeModule"
+      ],
+      "properties": {
+        "name": "fuelquantityestimator.c",
+        "identifier": "CODE-FUEL-001",
+        "commitSha": "fuela1b2c3",
+        "version": "0.9.0"
+      }
+    },
+    {
+      "id": "CODE-FUEL-002",
+      "labels": [
+        "ImplementationArtifact",
+        "CodeModule"
+      ],
+      "properties": {
+        "name": "lowfuelannunciator.c",
+        "identifier": "CODE-FUEL-002",
+        "commitSha": "fueld4e5f6",
+        "version": "0.9.0"
+      }
+    },
+    {
+      "id": "TC-FUEL-001",
+      "labels": [
+        "VerificationArtifact",
+        "TestCase"
+      ],
+      "properties": {
+        "name": "FuelQuantityEstimator Test",
+        "identifier": "TC-FUEL-001",
+        "description": "Verifies FuelQuantityEstimator."
+      }
+    },
+    {
+      "id": "TC-FUEL-002",
+      "labels": [
+        "VerificationArtifact",
+        "TestCase"
+      ],
+      "properties": {
+        "name": "LowFuelAnnunciator Test",
+        "identifier": "TC-FUEL-002",
+        "description": "Verifies LowFuelAnnunciator."
+      }
+    },
+    {
+      "id": "TR-FUEL-001",
+      "labels": [
+        "VerificationArtifact",
+        "TestResult"
+      ],
+      "properties": {
+        "name": "FuelQuantityEstimator Result",
+        "identifier": "TR-FUEL-001",
+        "resultStatus": "PASSED"
+      }
+    },
+    {
+      "id": "TR-FUEL-002",
+      "labels": [
+        "VerificationArtifact",
+        "TestResult"
+      ],
+      "properties": {
+        "name": "LowFuelAnnunciator Result",
+        "identifier": "TR-FUEL-002",
+        "resultStatus": "PASSED"
+      }
+    },
+    {
+      "id": "REV-FUEL-001",
+      "labels": [
+        "VerificationArtifact",
+        "ReviewRecord"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring Code Review",
+        "identifier": "REV-FUEL-001",
+        "resultStatus": "Accepted"
+      }
+    },
+    {
+      "id": "SA-FUEL-001",
+      "labels": [
+        "VerificationArtifact",
+        "StaticAnalysisResult"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring MISRA C Analysis",
+        "identifier": "SA-FUEL-001",
+        "resultStatus": "PASSED"
+      }
+    },
+    {
+      "id": "EVD-FUEL-001",
+      "labels": [
+        "AssuranceArtifact",
+        "Evidence"
+      ],
+      "properties": {
+        "name": "FuelQuantityEstimator Test Report",
+        "identifier": "EVD-FUEL-001",
+        "sourceSystem": "TestReport"
+      }
+    },
+    {
+      "id": "EVD-FUEL-002",
+      "labels": [
+        "AssuranceArtifact",
+        "Evidence"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring MISRA Report",
+        "identifier": "EVD-FUEL-002",
+        "sourceSystem": "StaticAnalysis"
+      }
+    },
+    {
+      "id": "CLAIM-FUEL-001",
+      "labels": [
+        "AssuranceArtifact",
+        "ComplianceClaim"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring Verification Complete",
+        "identifier": "CLAIM-FUEL-001",
+        "status": "Asserted"
+      }
+    },
+    {
+      "id": "CASE-FUEL-001",
+      "labels": [
+        "AssuranceArtifact",
+        "AssuranceCase"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring Assurance Case",
+        "identifier": "CASE-FUEL-001",
+        "status": "InProgress"
+      }
+    },
+    {
+      "id": "HAZ-FUEL-001",
+      "labels": [
+        "SafetyArtifact",
+        "Hazard"
+      ],
+      "properties": {
+        "name": "Fuel Exhaustion In Flight",
+        "identifier": "HAZ-FUEL-001",
+        "criticality": "Hazardous"
+      }
+    },
+    {
+      "id": "SC-FUEL-001",
+      "labels": [
+        "SafetyArtifact",
+        "SafetyControl"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring Protection",
+        "identifier": "SC-FUEL-001",
+        "status": "Implemented"
+      }
+    },
+    {
+      "id": "WI-FUEL-001",
+      "labels": [
+        "WorkManagementEntity",
+        "WorkItem"
+      ],
+      "properties": {
+        "name": "Implement FuelQuantityEstimator",
+        "identifier": "WI-FUEL-001",
+        "status": "Done"
+      }
+    },
+    {
+      "id": "CR-FUEL-001",
+      "labels": [
+        "WorkManagementEntity",
+        "ChangeRequest"
+      ],
+      "properties": {
+        "name": "Refine Fuel Monitoring Threshold",
+        "identifier": "CR-FUEL-001",
+        "status": "Approved"
+      }
+    },
+    {
+      "id": "DEF-FUEL-001",
+      "labels": [
+        "WorkManagementEntity",
+        "Defect"
+      ],
+      "properties": {
+        "name": "FuelQuantityEstimator Edge-case Defect",
+        "identifier": "DEF-FUEL-001",
+        "status": "Closed"
+      }
+    },
+    {
+      "id": "PR-FUEL-001",
+      "labels": [
+        "WorkManagementEntity",
+        "PullRequest"
+      ],
+      "properties": {
+        "name": "PR FuelQuantityEstimator Fix",
+        "identifier": "PR-FUEL-001",
+        "status": "Merged"
+      }
+    },
+    {
+      "id": "PIPE-FUEL",
+      "labels": [
+        "WorkManagementEntity",
+        "PipelineRun"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring CI Run",
+        "identifier": "PIPE-FUEL",
+        "sourceSystem": "AzureDevOps",
+        "resultStatus": "PASSED"
+      }
+    },
+    {
+      "id": "BASE-FUEL-R1",
+      "labels": [
+        "ConfigurationArtifact",
+        "ReleaseBaseline"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring Release R1",
+        "identifier": "BASE-FUEL-R1",
+        "baselineTag": "FUEL-R1",
+        "status": "Blocked"
+      }
+    },
+    {
+      "id": "CI-FUEL-001",
+      "labels": [
+        "ConfigurationArtifact",
+        "ConfigurationItem"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring Software Load",
+        "identifier": "CI-FUEL-001",
+        "version": "0.9.0"
+      }
+    },
+    {
+      "id": "TEAM-FUEL",
+      "labels": [
+        "Actor",
+        "Team"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring Team",
+        "identifier": "TEAM-FUEL"
+      }
+    },
+    {
+      "id": "PERSON-FUEL",
+      "labels": [
+        "Actor",
+        "Person"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring Engineer",
+        "identifier": "PERSON-FUEL"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "id": "sr1",
+      "type": "DERIVES_FROM",
+      "startNode": "SWR-FCS-001",
+      "endNode": "SYS-FCS-001"
+    },
+    {
+      "id": "sr2",
+      "type": "DERIVES_FROM",
+      "startNode": "SWR-FCS-002",
+      "endNode": "SYS-FCS-001"
+    },
+    {
+      "id": "sr3",
+      "type": "DERIVES_FROM",
+      "startNode": "INT-FCS-001",
+      "endNode": "SYS-FCS-001"
+    },
+    {
+      "id": "sr4",
+      "type": "SATISFIES",
+      "startNode": "ARC-FCS-001",
+      "endNode": "SWR-FCS-001"
+    },
+    {
+      "id": "sr5",
+      "type": "IMPLEMENTS",
+      "startNode": "SWC-FCS-001",
+      "endNode": "ARC-FCS-001"
+    },
+    {
+      "id": "sr6",
+      "type": "SATISFIES",
+      "startNode": "SWC-FCS-001",
+      "endNode": "SWR-FCS-001"
+    },
+    {
+      "id": "sr7",
+      "type": "SATISFIES",
+      "startNode": "SWC-FCS-002",
+      "endNode": "SWR-FCS-002"
+    },
+    {
+      "id": "sr8",
+      "type": "IMPLEMENTS",
+      "startNode": "CODE-FCS-001",
+      "endNode": "SWC-FCS-001"
+    },
+    {
+      "id": "sr9",
+      "type": "IMPLEMENTS",
+      "startNode": "CODE-FCS-002",
+      "endNode": "SWC-FCS-002"
+    },
+    {
+      "id": "sr10",
+      "type": "VERIFIES",
+      "startNode": "TC-FCS-001",
+      "endNode": "SWR-FCS-001"
+    },
+    {
+      "id": "sr11",
+      "type": "VERIFIES",
+      "startNode": "TC-FCS-002",
+      "endNode": "SWR-FCS-002"
+    },
+    {
+      "id": "sr12",
+      "type": "PRODUCES",
+      "startNode": "TC-FCS-001",
+      "endNode": "TR-FCS-001"
+    },
+    {
+      "id": "sr13",
+      "type": "PRODUCES",
+      "startNode": "TC-FCS-002",
+      "endNode": "TR-FCS-002"
+    },
+    {
+      "id": "sr14",
+      "type": "REVIEWS",
+      "startNode": "REV-FCS-001",
+      "endNode": "CODE-FCS-001"
+    },
+    {
+      "id": "sr15",
+      "type": "ANALYSES",
+      "startNode": "SA-FCS-001",
+      "endNode": "CODE-FCS-001"
+    },
+    {
+      "id": "sr16",
+      "type": "PRODUCES",
+      "startNode": "TR-FCS-001",
+      "endNode": "EVD-FCS-001"
+    },
+    {
+      "id": "sr17",
+      "type": "PRODUCES",
+      "startNode": "SA-FCS-001",
+      "endNode": "EVD-FCS-002"
+    },
+    {
+      "id": "sr18",
+      "type": "USES_EVIDENCE",
+      "startNode": "CLAIM-FCS-001",
+      "endNode": "EVD-FCS-001"
+    },
+    {
+      "id": "sr19",
+      "type": "USES_EVIDENCE",
+      "startNode": "CLAIM-FCS-001",
+      "endNode": "EVD-FCS-002"
+    },
+    {
+      "id": "sr20",
+      "type": "INCLUDES_CLAIM",
+      "startNode": "CASE-FCS-001",
+      "endNode": "CLAIM-FCS-001"
+    },
+    {
+      "id": "sr21",
+      "type": "MITIGATES",
+      "startNode": "SC-FCS-001",
+      "endNode": "HAZ-FCS-001"
+    },
+    {
+      "id": "sr22",
+      "type": "TRACES_TO_HAZARD",
+      "startNode": "SWR-FCS-001",
+      "endNode": "HAZ-FCS-001"
+    },
+    {
+      "id": "sr23",
+      "type": "IMPLEMENTED_BY",
+      "startNode": "SC-FCS-001",
+      "endNode": "SWC-FCS-001"
+    },
+    {
+      "id": "sr24",
+      "type": "IMPLEMENTS_WORK",
+      "startNode": "WI-FCS-001",
+      "endNode": "SWC-FCS-001"
+    },
+    {
+      "id": "sr25",
+      "type": "AFFECTS",
+      "startNode": "CR-FCS-001",
+      "endNode": "SWR-FCS-001"
+    },
+    {
+      "id": "sr26",
+      "type": "AFFECTS",
+      "startNode": "DEF-FCS-001",
+      "endNode": "SWC-FCS-001"
+    },
+    {
+      "id": "sr27",
+      "type": "RESOLVES",
+      "startNode": "PR-FCS-001",
+      "endNode": "DEF-FCS-001"
+    },
+    {
+      "id": "sr28",
+      "type": "EXECUTES",
+      "startNode": "PIPE-FCS",
+      "endNode": "TC-FCS-001"
+    },
+    {
+      "id": "sr29",
+      "type": "EXECUTES",
+      "startNode": "PIPE-FCS",
+      "endNode": "TC-FCS-002"
+    },
+    {
+      "id": "sr30",
+      "type": "INCLUDED_IN_BASELINE",
+      "startNode": "SWC-FCS-001",
+      "endNode": "BASE-FCS-R1"
+    },
+    {
+      "id": "sr31",
+      "type": "INCLUDED_IN_BASELINE",
+      "startNode": "SWC-FCS-002",
+      "endNode": "BASE-FCS-R1"
+    },
+    {
+      "id": "sr32",
+      "type": "HAS_CONFIGURATION_ITEM",
+      "startNode": "BASE-FCS-R1",
+      "endNode": "CI-FCS-001"
+    },
+    {
+      "id": "sr33",
+      "type": "OWNED_BY",
+      "startNode": "SWC-FCS-001",
+      "endNode": "TEAM-FCS"
+    },
+    {
+      "id": "sr34",
+      "type": "ASSIGNED_TO",
+      "startNode": "PERSON-FCS",
+      "endNode": "WI-FCS-001"
+    },
+    {
+      "id": "sr35",
+      "type": "MEMBER_OF",
+      "startNode": "PERSON-FCS",
+      "endNode": "TEAM-FCS"
+    },
+    {
+      "id": "sr36",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-FCS-001",
+      "endNode": "OBJ-A7-1"
+    },
+    {
+      "id": "sr37",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-FCS-001",
+      "endNode": "OBJ-A7-2"
+    },
+    {
+      "id": "sr38",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-FCS-001",
+      "endNode": "OBJ-A5-1"
+    },
+    {
+      "id": "sr39",
+      "type": "MEMBER_OF",
+      "startNode": "PERSON-FCS",
+      "endNode": "TEAM-SQA"
+    },
+    {
+      "id": "sr40",
+      "type": "ALLOCATED_TO",
+      "startNode": "SYS-FCS-001",
+      "endNode": "flightControls"
+    },
+    {
+      "id": "sr41",
+      "type": "REALISES",
+      "startNode": "SWC-FCS-001",
+      "endNode": "flightControls"
+    },
+    {
+      "id": "sr42",
+      "type": "USES_INTERFACE",
+      "startNode": "INT-FCS-001",
+      "endNode": "avionics"
+    },
+    {
+      "id": "sr43",
+      "type": "ENDANGERS",
+      "startNode": "HAZ-FCS-001",
+      "endNode": "flightControls"
+    },
+    {
+      "id": "sr44",
+      "type": "INSTALLED_ON",
+      "startNode": "BASE-FCS-R1",
+      "endNode": "G-ECHO"
+    },
+    {
+      "id": "sr45",
+      "type": "DEPLOYED_ON",
+      "startNode": "CI-FCS-001",
+      "endNode": "flightControls"
+    },
+    {
+      "id": "sr46",
+      "type": "DERIVES_FROM",
+      "startNode": "SWR-LGS-001",
+      "endNode": "SYS-LGS-001"
+    },
+    {
+      "id": "sr47",
+      "type": "DERIVES_FROM",
+      "startNode": "SWR-LGS-002",
+      "endNode": "SYS-LGS-001"
+    },
+    {
+      "id": "sr48",
+      "type": "DERIVES_FROM",
+      "startNode": "INT-LGS-001",
+      "endNode": "SYS-LGS-001"
+    },
+    {
+      "id": "sr49",
+      "type": "SATISFIES",
+      "startNode": "ARC-LGS-001",
+      "endNode": "SWR-LGS-001"
+    },
+    {
+      "id": "sr50",
+      "type": "IMPLEMENTS",
+      "startNode": "SWC-LGS-001",
+      "endNode": "ARC-LGS-001"
+    },
+    {
+      "id": "sr51",
+      "type": "SATISFIES",
+      "startNode": "SWC-LGS-001",
+      "endNode": "SWR-LGS-001"
+    },
+    {
+      "id": "sr52",
+      "type": "SATISFIES",
+      "startNode": "SWC-LGS-002",
+      "endNode": "SWR-LGS-002"
+    },
+    {
+      "id": "sr53",
+      "type": "IMPLEMENTS",
+      "startNode": "CODE-LGS-001",
+      "endNode": "SWC-LGS-001"
+    },
+    {
+      "id": "sr54",
+      "type": "IMPLEMENTS",
+      "startNode": "CODE-LGS-002",
+      "endNode": "SWC-LGS-002"
+    },
+    {
+      "id": "sr55",
+      "type": "VERIFIES",
+      "startNode": "TC-LGS-001",
+      "endNode": "SWR-LGS-001"
+    },
+    {
+      "id": "sr56",
+      "type": "VERIFIES",
+      "startNode": "TC-LGS-002",
+      "endNode": "SWR-LGS-002"
+    },
+    {
+      "id": "sr57",
+      "type": "PRODUCES",
+      "startNode": "TC-LGS-001",
+      "endNode": "TR-LGS-001"
+    },
+    {
+      "id": "sr58",
+      "type": "PRODUCES",
+      "startNode": "TC-LGS-002",
+      "endNode": "TR-LGS-002"
+    },
+    {
+      "id": "sr59",
+      "type": "REVIEWS",
+      "startNode": "REV-LGS-001",
+      "endNode": "CODE-LGS-001"
+    },
+    {
+      "id": "sr60",
+      "type": "ANALYSES",
+      "startNode": "SA-LGS-001",
+      "endNode": "CODE-LGS-001"
+    },
+    {
+      "id": "sr61",
+      "type": "PRODUCES",
+      "startNode": "TR-LGS-001",
+      "endNode": "EVD-LGS-001"
+    },
+    {
+      "id": "sr62",
+      "type": "PRODUCES",
+      "startNode": "SA-LGS-001",
+      "endNode": "EVD-LGS-002"
+    },
+    {
+      "id": "sr63",
+      "type": "USES_EVIDENCE",
+      "startNode": "CLAIM-LGS-001",
+      "endNode": "EVD-LGS-001"
+    },
+    {
+      "id": "sr64",
+      "type": "USES_EVIDENCE",
+      "startNode": "CLAIM-LGS-001",
+      "endNode": "EVD-LGS-002"
+    },
+    {
+      "id": "sr65",
+      "type": "INCLUDES_CLAIM",
+      "startNode": "CASE-LGS-001",
+      "endNode": "CLAIM-LGS-001"
+    },
+    {
+      "id": "sr66",
+      "type": "MITIGATES",
+      "startNode": "SC-LGS-001",
+      "endNode": "HAZ-LGS-001"
+    },
+    {
+      "id": "sr67",
+      "type": "TRACES_TO_HAZARD",
+      "startNode": "SWR-LGS-001",
+      "endNode": "HAZ-LGS-001"
+    },
+    {
+      "id": "sr68",
+      "type": "IMPLEMENTED_BY",
+      "startNode": "SC-LGS-001",
+      "endNode": "SWC-LGS-001"
+    },
+    {
+      "id": "sr69",
+      "type": "IMPLEMENTS_WORK",
+      "startNode": "WI-LGS-001",
+      "endNode": "SWC-LGS-001"
+    },
+    {
+      "id": "sr70",
+      "type": "AFFECTS",
+      "startNode": "CR-LGS-001",
+      "endNode": "SWR-LGS-001"
+    },
+    {
+      "id": "sr71",
+      "type": "AFFECTS",
+      "startNode": "DEF-LGS-001",
+      "endNode": "SWC-LGS-001"
+    },
+    {
+      "id": "sr72",
+      "type": "RESOLVES",
+      "startNode": "PR-LGS-001",
+      "endNode": "DEF-LGS-001"
+    },
+    {
+      "id": "sr73",
+      "type": "EXECUTES",
+      "startNode": "PIPE-LGS",
+      "endNode": "TC-LGS-001"
+    },
+    {
+      "id": "sr74",
+      "type": "EXECUTES",
+      "startNode": "PIPE-LGS",
+      "endNode": "TC-LGS-002"
+    },
+    {
+      "id": "sr75",
+      "type": "INCLUDED_IN_BASELINE",
+      "startNode": "SWC-LGS-001",
+      "endNode": "BASE-LGS-R1"
+    },
+    {
+      "id": "sr76",
+      "type": "INCLUDED_IN_BASELINE",
+      "startNode": "SWC-LGS-002",
+      "endNode": "BASE-LGS-R1"
+    },
+    {
+      "id": "sr77",
+      "type": "HAS_CONFIGURATION_ITEM",
+      "startNode": "BASE-LGS-R1",
+      "endNode": "CI-LGS-001"
+    },
+    {
+      "id": "sr78",
+      "type": "OWNED_BY",
+      "startNode": "SWC-LGS-001",
+      "endNode": "TEAM-LGS"
+    },
+    {
+      "id": "sr79",
+      "type": "ASSIGNED_TO",
+      "startNode": "PERSON-LGS",
+      "endNode": "WI-LGS-001"
+    },
+    {
+      "id": "sr80",
+      "type": "MEMBER_OF",
+      "startNode": "PERSON-LGS",
+      "endNode": "TEAM-LGS"
+    },
+    {
+      "id": "sr81",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-LGS-001",
+      "endNode": "OBJ-A7-1"
+    },
+    {
+      "id": "sr82",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-LGS-001",
+      "endNode": "OBJ-A7-2"
+    },
+    {
+      "id": "sr83",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-LGS-001",
+      "endNode": "OBJ-A5-1"
+    },
+    {
+      "id": "sr84",
+      "type": "MEMBER_OF",
+      "startNode": "PERSON-LGS",
+      "endNode": "TEAM-SQA"
+    },
+    {
+      "id": "sr85",
+      "type": "ALLOCATED_TO",
+      "startNode": "SYS-LGS-001",
+      "endNode": "landingGear"
+    },
+    {
+      "id": "sr86",
+      "type": "REALISES",
+      "startNode": "SWC-LGS-001",
+      "endNode": "landingGear"
+    },
+    {
+      "id": "sr87",
+      "type": "USES_INTERFACE",
+      "startNode": "INT-LGS-001",
+      "endNode": "electrical"
+    },
+    {
+      "id": "sr88",
+      "type": "ENDANGERS",
+      "startNode": "HAZ-LGS-001",
+      "endNode": "landingGear"
+    },
+    {
+      "id": "sr89",
+      "type": "INSTALLED_ON",
+      "startNode": "BASE-LGS-R1",
+      "endNode": "G-ECHO"
+    },
+    {
+      "id": "sr90",
+      "type": "DEPLOYED_ON",
+      "startNode": "CI-LGS-001",
+      "endNode": "landingGear"
+    },
+    {
+      "id": "sr91",
+      "type": "DERIVES_FROM",
+      "startNode": "SWR-FUEL-001",
+      "endNode": "SYS-FUEL-001"
+    },
+    {
+      "id": "sr92",
+      "type": "DERIVES_FROM",
+      "startNode": "SWR-FUEL-002",
+      "endNode": "SYS-FUEL-001"
+    },
+    {
+      "id": "sr93",
+      "type": "DERIVES_FROM",
+      "startNode": "INT-FUEL-001",
+      "endNode": "SYS-FUEL-001"
+    },
+    {
+      "id": "sr94",
+      "type": "SATISFIES",
+      "startNode": "ARC-FUEL-001",
+      "endNode": "SWR-FUEL-001"
+    },
+    {
+      "id": "sr95",
+      "type": "IMPLEMENTS",
+      "startNode": "SWC-FUEL-001",
+      "endNode": "ARC-FUEL-001"
+    },
+    {
+      "id": "sr96",
+      "type": "SATISFIES",
+      "startNode": "SWC-FUEL-001",
+      "endNode": "SWR-FUEL-001"
+    },
+    {
+      "id": "sr97",
+      "type": "SATISFIES",
+      "startNode": "SWC-FUEL-002",
+      "endNode": "SWR-FUEL-002"
+    },
+    {
+      "id": "sr98",
+      "type": "IMPLEMENTS",
+      "startNode": "CODE-FUEL-001",
+      "endNode": "SWC-FUEL-001"
+    },
+    {
+      "id": "sr99",
+      "type": "IMPLEMENTS",
+      "startNode": "CODE-FUEL-002",
+      "endNode": "SWC-FUEL-002"
+    },
+    {
+      "id": "sr100",
+      "type": "VERIFIES",
+      "startNode": "TC-FUEL-001",
+      "endNode": "SWR-FUEL-001"
+    },
+    {
+      "id": "sr101",
+      "type": "VERIFIES",
+      "startNode": "TC-FUEL-002",
+      "endNode": "SWR-FUEL-002"
+    },
+    {
+      "id": "sr102",
+      "type": "PRODUCES",
+      "startNode": "TC-FUEL-001",
+      "endNode": "TR-FUEL-001"
+    },
+    {
+      "id": "sr103",
+      "type": "PRODUCES",
+      "startNode": "TC-FUEL-002",
+      "endNode": "TR-FUEL-002"
+    },
+    {
+      "id": "sr104",
+      "type": "REVIEWS",
+      "startNode": "REV-FUEL-001",
+      "endNode": "CODE-FUEL-001"
+    },
+    {
+      "id": "sr105",
+      "type": "ANALYSES",
+      "startNode": "SA-FUEL-001",
+      "endNode": "CODE-FUEL-001"
+    },
+    {
+      "id": "sr106",
+      "type": "PRODUCES",
+      "startNode": "TR-FUEL-001",
+      "endNode": "EVD-FUEL-001"
+    },
+    {
+      "id": "sr107",
+      "type": "PRODUCES",
+      "startNode": "SA-FUEL-001",
+      "endNode": "EVD-FUEL-002"
+    },
+    {
+      "id": "sr108",
+      "type": "USES_EVIDENCE",
+      "startNode": "CLAIM-FUEL-001",
+      "endNode": "EVD-FUEL-001"
+    },
+    {
+      "id": "sr109",
+      "type": "USES_EVIDENCE",
+      "startNode": "CLAIM-FUEL-001",
+      "endNode": "EVD-FUEL-002"
+    },
+    {
+      "id": "sr110",
+      "type": "INCLUDES_CLAIM",
+      "startNode": "CASE-FUEL-001",
+      "endNode": "CLAIM-FUEL-001"
+    },
+    {
+      "id": "sr111",
+      "type": "MITIGATES",
+      "startNode": "SC-FUEL-001",
+      "endNode": "HAZ-FUEL-001"
+    },
+    {
+      "id": "sr112",
+      "type": "TRACES_TO_HAZARD",
+      "startNode": "SWR-FUEL-001",
+      "endNode": "HAZ-FUEL-001"
+    },
+    {
+      "id": "sr113",
+      "type": "IMPLEMENTED_BY",
+      "startNode": "SC-FUEL-001",
+      "endNode": "SWC-FUEL-001"
+    },
+    {
+      "id": "sr114",
+      "type": "IMPLEMENTS_WORK",
+      "startNode": "WI-FUEL-001",
+      "endNode": "SWC-FUEL-001"
+    },
+    {
+      "id": "sr115",
+      "type": "AFFECTS",
+      "startNode": "CR-FUEL-001",
+      "endNode": "SWR-FUEL-001"
+    },
+    {
+      "id": "sr116",
+      "type": "AFFECTS",
+      "startNode": "DEF-FUEL-001",
+      "endNode": "SWC-FUEL-001"
+    },
+    {
+      "id": "sr117",
+      "type": "RESOLVES",
+      "startNode": "PR-FUEL-001",
+      "endNode": "DEF-FUEL-001"
+    },
+    {
+      "id": "sr118",
+      "type": "EXECUTES",
+      "startNode": "PIPE-FUEL",
+      "endNode": "TC-FUEL-001"
+    },
+    {
+      "id": "sr119",
+      "type": "EXECUTES",
+      "startNode": "PIPE-FUEL",
+      "endNode": "TC-FUEL-002"
+    },
+    {
+      "id": "sr120",
+      "type": "INCLUDED_IN_BASELINE",
+      "startNode": "SWC-FUEL-001",
+      "endNode": "BASE-FUEL-R1"
+    },
+    {
+      "id": "sr121",
+      "type": "INCLUDED_IN_BASELINE",
+      "startNode": "SWC-FUEL-002",
+      "endNode": "BASE-FUEL-R1"
+    },
+    {
+      "id": "sr122",
+      "type": "HAS_CONFIGURATION_ITEM",
+      "startNode": "BASE-FUEL-R1",
+      "endNode": "CI-FUEL-001"
+    },
+    {
+      "id": "sr123",
+      "type": "OWNED_BY",
+      "startNode": "SWC-FUEL-001",
+      "endNode": "TEAM-FUEL"
+    },
+    {
+      "id": "sr124",
+      "type": "ASSIGNED_TO",
+      "startNode": "PERSON-FUEL",
+      "endNode": "WI-FUEL-001"
+    },
+    {
+      "id": "sr125",
+      "type": "MEMBER_OF",
+      "startNode": "PERSON-FUEL",
+      "endNode": "TEAM-FUEL"
+    },
+    {
+      "id": "sr126",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-FUEL-001",
+      "endNode": "OBJ-A7-1"
+    },
+    {
+      "id": "sr127",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-FUEL-001",
+      "endNode": "OBJ-A7-2"
+    },
+    {
+      "id": "sr128",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-FUEL-001",
+      "endNode": "OBJ-A5-1"
+    },
+    {
+      "id": "sr129",
+      "type": "MEMBER_OF",
+      "startNode": "PERSON-FUEL",
+      "endNode": "TEAM-SQA"
+    },
+    {
+      "id": "sr130",
+      "type": "ALLOCATED_TO",
+      "startNode": "SYS-FUEL-001",
+      "endNode": "fuel"
+    },
+    {
+      "id": "sr131",
+      "type": "REALISES",
+      "startNode": "SWC-FUEL-001",
+      "endNode": "fuel"
+    },
+    {
+      "id": "sr132",
+      "type": "USES_INTERFACE",
+      "startNode": "INT-FUEL-001",
+      "endNode": "avionics"
+    },
+    {
+      "id": "sr133",
+      "type": "ENDANGERS",
+      "startNode": "HAZ-FUEL-001",
+      "endNode": "fuel"
+    },
+    {
+      "id": "sr134",
+      "type": "INSTALLED_ON",
+      "startNode": "BASE-FUEL-R1",
+      "endNode": "G-ECHO"
+    },
+    {
+      "id": "sr135",
+      "type": "DEPLOYED_ON",
+      "startNode": "CI-FUEL-001",
+      "endNode": "fuel"
+    },
+    {
+      "id": "sr136",
+      "type": "ASSIGNED_TO",
+      "startNode": "PERSON-DER",
+      "endNode": "OBJ-A7-1"
+    },
+    {
+      "id": "sr137",
+      "type": "MEMBER_OF",
+      "startNode": "PERSON-DER",
+      "endNode": "TEAM-SQA"
+    },
+    {
+      "id": "sr138",
+      "type": "RAISES",
+      "startNode": "CR-FCS-001",
+      "endNode": "WI-FCS-001"
+    },
+    {
+      "id": "sr139",
+      "type": "IMPLEMENTED_BY",
+      "startNode": "WI-FCS-001",
+      "endNode": "PR-FCS-001"
+    },
+    {
+      "id": "sr140",
+      "type": "MERGES",
+      "startNode": "PR-FCS-001",
+      "endNode": "CODE-FCS-001"
+    },
+    {
+      "id": "sr141",
+      "type": "TRIGGERS",
+      "startNode": "PR-FCS-001",
+      "endNode": "PIPE-FCS"
+    },
+    {
+      "id": "sr142",
+      "type": "REVIEWS",
+      "startNode": "REV-FCS-001",
+      "endNode": "PR-FCS-001"
+    },
+    {
+      "id": "sr143",
+      "type": "FOUND_BY",
+      "startNode": "DEF-FCS-001",
+      "endNode": "TR-FCS-002"
+    },
+    {
+      "id": "sr144",
+      "type": "AUTHORED",
+      "startNode": "PERSON-FCS",
+      "endNode": "PR-FCS-001"
+    },
+    {
+      "id": "sr145",
+      "type": "ANALYSES",
+      "startNode": "SA-FCS-001",
+      "endNode": "CODE-FCS-002"
+    },
+    {
+      "id": "sr146",
+      "type": "REVIEWS",
+      "startNode": "REV-FCS-001",
+      "endNode": "CODE-FCS-002"
+    },
+    {
+      "id": "sr147",
+      "type": "SATISFIES",
+      "startNode": "SWC-FCS-002",
+      "endNode": "INT-FCS-001"
+    },
+    {
+      "id": "sr148",
+      "type": "ASSURES",
+      "startNode": "CASE-FCS-001",
+      "endNode": "BASE-FCS-R1"
+    },
+    {
+      "id": "sr149",
+      "type": "APPROVES",
+      "startNode": "PERSON-DER",
+      "endNode": "CASE-FCS-001"
+    },
+    {
+      "id": "sr150",
+      "type": "RAISES",
+      "startNode": "CR-LGS-001",
+      "endNode": "WI-LGS-001"
+    },
+    {
+      "id": "sr151",
+      "type": "IMPLEMENTED_BY",
+      "startNode": "WI-LGS-001",
+      "endNode": "PR-LGS-001"
+    },
+    {
+      "id": "sr152",
+      "type": "MERGES",
+      "startNode": "PR-LGS-001",
+      "endNode": "CODE-LGS-001"
+    },
+    {
+      "id": "sr153",
+      "type": "TRIGGERS",
+      "startNode": "PR-LGS-001",
+      "endNode": "PIPE-LGS"
+    },
+    {
+      "id": "sr154",
+      "type": "REVIEWS",
+      "startNode": "REV-LGS-001",
+      "endNode": "PR-LGS-001"
+    },
+    {
+      "id": "sr155",
+      "type": "FOUND_BY",
+      "startNode": "DEF-LGS-001",
+      "endNode": "TR-LGS-002"
+    },
+    {
+      "id": "sr156",
+      "type": "AUTHORED",
+      "startNode": "PERSON-LGS",
+      "endNode": "PR-LGS-001"
+    },
+    {
+      "id": "sr157",
+      "type": "ANALYSES",
+      "startNode": "SA-LGS-001",
+      "endNode": "CODE-LGS-002"
+    },
+    {
+      "id": "sr158",
+      "type": "REVIEWS",
+      "startNode": "REV-LGS-001",
+      "endNode": "CODE-LGS-002"
+    },
+    {
+      "id": "sr159",
+      "type": "SATISFIES",
+      "startNode": "SWC-LGS-002",
+      "endNode": "INT-LGS-001"
+    },
+    {
+      "id": "sr160",
+      "type": "ASSURES",
+      "startNode": "CASE-LGS-001",
+      "endNode": "BASE-LGS-R1"
+    },
+    {
+      "id": "sr161",
+      "type": "APPROVES",
+      "startNode": "PERSON-DER",
+      "endNode": "CASE-LGS-001"
+    },
+    {
+      "id": "sr162",
+      "type": "RAISES",
+      "startNode": "CR-FUEL-001",
+      "endNode": "WI-FUEL-001"
+    },
+    {
+      "id": "sr163",
+      "type": "IMPLEMENTED_BY",
+      "startNode": "WI-FUEL-001",
+      "endNode": "PR-FUEL-001"
+    },
+    {
+      "id": "sr164",
+      "type": "MERGES",
+      "startNode": "PR-FUEL-001",
+      "endNode": "CODE-FUEL-001"
+    },
+    {
+      "id": "sr165",
+      "type": "TRIGGERS",
+      "startNode": "PR-FUEL-001",
+      "endNode": "PIPE-FUEL"
+    },
+    {
+      "id": "sr166",
+      "type": "REVIEWS",
+      "startNode": "REV-FUEL-001",
+      "endNode": "PR-FUEL-001"
+    },
+    {
+      "id": "sr167",
+      "type": "FOUND_BY",
+      "startNode": "DEF-FUEL-001",
+      "endNode": "TR-FUEL-002"
+    },
+    {
+      "id": "sr168",
+      "type": "AUTHORED",
+      "startNode": "PERSON-FUEL",
+      "endNode": "PR-FUEL-001"
+    },
+    {
+      "id": "sr169",
+      "type": "ANALYSES",
+      "startNode": "SA-FUEL-001",
+      "endNode": "CODE-FUEL-002"
+    },
+    {
+      "id": "sr170",
+      "type": "REVIEWS",
+      "startNode": "REV-FUEL-001",
+      "endNode": "CODE-FUEL-002"
+    },
+    {
+      "id": "sr171",
+      "type": "SATISFIES",
+      "startNode": "SWC-FUEL-002",
+      "endNode": "INT-FUEL-001"
+    },
+    {
+      "id": "sr172",
+      "type": "ASSURES",
+      "startNode": "CASE-FUEL-001",
+      "endNode": "BASE-FUEL-R1"
+    },
+    {
+      "id": "sr173",
+      "type": "APPROVES",
+      "startNode": "PERSON-DER",
+      "endNode": "CASE-FUEL-001"
+    }
+  ]
+}

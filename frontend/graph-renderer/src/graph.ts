@@ -1,4 +1,5 @@
 import type {
+  Domain,
   Graph,
   GraphNode,
   NodeStyle,
@@ -9,7 +10,9 @@ import type {
 } from './types'
 
 // Adapt a Neo4j/APOC graph export into the internal model used by the renderer.
-export function adaptNeo4j(data: RawGraph): Graph {
+// Every node is tagged with the domain it belongs to so the renderer can group,
+// toggle, and highlight cross-domain seams.
+export function adaptNeo4j(data: RawGraph, domain: Domain = 'aircraft'): Graph {
   const nodes = (data.nodes ?? []).map((n) => {
     const props = n.properties ?? {}
     const { name, ...rest } = props as { name?: unknown } & Record<string, unknown>
@@ -19,6 +22,7 @@ export function adaptNeo4j(data: RawGraph): Graph {
       type: labels[0] ?? '',
       sub: labels[1] ?? null,
       label: (name as string) || n.id,
+      domain,
       props: rest,
     }
   })
@@ -27,6 +31,23 @@ export function adaptNeo4j(data: RawGraph): Graph {
     target: r.endNode,
     rel: r.type,
   }))
+  return { nodes, links }
+}
+
+// Combine several adapted graphs into one. Nodes are de-duplicated by id (the
+// first occurrence wins) so a cross-domain edge can safely reference a node that
+// already exists in another domain's graph.
+export function mergeGraphs(...graphs: Graph[]): Graph {
+  const nodes: GraphNode[] = []
+  const seen = new Set<string>()
+  for (const g of graphs) {
+    for (const n of g.nodes) {
+      if (seen.has(n.id)) continue
+      seen.add(n.id)
+      nodes.push(n)
+    }
+  }
+  const links = graphs.flatMap((g) => g.links)
   return { nodes, links }
 }
 

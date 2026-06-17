@@ -65,11 +65,22 @@ help = "Run unit tests"
 cmd = "pytest tests/ -v"
 
 [tool.poe.tasks.import-graph]
-help = "Import data/knowledge-graph.json into Neo4j (pass --clear to wipe first)"
+help = "Import data/aircraft-knowledge-graph.json into Neo4j (pass --clear to wipe first)"
 cmd = "python scripts/import_graph.py"
 
+[tool.poe.tasks.import-sdlc]
+help = "Import data/sdlc-knowledge-graph.json (the engineering/SDLC overlay) into Neo4j; run AFTER import-graph so the cross-domain edges resolve"
+cmd = "python scripts/import_graph.py --file ../data/sdlc-knowledge-graph.json"
+
+[tool.poe.tasks.import-all]
+help = "Wipe Neo4j, then import the aircraft graph followed by the SDLC overlay (correct order so cross-domain edges resolve)"
+sequence = [
+  { cmd = "python scripts/import_graph.py --clear" },
+  { cmd = "python scripts/import_graph.py --file ../data/sdlc-knowledge-graph.json" },
+]
+
 [tool.poe.tasks.generate-ttl]
-help = "Regenerate data/small_plane_ontology.ttl from data/knowledge-graph.json (pass --check to verify)"
+help = "Regenerate data/aircraft-ontology.ttl from data/aircraft-knowledge-graph.json (pass --check to verify)"
 cmd = "python scripts/generate_ttl.py"
 
 [tool.poe.tasks.evaluate]

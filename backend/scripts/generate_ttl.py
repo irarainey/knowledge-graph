@@ -1,11 +1,11 @@
-"""Regenerate the Turtle ontology's instance graph from ``knowledge-graph.json``.
+"""Regenerate the Turtle ontology's instance graph from ``aircraft-knowledge-graph.json``.
 
-``data/small_plane_ontology.ttl`` is made of two parts:
+``data/aircraft-ontology.ttl`` is made of two parts:
 
 * a hand-written schema header (classes, object properties and datatype
   properties with rich ``rdfs:comment`` / ``rdfs:domain`` / ``rdfs:range``
   axioms), and
-* auto-generated sections that *mirror* ``data/knowledge-graph.json`` — stub
+* auto-generated sections that *mirror* ``data/aircraft-knowledge-graph.json`` — stub
   declarations for every class, object property and datatype property used by
   the data, followed by the individuals (the instance graph).
 
@@ -30,8 +30,8 @@ from typing import Any
 
 # Repo layout: <repo>/backend/scripts/generate_ttl.py -> <repo>/data/*
 _DATA_DIR = Path(__file__).resolve().parents[2] / "data"
-DEFAULT_JSON_PATH = _DATA_DIR / "knowledge-graph.json"
-DEFAULT_TTL_PATH = _DATA_DIR / "small_plane_ontology.ttl"
+DEFAULT_JSON_PATH = _DATA_DIR / "aircraft-knowledge-graph.json"
+DEFAULT_TTL_PATH = _DATA_DIR / "aircraft-ontology.ttl"
 
 # The hand-written schema ends where the first auto-generated section begins.
 _ADDITIONAL_MARKER = "#  ADDITIONAL CLASSES"
@@ -175,7 +175,7 @@ def build_additional_classes(nodes: list[dict[str, Any]], base_classes: set[str]
             lines.append(f"    rdfs:subClassOf spo:{parent} ;")
         lines.append(f'    rdfs:label "{_escape_literal(label)}"@en .')
         blocks.append("\n".join(lines))
-    return _banner("ADDITIONAL CLASSES  (auto-generated to mirror knowledge-graph.json)") + "\n" + "\n\n".join(blocks) + "\n"
+    return _banner("ADDITIONAL CLASSES  (auto-generated to mirror aircraft-knowledge-graph.json)") + "\n" + "\n\n".join(blocks) + "\n"
 
 
 def build_additional_object_properties(relationships: list[dict[str, Any]], base_obj: set[str]) -> str:
@@ -249,7 +249,7 @@ def build_individuals(nodes: list[dict[str, Any]], relationships: list[dict[str,
         lines[-1] = lines[-1][:-1].rstrip() + " ."
         blocks.append("\n".join(lines))
 
-    header = _banner("INDIVIDUALS  (instance graph \u2014 generated from knowledge-graph.json)")
+    header = _banner("INDIVIDUALS  (instance graph \u2014 generated from aircraft-knowledge-graph.json)")
     return header + "\n" + "\n\n".join(blocks) + "\n"
 
 

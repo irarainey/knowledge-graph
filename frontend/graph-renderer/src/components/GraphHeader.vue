@@ -26,8 +26,8 @@ function setAsOfDate(event: Event): void {
 <template>
   <header>
     <div class="brand">
-      <span class="brand-title">✈ Cessna 172S Skyhawk</span>
-      <span class="brand-sub">G-ECHO · Knowledge Graph</span>
+      <span class="brand-title">⬡ Knowledge Graph Explorer</span>
+      <span class="brand-sub">Operational + SDLC domains</span>
     </div>
 
     <div class="stats">

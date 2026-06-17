@@ -101,6 +101,31 @@ class Aggregate(BaseModel):
     field: str | None = Field(default=None, description="The field to aggregate; omit for count of rows.")
 
 
+class Direction(StrEnum):
+    """The direction a traversal hop follows a relationship, relative to the prior node."""
+
+    OUT = "out"
+    IN = "in"
+
+
+class RelationshipHop(BaseModel):
+    """One hop of a traversal: follow ``relationship`` to a connected ``entity``.
+
+    A hop is a *constraint* on the anchor entity, not a projection: it requires the matched
+    anchor (or the previous hop's node) to be connected, via ``relationship`` in ``direction``,
+    to a node of ``entity`` that satisfies the hop's ``filters``. Hops chain to express
+    multi-step paths. The query still returns only the anchor entity's fields.
+    """
+
+    relationship: str = Field(description="The relationship type to follow, e.g. 'ENDANGERS' (must be in the catalog).")
+    entity: str = Field(description="The connected entity (node label) at the far end of this hop.")
+    direction: Direction = Field(
+        default=Direction.OUT,
+        description="'out' follows (prev)-[:REL]->(entity); 'in' follows (prev)<-[:REL]-(entity).",
+    )
+    filters: list[Filter] = Field(default_factory=list, description="Optional field comparisons applied to the hop's entity.")
+
+
 class QueryIntent(BaseModel):
     """A typed, validated description of what to retrieve from the graph.
 
@@ -112,6 +137,10 @@ class QueryIntent(BaseModel):
     filters: list[Filter] = Field(default_factory=list, description="Field comparisons to apply.")
     aggregate: Aggregate | None = Field(default=None, description="An optional aggregate instead of returning rows.")
     limit: int | None = Field(default=None, description="Maximum rows to return (clamped to the configured cap).")
+    traverse: list[RelationshipHop] = Field(
+        default_factory=list,
+        description="Optional chain of relationship hops constraining the entity by what it is connected to.",
+    )
 
 
 class BuiltQuery(BaseModel):
@@ -262,10 +291,10 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
     has_gated = store.has_gated_categories(principal)
     classification_used = False
 
-    def classification_predicate() -> str:
+    def classification_predicate(var: str = "n") -> str:
         nonlocal classification_used
         classification_used = True
-        return f"(n.classification IS NULL OR n.classification IN ${_PARAM_CLASSIFICATIONS})"
+        return f"({var}.classification IS NULL OR {var}.classification IN ${_PARAM_CLASSIFICATIONS})"
 
     where: list[str] = []
     if not has_gated:
@@ -303,6 +332,58 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
         if has_gated and store.is_field_clearance_gated(principal, entity, flt_field):
             predicate = f"({classification_predicate()} AND {predicate})"
         where.append(predicate)
+
+    # --- WHERE: traversal constraints (nested EXISTS path filters) -----------------------
+    # A traversal hop constrains the anchor by what it is connected to, without projecting the
+    # far node. Each hop is validated independently against policy — the relationship type and
+    # its endpoint labels against the relationship catalog, the hop's target entity against the
+    # principal's grants, and each hop filter field against field visibility — then emitted as a
+    # nested EXISTS so unauthorised nodes never participate. Hops chain into nested EXISTS to
+    # express multi-step paths. The traversal never widens the projection: only the anchor is
+    # returned, so all existing redaction/aliasing applies unchanged.
+    if intent.traverse:
+        param_counter = [len(intent.filters)]
+
+        def build_hop_exists(hops: list[RelationshipHop], parent_var: str, parent_entity: str, depth: int) -> str:
+            hop = hops[0]
+            var = f"t{depth}"
+            rel = _safe_identifier(hop.relationship, "relationship")
+            target = hop.entity
+            if store.entity_catalog(target) is None or target not in principal.entities:
+                raise AuthorizationError(f"Entity '{target}' is not permitted for this identity.")
+            target_label = _safe_identifier(target, "entity")
+            # Direction maps the (from, to) the relationship catalog is keyed on: OUT keeps the
+            # prior node as 'from'; IN flips it (the edge points back from the hop node).
+            if hop.direction is Direction.OUT:
+                if not store.is_relationship_permitted(principal, parent_entity, hop.relationship, target):
+                    raise AuthorizationError(f"Relationship '{hop.relationship}' is not permitted for this identity.")
+                pattern = f"({parent_var})-[:`{rel}`]->({var}:`{target_label}`)"
+            else:
+                if not store.is_relationship_permitted(principal, target, hop.relationship, parent_entity):
+                    raise AuthorizationError(f"Relationship '{hop.relationship}' is not permitted for this identity.")
+                pattern = f"({parent_var})<-[:`{rel}`]-({var}:`{target_label}`)"
+            conditions: list[str] = []
+            # Mirror the anchor's whole-row classification filter on each hop node (for a
+            # non-gated principal) so an anchor cannot be discovered through a classified node.
+            if not has_gated:
+                conditions.append(classification_predicate(var))
+            for hop_flt in hop.filters:
+                hop_field = _canonical_field(hop_flt.field)
+                _require_visible(store, principal, target, hop_field)
+                safe_field = _safe_identifier(hop_field, "field")
+                param_counter[0] += 1
+                param = f"p{param_counter[0] - 1}"
+                parameters[param] = hop_flt.value
+                predicate = f"{var}.`{safe_field}` {hop_flt.op.value} ${param}"
+                if has_gated and store.is_field_clearance_gated(principal, target, hop_field):
+                    predicate = f"({classification_predicate(var)} AND {predicate})"
+                conditions.append(predicate)
+            if len(hops) > 1:
+                conditions.append(build_hop_exists(hops[1:], var, target, depth + 1))
+            inner_where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
+            return f"EXISTS {{ MATCH {pattern}{inner_where} }}"
+
+        where.append(build_hop_exists(intent.traverse, "n", entity, 0))
 
     # --- RETURN: aggregate (gated) or projected fields ----------------------------------
     if intent.aggregate is not None:

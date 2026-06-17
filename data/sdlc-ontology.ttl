@@ -1,0 +1,180 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix sdlc:  <https://example.org/aerospace-sdlc#> .
+@prefix spo:   <https://ontology.example.org/small-plane#> .
+
+# ─────────────────────────────────────────────────────────────
+#  Ontology Declaration
+#
+#  Semantic-tier artefact for the aerospace SDLC demo. It defines
+#  the meaning of the lifecycle/assurance entities and the edges
+#  that connect them, and the cross-domain properties that bind an
+#  SDLC artefact to the operational small-plane graph (spo:).
+# ─────────────────────────────────────────────────────────────
+sdlc:AerospaceSdlcOntology a owl:Ontology ;
+    rdfs:label "Aerospace SDLC Ontology"@en ;
+    rdfs:comment "A lightweight ontology for aircraft software lifecycle and assurance artefacts."@en ;
+    owl:versionInfo "0.1.0-demo" .
+
+
+# ═════════════════════════════════════════════════════════════
+#  CLASSES
+# ═════════════════════════════════════════════════════════════
+
+sdlc:LifecycleEntity a owl:Class ;
+    rdfs:label "Lifecycle Entity"@en ;
+    rdfs:comment "Root class for every SDLC artefact."@en .
+
+# ── Requirements ─────────────────────────────────────────────
+sdlc:Requirement a owl:Class ; rdfs:subClassOf sdlc:LifecycleEntity ; rdfs:label "Requirement"@en .
+sdlc:SystemRequirement a owl:Class ; rdfs:subClassOf sdlc:Requirement ; rdfs:label "System Requirement"@en .
+sdlc:SoftwareRequirement a owl:Class ; rdfs:subClassOf sdlc:Requirement ; rdfs:label "Software Requirement"@en .
+sdlc:InterfaceRequirement a owl:Class ; rdfs:subClassOf sdlc:Requirement ; rdfs:label "Interface Requirement"@en .
+
+# ── Implementation ───────────────────────────────────────────
+sdlc:ImplementationArtifact a owl:Class ; rdfs:subClassOf sdlc:LifecycleEntity ; rdfs:label "Implementation Artefact"@en .
+sdlc:ArchitectureElement a owl:Class ; rdfs:subClassOf sdlc:ImplementationArtifact ; rdfs:label "Architecture Element"@en .
+sdlc:SoftwareComponent a owl:Class ; rdfs:subClassOf sdlc:ImplementationArtifact ; rdfs:label "Software Component"@en .
+sdlc:CodeModule a owl:Class ; rdfs:subClassOf sdlc:ImplementationArtifact ; rdfs:label "Code Module"@en .
+
+# ── Verification ─────────────────────────────────────────────
+sdlc:VerificationArtifact a owl:Class ; rdfs:subClassOf sdlc:LifecycleEntity ; rdfs:label "Verification Artefact"@en .
+sdlc:TestCase a owl:Class ; rdfs:subClassOf sdlc:VerificationArtifact ; rdfs:label "Test Case"@en .
+sdlc:TestResult a owl:Class ; rdfs:subClassOf sdlc:VerificationArtifact ; rdfs:label "Test Result"@en .
+sdlc:ReviewRecord a owl:Class ; rdfs:subClassOf sdlc:VerificationArtifact ; rdfs:label "Review Record"@en .
+sdlc:StaticAnalysisResult a owl:Class ; rdfs:subClassOf sdlc:VerificationArtifact ; rdfs:label "Static Analysis Result"@en .
+
+# ── Assurance ────────────────────────────────────────────────
+sdlc:AssuranceArtifact a owl:Class ; rdfs:subClassOf sdlc:LifecycleEntity ; rdfs:label "Assurance Artefact"@en .
+sdlc:Evidence a owl:Class ; rdfs:subClassOf sdlc:AssuranceArtifact ; rdfs:label "Evidence"@en .
+sdlc:CertificationObjective a owl:Class ; rdfs:subClassOf sdlc:AssuranceArtifact ; rdfs:label "Certification Objective"@en .
+sdlc:ComplianceClaim a owl:Class ; rdfs:subClassOf sdlc:AssuranceArtifact ; rdfs:label "Compliance Claim"@en .
+sdlc:AssuranceCase a owl:Class ; rdfs:subClassOf sdlc:AssuranceArtifact ; rdfs:label "Assurance Case"@en .
+
+# ── Safety ───────────────────────────────────────────────────
+sdlc:SafetyArtifact a owl:Class ; rdfs:subClassOf sdlc:LifecycleEntity ; rdfs:label "Safety Artefact"@en .
+sdlc:Hazard a owl:Class ; rdfs:subClassOf sdlc:SafetyArtifact ; rdfs:label "Hazard"@en .
+sdlc:SafetyControl a owl:Class ; rdfs:subClassOf sdlc:SafetyArtifact ; rdfs:label "Safety Control"@en .
+
+# ── Work management ──────────────────────────────────────────
+sdlc:WorkManagementEntity a owl:Class ; rdfs:subClassOf sdlc:LifecycleEntity ; rdfs:label "Work Management Entity"@en .
+sdlc:WorkItem a owl:Class ; rdfs:subClassOf sdlc:WorkManagementEntity ; rdfs:label "Work Item"@en .
+sdlc:ChangeRequest a owl:Class ; rdfs:subClassOf sdlc:WorkManagementEntity ; rdfs:label "Change Request"@en .
+sdlc:Defect a owl:Class ; rdfs:subClassOf sdlc:WorkManagementEntity ; rdfs:label "Defect"@en .
+sdlc:PullRequest a owl:Class ; rdfs:subClassOf sdlc:WorkManagementEntity ; rdfs:label "Pull Request"@en .
+sdlc:PipelineRun a owl:Class ; rdfs:subClassOf sdlc:WorkManagementEntity ; rdfs:label "Pipeline Run"@en .
+
+# ── Configuration ────────────────────────────────────────────
+sdlc:ConfigurationArtifact a owl:Class ; rdfs:subClassOf sdlc:LifecycleEntity ; rdfs:label "Configuration Artefact"@en .
+sdlc:ReleaseBaseline a owl:Class ; rdfs:subClassOf sdlc:ConfigurationArtifact ; rdfs:label "Release Baseline"@en .
+sdlc:ConfigurationItem a owl:Class ; rdfs:subClassOf sdlc:ConfigurationArtifact ; rdfs:label "Configuration Item"@en .
+
+# ── Actors ───────────────────────────────────────────────────
+sdlc:Actor a owl:Class ; rdfs:subClassOf sdlc:LifecycleEntity ; rdfs:label "Actor"@en .
+sdlc:Team a owl:Class ; rdfs:subClassOf sdlc:Actor ; rdfs:label "Team"@en .
+sdlc:Person a owl:Class ; rdfs:subClassOf sdlc:Actor ; rdfs:label "Person"@en .
+
+
+# ═════════════════════════════════════════════════════════════
+#  OBJECT PROPERTIES (intra-SDLC)
+# ═════════════════════════════════════════════════════════════
+
+sdlc:derivesFrom a owl:ObjectProperty ; rdfs:label "derives from"@en ;
+    rdfs:domain sdlc:Requirement ; rdfs:range sdlc:Requirement .
+sdlc:satisfies a owl:ObjectProperty ; rdfs:label "satisfies"@en ;
+    rdfs:range sdlc:Requirement .
+sdlc:implements a owl:ObjectProperty ; rdfs:label "implements"@en .
+sdlc:verifies a owl:ObjectProperty ; rdfs:label "verifies"@en ;
+    rdfs:domain sdlc:VerificationArtifact ; rdfs:range sdlc:Requirement .
+sdlc:produces a owl:ObjectProperty ; rdfs:label "produces"@en .
+sdlc:reviews a owl:ObjectProperty ; rdfs:label "reviews"@en ;
+    rdfs:domain sdlc:ReviewRecord .
+sdlc:analyses a owl:ObjectProperty ; rdfs:label "analyses"@en ;
+    rdfs:domain sdlc:StaticAnalysisResult .
+sdlc:usesEvidence a owl:ObjectProperty ; rdfs:label "uses evidence"@en ;
+    rdfs:domain sdlc:ComplianceClaim ; rdfs:range sdlc:Evidence .
+sdlc:claimsComplianceWith a owl:ObjectProperty ; rdfs:label "claims compliance with"@en ;
+    rdfs:domain sdlc:ComplianceClaim ; rdfs:range sdlc:CertificationObjective .
+sdlc:includesClaim a owl:ObjectProperty ; rdfs:label "includes claim"@en ;
+    rdfs:domain sdlc:AssuranceCase ; rdfs:range sdlc:ComplianceClaim .
+sdlc:mitigates a owl:ObjectProperty ; rdfs:label "mitigates"@en ;
+    rdfs:domain sdlc:SafetyControl ; rdfs:range sdlc:Hazard .
+sdlc:tracesToHazard a owl:ObjectProperty ; rdfs:label "traces to hazard"@en ;
+    rdfs:range sdlc:Hazard .
+sdlc:implementedBy a owl:ObjectProperty ; rdfs:label "implemented by"@en .
+sdlc:implementsWork a owl:ObjectProperty ; rdfs:label "implements work"@en ;
+    rdfs:domain sdlc:WorkItem .
+sdlc:affects a owl:ObjectProperty ; rdfs:label "affects"@en .
+sdlc:resolves a owl:ObjectProperty ; rdfs:label "resolves"@en ;
+    rdfs:domain sdlc:PullRequest ; rdfs:range sdlc:Defect .
+sdlc:raises a owl:ObjectProperty ; rdfs:label "raises"@en ;
+    rdfs:domain sdlc:ChangeRequest ; rdfs:range sdlc:WorkItem .
+sdlc:merges a owl:ObjectProperty ; rdfs:label "merges"@en ;
+    rdfs:domain sdlc:PullRequest ; rdfs:range sdlc:CodeModule .
+sdlc:triggers a owl:ObjectProperty ; rdfs:label "triggers"@en ;
+    rdfs:domain sdlc:PullRequest ; rdfs:range sdlc:PipelineRun .
+sdlc:foundBy a owl:ObjectProperty ; rdfs:label "found by"@en ;
+    rdfs:domain sdlc:Defect ; rdfs:range sdlc:TestResult .
+sdlc:authored a owl:ObjectProperty ; rdfs:label "authored"@en ;
+    rdfs:domain sdlc:Person ; rdfs:range sdlc:PullRequest .
+sdlc:assures a owl:ObjectProperty ; rdfs:label "assures"@en ;
+    rdfs:domain sdlc:AssuranceCase ; rdfs:range sdlc:ReleaseBaseline .
+sdlc:approves a owl:ObjectProperty ; rdfs:label "approves"@en ;
+    rdfs:domain sdlc:Person ; rdfs:range sdlc:AssuranceCase .
+sdlc:executes a owl:ObjectProperty ; rdfs:label "executes"@en ;
+    rdfs:domain sdlc:PipelineRun ; rdfs:range sdlc:TestCase .
+sdlc:includedInBaseline a owl:ObjectProperty ; rdfs:label "included in baseline"@en ;
+    rdfs:range sdlc:ReleaseBaseline .
+sdlc:hasConfigurationItem a owl:ObjectProperty ; rdfs:label "has configuration item"@en ;
+    rdfs:domain sdlc:ReleaseBaseline ; rdfs:range sdlc:ConfigurationItem .
+sdlc:ownedBy a owl:ObjectProperty ; rdfs:label "owned by"@en ; rdfs:range sdlc:Team .
+sdlc:assignedTo a owl:ObjectProperty ; rdfs:label "assigned to"@en .
+sdlc:memberOf a owl:ObjectProperty ; rdfs:label "member of"@en ;
+    rdfs:domain sdlc:Person ; rdfs:range sdlc:Team .
+
+
+# ═════════════════════════════════════════════════════════════
+#  CROSS-DOMAIN OBJECT PROPERTIES (SDLC → operational aircraft graph)
+#
+#  These are the seams that bind a lifecycle/assurance artefact to a
+#  live aircraft entity in the operational tier (spo:). They are the
+#  edges the graph renderer highlights to show how the two domains relate.
+# ═════════════════════════════════════════════════════════════
+
+sdlc:allocatedTo a owl:ObjectProperty ; rdfs:label "allocated to"@en ;
+    rdfs:comment "Allocation seam: a requirement is allocated to an aircraft system/function."@en ;
+    rdfs:domain sdlc:Requirement ; rdfs:range spo:System .
+sdlc:realises a owl:ObjectProperty ; rdfs:label "realises"@en ;
+    rdfs:comment "Realisation seam: a software component realises an aircraft system function."@en ;
+    rdfs:domain sdlc:SoftwareComponent ; rdfs:range spo:System .
+sdlc:usesInterface a owl:ObjectProperty ; rdfs:label "uses interface"@en ;
+    rdfs:comment "Interface seam: an interface requirement binds to an aircraft system interface."@en ;
+    rdfs:domain sdlc:InterfaceRequirement ; rdfs:range spo:System .
+sdlc:endangers a owl:ObjectProperty ; rdfs:label "endangers"@en ;
+    rdfs:comment "Safety seam: a hazard endangers an aircraft system/function."@en ;
+    rdfs:domain sdlc:Hazard ; rdfs:range spo:System .
+sdlc:installedOn a owl:ObjectProperty ; rdfs:label "installed on"@en ;
+    rdfs:comment "Configuration seam: a release baseline is installed on an aircraft tail."@en ;
+    rdfs:domain sdlc:ReleaseBaseline ; rdfs:range spo:Aircraft .
+sdlc:deployedOn a owl:ObjectProperty ; rdfs:label "deployed on"@en ;
+    rdfs:comment "Configuration seam: a configuration item is deployed on an aircraft system."@en ;
+    rdfs:domain sdlc:ConfigurationItem ; rdfs:range spo:System .
+
+
+# ═════════════════════════════════════════════════════════════
+#  DATATYPE PROPERTIES
+# ═════════════════════════════════════════════════════════════
+
+sdlc:identifier a owl:DatatypeProperty ; rdfs:label "identifier"@en ; rdfs:range xsd:string .
+sdlc:title a owl:DatatypeProperty ; rdfs:label "title"@en ; rdfs:range xsd:string .
+sdlc:description a owl:DatatypeProperty ; rdfs:label "description"@en ; rdfs:range xsd:string .
+sdlc:status a owl:DatatypeProperty ; rdfs:label "status"@en ; rdfs:range xsd:string .
+sdlc:assuranceLevel a owl:DatatypeProperty ; rdfs:label "assurance level"@en ; rdfs:range xsd:string .
+sdlc:criticality a owl:DatatypeProperty ; rdfs:label "criticality"@en ; rdfs:range xsd:string .
+sdlc:version a owl:DatatypeProperty ; rdfs:label "version"@en ; rdfs:range xsd:string .
+sdlc:sourceSystem a owl:DatatypeProperty ; rdfs:label "source system"@en ; rdfs:range xsd:string .
+sdlc:resultStatus a owl:DatatypeProperty ; rdfs:label "result status"@en ; rdfs:range xsd:string .
+sdlc:baselineTag a owl:DatatypeProperty ; rdfs:label "baseline tag"@en ; rdfs:range xsd:string .
+sdlc:commitSha a owl:DatatypeProperty ; rdfs:label "commit SHA"@en ; rdfs:range xsd:string .

@@ -1,5 +1,5 @@
 {
-  "version": "2026-06-10.5",
+  "version": "2026-06-18.1",
   "description": "External, versioned access policy for the knowledge-graph PoC and the authorization trust boundary's source of truth. Kept OUTSIDE the graph and versioned separately from both the data and the ontology. Authorization is two-dimensional: role-based capability grants (which sensitivity CATEGORIES of fields, which ENTITIES, and whether aggregates are allowed) plus CLEARANCE (gated against each node's in-graph `classification` for row-level visibility). An identity may optionally mark categories as `clearanceGatedCategories`: those fields are redacted per-row on classified rows above its clearance instead of the whole row being hidden, so the row stays visible (and counts in aggregates) while the gated fields are protected. The `catalog` is the curated, queryable surface the structured-intent query builder validates typed queries against; a field absent from the catalog is queryable by no one (default-deny).",
   "clearanceLevels": [
     "unclassified",
@@ -12,7 +12,8 @@
     "route",
     "maintenance",
     "performance",
-    "document"
+    "document",
+    "engineering"
   ],
   "defaultIdentity": "public",
   "catalog": {
@@ -135,6 +136,817 @@
         "distance_nm": "route",
         "cruiseAltitude_ft": "route"
       }
+    },
+    "WorkItem": {
+      "description": "A unit of engineering work (e.g. a feature or task) tracked through the SDLC.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "status": "engineering"
+      }
+    },
+    "PullRequest": {
+      "description": "A proposed code change submitted for review and merge.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "status": "engineering"
+      }
+    },
+    "Hazard": {
+      "description": "An identified safety hazard arising from a system, addressed by the safety process.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "criticality": "engineering"
+      }
+    },
+    "SystemRequirement": {
+      "description": "A system-level requirement allocated to an aircraft system.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "description": "engineering",
+        "status": "engineering",
+        "assuranceLevel": "engineering",
+        "criticality": "engineering"
+      }
+    },
+    "SoftwareRequirement": {
+      "description": "A software requirement derived from a system requirement, carrying an assurance (DAL) level.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "description": "engineering",
+        "status": "engineering",
+        "assuranceLevel": "engineering"
+      }
+    },
+    "TestResult": {
+      "description": "The outcome of executing a test (PASSED/FAILED).",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "resultStatus": "engineering"
+      }
+    },
+    "ReleaseBaseline": {
+      "description": "A configuration-controlled release baseline of the software installed on the aircraft.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "baselineTag": "engineering",
+        "status": "engineering"
+      }
+    },
+    "ComplianceClaim": {
+      "description": "A claim of compliance with a certification objective, supported by evidence.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "status": "engineering"
+      }
+    },
+    "Evidence": {
+      "description": "A piece of assurance evidence produced by verification or analysis.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "sourceSystem": "engineering"
+      }
+    },
+    "AssuranceCase": {
+      "description": "A structured assurance case that assures a release baseline.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "status": "engineering"
+      }
+    },
+    "CodeModule": {
+      "description": "A source code module (with commit and version) implementing a software component.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "commitSha": "engineering",
+        "version": "engineering"
+      }
+    },
+    "InterfaceRequirement": {
+      "description": "A requirement governing an interface used by an aircraft system.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "description": "engineering",
+        "status": "engineering"
+      }
+    },
+    "PipelineRun": {
+      "description": "An execution of a CI/CD pipeline that runs tests for a change.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "sourceSystem": "engineering",
+        "resultStatus": "engineering"
+      }
+    },
+    "StaticAnalysisResult": {
+      "description": "The outcome of static analysis run against a code module.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "resultStatus": "engineering"
+      }
+    },
+    "SafetyControl": {
+      "description": "A control that mitigates a hazard, implemented by software.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "status": "engineering"
+      }
+    },
+    "Defect": {
+      "description": "A defect found during verification, resolved by a code change.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "status": "engineering"
+      }
+    },
+    "ConfigurationItem": {
+      "description": "A configuration-managed item deployed on an aircraft system.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "version": "engineering"
+      }
+    },
+    "TestCase": {
+      "description": "A defined test case that verifies a software requirement.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "description": "engineering"
+      }
+    },
+    "ReviewRecord": {
+      "description": "A record of a code or pull-request review.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "resultStatus": "engineering"
+      }
+    },
+    "SoftwareComponent": {
+      "description": "A software component that realises an aircraft system's software.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "version": "engineering",
+        "status": "engineering",
+        "assuranceLevel": "engineering"
+      }
+    },
+    "ArchitectureElement": {
+      "description": "An element of the software architecture that satisfies requirements.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "description": "engineering",
+        "status": "engineering"
+      }
+    },
+    "CertificationObjective": {
+      "description": "A certification objective (e.g. a DO-178C objective) a claim demonstrates compliance with.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "description": "engineering",
+        "assuranceLevel": "engineering"
+      }
+    },
+    "ChangeRequest": {
+      "description": "A request for change that raises work items and affects requirements.",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering",
+        "status": "engineering"
+      }
+    },
+    "Actor": {
+      "description": "A person or team involved in the engineering lifecycle (author, reviewer, owner, assignee).",
+      "fields": {
+        "name": "engineering",
+        "identifier": "engineering"
+      }
+    }
+  },
+  "relationshipCatalog": {
+    "ACTUATES": {
+      "description": "A component actuates another component.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        }
+      ]
+    },
+    "AFFECTS": {
+      "description": "A change request affects a software requirement, or a defect affects a software component.",
+      "endpoints": [
+        {
+          "from": "ChangeRequest",
+          "to": "SoftwareRequirement"
+        },
+        {
+          "from": "Defect",
+          "to": "SoftwareComponent"
+        }
+      ]
+    },
+    "ALLOCATED_TO": {
+      "description": "A system requirement is allocated to the aircraft system it constrains.",
+      "endpoints": [
+        {
+          "from": "SystemRequirement",
+          "to": "System"
+        }
+      ]
+    },
+    "ANALYSES": {
+      "description": "A static-analysis result analyses a code module.",
+      "endpoints": [
+        {
+          "from": "StaticAnalysisResult",
+          "to": "CodeModule"
+        }
+      ]
+    },
+    "APPROVES": {
+      "description": "An actor approves an assurance case.",
+      "endpoints": [
+        {
+          "from": "Actor",
+          "to": "AssuranceCase"
+        }
+      ]
+    },
+    "ARRIVES_AT": {
+      "description": "A flight arrives at an aerodrome.",
+      "endpoints": [
+        {
+          "from": "Flight",
+          "to": "Aerodrome"
+        }
+      ]
+    },
+    "ASSIGNED_TO": {
+      "description": "An actor (person or team) is assigned to a work item or certification objective.",
+      "endpoints": [
+        {
+          "from": "Actor",
+          "to": "CertificationObjective"
+        },
+        {
+          "from": "Actor",
+          "to": "WorkItem"
+        }
+      ]
+    },
+    "ASSURES": {
+      "description": "An assurance case assures a release baseline.",
+      "endpoints": [
+        {
+          "from": "AssuranceCase",
+          "to": "ReleaseBaseline"
+        }
+      ]
+    },
+    "AUTHORED": {
+      "description": "An actor authored a pull request.",
+      "endpoints": [
+        {
+          "from": "Actor",
+          "to": "PullRequest"
+        }
+      ]
+    },
+    "CHARGES": {
+      "description": "A component charges another component.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        }
+      ]
+    },
+    "CLAIMS_COMPLIANCE_WITH": {
+      "description": "A compliance claim claims compliance with a certification objective.",
+      "endpoints": [
+        {
+          "from": "ComplianceClaim",
+          "to": "CertificationObjective"
+        }
+      ]
+    },
+    "CLAMPS": {
+      "description": "A component clamps another component.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        }
+      ]
+    },
+    "CONTROLS": {
+      "description": "A component controls another component.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        }
+      ]
+    },
+    "DEPARTS_FROM": {
+      "description": "A flight departs from an aerodrome.",
+      "endpoints": [
+        {
+          "from": "Flight",
+          "to": "Aerodrome"
+        }
+      ]
+    },
+    "DEPLOYED_ON": {
+      "description": "A configuration item is deployed on an aircraft system.",
+      "endpoints": [
+        {
+          "from": "ConfigurationItem",
+          "to": "System"
+        }
+      ]
+    },
+    "DERIVES_FROM": {
+      "description": "A software or interface requirement derives from a higher-level system requirement.",
+      "endpoints": [
+        {
+          "from": "InterfaceRequirement",
+          "to": "SystemRequirement"
+        },
+        {
+          "from": "SoftwareRequirement",
+          "to": "SystemRequirement"
+        }
+      ]
+    },
+    "DRIVES": {
+      "description": "A component drives another component.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        }
+      ]
+    },
+    "ENDANGERS": {
+      "description": "A safety hazard endangers an aircraft system.",
+      "endpoints": [
+        {
+          "from": "Hazard",
+          "to": "System"
+        }
+      ]
+    },
+    "EXECUTES": {
+      "description": "A pipeline run executes a test case.",
+      "endpoints": [
+        {
+          "from": "PipelineRun",
+          "to": "TestCase"
+        }
+      ]
+    },
+    "FEEDS": {
+      "description": "A system or component feeds another component.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        },
+        {
+          "from": "System",
+          "to": "Component"
+        }
+      ]
+    },
+    "FIRES": {
+      "description": "A component fires another component.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        }
+      ]
+    },
+    "FITTED_TO": {
+      "description": "A component fitted to another component.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        }
+      ]
+    },
+    "FOUND_BY": {
+      "description": "A defect was found by a test result.",
+      "endpoints": [
+        {
+          "from": "Defect",
+          "to": "TestResult"
+        }
+      ]
+    },
+    "FUELS_FROM": {
+      "description": "A component fuels from another component.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        }
+      ]
+    },
+    "GOVERNED_BY": {
+      "description": "An aircraft, system or specification is governed by a reference document.",
+      "endpoints": [
+        {
+          "from": "Aircraft",
+          "to": "Document"
+        },
+        {
+          "from": "Specification",
+          "to": "Document"
+        },
+        {
+          "from": "System",
+          "to": "Document"
+        }
+      ]
+    },
+    "HAS_AD": {
+      "description": "The aircraft has an airworthiness directive document.",
+      "endpoints": [
+        {
+          "from": "Aircraft",
+          "to": "Document"
+        }
+      ]
+    },
+    "HAS_COMPONENT": {
+      "description": "A system has a component.",
+      "endpoints": [
+        {
+          "from": "System",
+          "to": "Component"
+        }
+      ]
+    },
+    "HAS_CONFIGURATION_ITEM": {
+      "description": "A release baseline has a configuration item.",
+      "endpoints": [
+        {
+          "from": "ReleaseBaseline",
+          "to": "ConfigurationItem"
+        }
+      ]
+    },
+    "HAS_CONTROL_SURFACE": {
+      "description": "A component has control surface another component.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        }
+      ]
+    },
+    "HAS_PART": {
+      "description": "has part.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        }
+      ]
+    },
+    "HAS_SPECIFICATION": {
+      "description": "The aircraft has a specification.",
+      "endpoints": [
+        {
+          "from": "Aircraft",
+          "to": "Specification"
+        }
+      ]
+    },
+    "HAS_SYSTEM": {
+      "description": "The aircraft has a system.",
+      "endpoints": [
+        {
+          "from": "Aircraft",
+          "to": "System"
+        }
+      ]
+    },
+    "HOUSES": {
+      "description": "A component houses another component.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        }
+      ]
+    },
+    "IMPLEMENTED_BY": {
+      "description": "A safety control is implemented by a software component; a work item is implemented by a pull request.",
+      "endpoints": [
+        {
+          "from": "SafetyControl",
+          "to": "SoftwareComponent"
+        },
+        {
+          "from": "WorkItem",
+          "to": "PullRequest"
+        }
+      ]
+    },
+    "IMPLEMENTS": {
+      "description": "A code module implements a software component, or a software component implements an architecture element.",
+      "endpoints": [
+        {
+          "from": "CodeModule",
+          "to": "SoftwareComponent"
+        },
+        {
+          "from": "SoftwareComponent",
+          "to": "ArchitectureElement"
+        }
+      ]
+    },
+    "IMPLEMENTS_WORK": {
+      "description": "A work item implements (delivers) a software component.",
+      "endpoints": [
+        {
+          "from": "WorkItem",
+          "to": "SoftwareComponent"
+        }
+      ]
+    },
+    "INCLUDED_IN_BASELINE": {
+      "description": "A software component is included in a release baseline.",
+      "endpoints": [
+        {
+          "from": "SoftwareComponent",
+          "to": "ReleaseBaseline"
+        }
+      ]
+    },
+    "INCLUDES_CLAIM": {
+      "description": "An assurance case includes a compliance claim.",
+      "endpoints": [
+        {
+          "from": "AssuranceCase",
+          "to": "ComplianceClaim"
+        }
+      ]
+    },
+    "INSTALLED_ON": {
+      "description": "A software release baseline is installed on the aircraft.",
+      "endpoints": [
+        {
+          "from": "ReleaseBaseline",
+          "to": "Aircraft"
+        }
+      ]
+    },
+    "MEMBER_OF": {
+      "description": "An actor is a member of a team.",
+      "endpoints": [
+        {
+          "from": "Actor",
+          "to": "Actor"
+        }
+      ]
+    },
+    "MERGES": {
+      "description": "A pull request merges a code module.",
+      "endpoints": [
+        {
+          "from": "PullRequest",
+          "to": "CodeModule"
+        }
+      ]
+    },
+    "MITIGATES": {
+      "description": "A safety control mitigates a hazard.",
+      "endpoints": [
+        {
+          "from": "SafetyControl",
+          "to": "Hazard"
+        }
+      ]
+    },
+    "MOUNTED_ON": {
+      "description": "A component mounted on another component.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        }
+      ]
+    },
+    "OPERATES": {
+      "description": "operates.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        }
+      ]
+    },
+    "OWNED_BY": {
+      "description": "A software component is owned by an actor (person or team).",
+      "endpoints": [
+        {
+          "from": "SoftwareComponent",
+          "to": "Actor"
+        }
+      ]
+    },
+    "POWERED_BY": {
+      "description": "A component is powered by a system or another component.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        },
+        {
+          "from": "Component",
+          "to": "System"
+        }
+      ]
+    },
+    "PREVIOUS_VERSION": {
+      "description": "A specification's previous version.",
+      "endpoints": [
+        {
+          "from": "Specification",
+          "to": "Specification"
+        }
+      ]
+    },
+    "PRODUCES": {
+      "description": "A test case produces a test result; a test result or static-analysis result produces assurance evidence.",
+      "endpoints": [
+        {
+          "from": "StaticAnalysisResult",
+          "to": "Evidence"
+        },
+        {
+          "from": "TestCase",
+          "to": "TestResult"
+        },
+        {
+          "from": "TestResult",
+          "to": "Evidence"
+        }
+      ]
+    },
+    "PROVIDES_IGNITION_TO": {
+      "description": "A component provides ignition to another component.",
+      "endpoints": [
+        {
+          "from": "Component",
+          "to": "Component"
+        }
+      ]
+    },
+    "RAISES": {
+      "description": "A change request raises a work item.",
+      "endpoints": [
+        {
+          "from": "ChangeRequest",
+          "to": "WorkItem"
+        }
+      ]
+    },
+    "REALISES": {
+      "description": "A software component realises (provides the software for) an aircraft system.",
+      "endpoints": [
+        {
+          "from": "SoftwareComponent",
+          "to": "System"
+        }
+      ]
+    },
+    "REFERENCES": {
+      "description": "The aircraft references a document.",
+      "endpoints": [
+        {
+          "from": "Aircraft",
+          "to": "Document"
+        }
+      ]
+    },
+    "RESOLVES": {
+      "description": "A pull request resolves a defect.",
+      "endpoints": [
+        {
+          "from": "PullRequest",
+          "to": "Defect"
+        }
+      ]
+    },
+    "REVIEWS": {
+      "description": "A review record reviews a code module or pull request.",
+      "endpoints": [
+        {
+          "from": "ReviewRecord",
+          "to": "CodeModule"
+        },
+        {
+          "from": "ReviewRecord",
+          "to": "PullRequest"
+        }
+      ]
+    },
+    "SATISFIES": {
+      "description": "An architecture element or software component satisfies a requirement.",
+      "endpoints": [
+        {
+          "from": "ArchitectureElement",
+          "to": "SoftwareRequirement"
+        },
+        {
+          "from": "SoftwareComponent",
+          "to": "InterfaceRequirement"
+        },
+        {
+          "from": "SoftwareComponent",
+          "to": "SoftwareRequirement"
+        }
+      ]
+    },
+    "TRACES_TO_HAZARD": {
+      "description": "A software requirement traces to the hazard it addresses.",
+      "endpoints": [
+        {
+          "from": "SoftwareRequirement",
+          "to": "Hazard"
+        }
+      ]
+    },
+    "TRIGGERS": {
+      "description": "A pull request triggers a pipeline run.",
+      "endpoints": [
+        {
+          "from": "PullRequest",
+          "to": "PipelineRun"
+        }
+      ]
+    },
+    "USES_AIRCRAFT": {
+      "description": "A flight uses the aircraft.",
+      "endpoints": [
+        {
+          "from": "Flight",
+          "to": "Aircraft"
+        }
+      ]
+    },
+    "USES_EVIDENCE": {
+      "description": "A compliance claim uses a piece of assurance evidence.",
+      "endpoints": [
+        {
+          "from": "ComplianceClaim",
+          "to": "Evidence"
+        }
+      ]
+    },
+    "USES_INTERFACE": {
+      "description": "An interface requirement governs an interface used by an aircraft system.",
+      "endpoints": [
+        {
+          "from": "InterfaceRequirement",
+          "to": "System"
+        }
+      ]
+    },
+    "VERIFIES": {
+      "description": "A test case verifies a software requirement.",
+      "endpoints": [
+        {
+          "from": "TestCase",
+          "to": "SoftwareRequirement"
+        }
+      ]
     }
   },
   "identities": [
@@ -207,6 +1019,50 @@
       ],
       "allowAggregates": true,
       "description": "Operations role cleared to the highest level. May see everything maintenance can, PLUS flight routes, aerodrome coordinates, and classified (e.g. military) flights that other identities cannot see at all."
+    },
+    {
+      "id": "software_engineer",
+      "displayName": "Software Engineer",
+      "role": "engineering",
+      "clearance": "unclassified",
+      "categories": [
+        "basic",
+        "engineering"
+      ],
+      "entities": [
+        "Aircraft",
+        "System",
+        "Component",
+        "PistonEngine",
+        "Specification",
+        "Aerodrome",
+        "WorkItem",
+        "PullRequest",
+        "Hazard",
+        "SystemRequirement",
+        "SoftwareRequirement",
+        "TestResult",
+        "ReleaseBaseline",
+        "ComplianceClaim",
+        "Evidence",
+        "AssuranceCase",
+        "CodeModule",
+        "InterfaceRequirement",
+        "PipelineRun",
+        "StaticAnalysisResult",
+        "SafetyControl",
+        "Defect",
+        "ConfigurationItem",
+        "TestCase",
+        "ReviewRecord",
+        "SoftwareComponent",
+        "ArchitectureElement",
+        "CertificationObjective",
+        "ChangeRequest",
+        "Actor"
+      ],
+      "allowAggregates": true,
+      "description": "Engineering identity for the software development lifecycle. Sees the engineering domain (requirements, implementation, verification, assurance, safety, configuration, work management and the people/teams involved) plus basic operational facts about the aircraft and its systems. Cannot see flights, routes, durations, maintenance or document content."
     }
   ]
 }

@@ -332,7 +332,7 @@ async def test_ask_emits_metadata_tokens_and_done() -> None:
     assert metadata["tools_used"] == ["query_knowledge_graph"]
     # The structured intent the model emitted is surfaced for intent-selection evaluation.
     assert metadata["intents_used"] == [
-        {"entity": "Flight", "fields": [], "filters": [], "aggregate": {"func": "count", "field": None}, "limit": None}
+        {"entity": "Flight", "fields": [], "filters": [], "aggregate": {"func": "count", "field": None}, "limit": None, "traverse": []}
     ]
     stats = next(event for event in events if event["type"] == "stats")
     assert stats["tools_used"] == ["query_knowledge_graph"]

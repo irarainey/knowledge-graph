@@ -26,7 +26,7 @@ Pydantic models matching JSON, see ``pyproject.toml``).
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Identity(BaseModel):
@@ -68,6 +68,35 @@ class EntityCatalog(BaseModel):
     fields: dict[str, str] = Field(description="Map of queryable field name -> sensitivity category.")
 
 
+class RelationshipEndpoint(BaseModel):
+    """A legal (from-label, to-label) pair a relationship type may connect.
+
+    Endpoints are expressed in the **catalog entity-label** vocabulary the principal queries
+    with (e.g. ``Hazard``, ``System``) — not the graph's raw generic labels — so the query
+    builder can validate a traversal hop against the labels the LLM actually names. Both ends
+    must be catalog entities (enforced at policy load).
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    from_: str = Field(alias="from", description="The source entity label of the relationship.")
+    to: str = Field(description="The target entity label of the relationship.")
+
+
+class RelationshipCatalogEntry(BaseModel):
+    """The queryable surface for one relationship type: its meaning and legal endpoints.
+
+    A relationship type may legitimately connect more than one (from, to) entity pair, so
+    ``endpoints`` is a list. A traversal hop is only permitted if its (from, relationship, to)
+    triple matches one of these endpoints (respecting direction) AND the principal is granted
+    both endpoint entities — relationships carry no separate grant, they are gated by the
+    entities they connect (a relationship a principal cannot reach either end of is invisible).
+    """
+
+    description: str = Field(default="", description="What this relationship represents (shown to the LLM).")
+    endpoints: list[RelationshipEndpoint] = Field(description="The legal (from, to) entity-label pairs this relationship connects.")
+
+
 class AccessPolicy(BaseModel):
     """The full external, versioned access policy loaded from ``access-policy.json``.
 
@@ -82,6 +111,10 @@ class AccessPolicy(BaseModel):
     sensitivityCategories: list[str] = Field(default_factory=list, description="The sensitivity categories fields can carry.")
     defaultIdentity: str = Field(description="Identity id unknown/unselected users resolve to (default-deny).")
     catalog: dict[str, EntityCatalog] = Field(default_factory=dict, description="Queryable entities and their fields/categories.")
+    relationshipCatalog: dict[str, RelationshipCatalogEntry] = Field(
+        default_factory=dict,
+        description="Queryable relationship types and their legal endpoint entity-label pairs (the traversal surface).",
+    )
     identities: list[Identity] = Field(description="The identities a user may act as.")
 
 

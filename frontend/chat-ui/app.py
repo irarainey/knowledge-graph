@@ -176,7 +176,7 @@ def _render_identity_selector(base_url: str) -> str:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Cessna 172S Skyhawk — Ask", page_icon="✈️", layout="centered")
+    st.set_page_config(page_title="Knowledge Graph Query", page_icon="✈️", layout="centered")
     st.markdown(PAGE_CSS, unsafe_allow_html=True)
 
     if "messages" not in st.session_state:
@@ -211,8 +211,8 @@ def main() -> None:
                 st.session_state.pending_question = example
                 st.rerun()
 
-    st.title("✈️ Cessna 172S Skyhawk (G-ECHO)")
-    st.caption("Ask natural-language questions about the aircraft, its systems, components, flights and maintenance.")
+    st.title("Knowledge Graph Query")
+    st.caption("Ask natural-language questions about the knowledge graph, its entities, relationships and history.")
 
     for message in st.session_state.messages:
         render_message(message)

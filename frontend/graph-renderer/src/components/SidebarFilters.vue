@@ -3,15 +3,25 @@ import { ref } from 'vue'
 import type { TypeGroup } from '../types'
 import type { StyleResolver } from '../graph'
 
-const props = defineProps<{
+interface DomainSection {
+  key: string
+  label: string
+  color: string
+  leafKeys: string[]
   groups: TypeGroup[]
+}
+
+const props = defineProps<{
+  sections: DomainSection[]
   activeKeys: Set<string>
+  highlightKeys: Set<string>
   styleFor: StyleResolver
 }>()
 
 defineEmits<{
   toggle: [key: string]
   'toggle-group': [type: string]
+  'toggle-domain': [domain: string]
   'select-all': []
   'deselect-all': []
 }>()
@@ -40,56 +50,86 @@ function groupState(group: TypeGroup): 'on' | 'off' | 'mixed' {
   if (on === keys.length) return 'on'
   return 'mixed'
 }
+
+function domainState(section: DomainSection): 'on' | 'off' | 'mixed' {
+  const on = section.leafKeys.filter((k) => props.activeKeys.has(k)).length
+  if (on === 0) return 'off'
+  if (on === section.leafKeys.length) return 'on'
+  return 'mixed'
+}
+
+// Whether a leaf/group/domain takes part in the current selection's focus, used
+// to draw an accent so the sidebar reflects what the selected node connects to.
+function groupHighlighted(group: TypeGroup): boolean {
+  return leafKeys(group).some((k) => props.highlightKeys.has(k))
+}
+
+function domainHighlighted(section: DomainSection): boolean {
+  return section.leafKeys.some((k) => props.highlightKeys.has(k))
+}
 </script>
 
 <template>
   <div id="sidebar">
-    <div class="sidebar-heading">Node types</div>
-
     <div class="bulk-actions">
       <button class="bulk-btn" @click="$emit('select-all')">Select all</button>
       <button class="bulk-btn" @click="$emit('deselect-all')">Deselect all</button>
     </div>
 
-    <div v-for="group in groups" :key="group.type" class="group">
-      <div class="group-row" :class="groupState(group)">
-        <button
-          class="expand"
-          :class="{ open: expanded.has(group.type) }"
-          :disabled="group.subgroups.length === 0"
-          :aria-label="expanded.has(group.type) ? 'Collapse' : 'Expand'"
-          @click="toggleExpand(group.type)"
-        >
-          <svg
-            v-if="group.subgroups.length"
-            viewBox="0 0 16 16"
-            width="12"
-            height="12"
-            aria-hidden="true"
+    <div v-for="section in sections" :key="section.key" class="section">
+      <button
+        class="domain-heading"
+        :class="[domainState(section), { highlight: domainHighlighted(section) }]"
+        @click="$emit('toggle-domain', section.key)"
+      >
+        <span class="dot" :style="{ '--dot': section.color }"></span>
+        <span class="label">{{ section.label }}</span>
+      </button>
+
+      <div v-for="group in section.groups" :key="group.type" class="group">
+        <div class="group-row" :class="groupState(group)">
+          <button
+            class="expand"
+            :class="{ open: expanded.has(group.type) }"
+            :disabled="group.subgroups.length === 0"
+            :aria-label="expanded.has(group.type) ? 'Collapse' : 'Expand'"
+            @click="toggleExpand(group.type)"
           >
-            <path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" />
-          </svg>
-        </button>
+            <svg
+              v-if="group.subgroups.length"
+              viewBox="0 0 16 16"
+              width="12"
+              height="12"
+              aria-hidden="true"
+            >
+              <path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" />
+            </svg>
+          </button>
 
-        <button class="filter-btn" @click="$emit('toggle-group', group.type)">
-          <span class="dot" :style="{ '--dot': styleFor(group.type).color }"></span>
-          <span class="label">{{ group.label }}</span>
-          <span class="count">{{ group.count }}</span>
-        </button>
-      </div>
+          <button
+            class="filter-btn"
+            :class="{ highlight: groupHighlighted(group) }"
+            @click="$emit('toggle-group', group.type)"
+          >
+            <span class="dot" :style="{ '--dot': styleFor(group.type).color }"></span>
+            <span class="label">{{ group.label }}</span>
+            <span class="count">{{ group.count }}</span>
+          </button>
+        </div>
 
-      <div v-if="expanded.has(group.type) && group.subgroups.length" class="subgroups">
-        <button
-          v-for="sub in group.subgroups"
-          :key="sub.key"
-          class="filter-btn sub"
-          :class="{ active: activeKeys.has(sub.key) }"
-          @click="$emit('toggle', sub.key)"
-        >
-          <span class="dot" :style="{ '--dot': styleFor(group.type).color }"></span>
-          <span class="label">{{ sub.label }}</span>
-          <span class="count">{{ sub.count }}</span>
-        </button>
+        <div v-if="expanded.has(group.type) && group.subgroups.length" class="subgroups">
+          <button
+            v-for="sub in group.subgroups"
+            :key="sub.key"
+            class="filter-btn sub"
+            :class="{ active: activeKeys.has(sub.key), highlight: highlightKeys.has(sub.key) }"
+            @click="$emit('toggle', sub.key)"
+          >
+            <span class="dot" :style="{ '--dot': styleFor(group.type).color }"></span>
+            <span class="label">{{ sub.label }}</span>
+            <span class="count">{{ sub.count }}</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -101,7 +141,7 @@ function groupState(group: TypeGroup): 'on' | 'off' | 'mixed' {
   left: 0;
   top: 56px;
   bottom: 0;
-  width: 220px;
+  width: 280px;
   z-index: 50;
   background: var(--panel);
   border-right: 1px solid var(--border);
@@ -112,13 +152,57 @@ function groupState(group: TypeGroup): 'on' | 'off' | 'mixed' {
   overflow-y: auto;
 }
 
-.sidebar-heading {
+.section {
+  display: flex;
+  flex-direction: column;
+}
+.section + .section {
+  margin-top: 12px;
+}
+
+/* The domain heading doubles as the whole-domain toggle: a prominent section
+   label whose dot reflects the domain's on/off/mixed state. */
+.domain-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: inherit;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-dim);
-  margin: 4px 6px 10px;
+  padding: 6px 6px 8px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.domain-heading:hover {
+  color: var(--text);
+}
+.domain-heading .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--text-dim);
+}
+.domain-heading.on,
+.domain-heading.mixed {
+  color: var(--text);
+}
+.domain-heading.on .dot {
+  background: var(--dot);
+  box-shadow: none;
+}
+.domain-heading.mixed .dot {
+  background: linear-gradient(90deg, var(--dot) 0 50%, transparent 50% 100%);
+  box-shadow: inset 0 0 0 1.5px var(--dot);
 }
 
 .bulk-actions {
@@ -256,5 +340,19 @@ function groupState(group: TypeGroup): 'on' | 'off' | 'mixed' {
 .filter-btn.sub {
   font-size: 12.5px;
   padding: 6px 10px;
+}
+
+/* Selection highlight: an amber accent marking the types that take part in the
+   currently selected node's focus lineage. Deliberately distinct from the
+   on/off "active" state so the two readings don't collide. */
+.filter-btn.highlight {
+  box-shadow: inset 2px 0 0 var(--accent);
+  background: var(--accent-weak);
+}
+.filter-btn.highlight .label {
+  color: var(--accent);
+}
+.domain-heading.highlight {
+  color: var(--accent);
 }
 </style>

@@ -18,6 +18,9 @@ const props = defineProps<{
 const emit = defineEmits<{
   'node-selected': [node: GraphNode]
   background: []
+  // The filter keys (type or type::subtype) of every node in the current
+  // selection's focus, so the sidebar can highlight which types are involved.
+  'focus-keys': [keys: string[]]
 }>()
 
 // D3 mutates simulation data (adds x/y/vx/vy and swaps source/target ids for
@@ -42,10 +45,66 @@ let zoomBehavior: d3.ZoomBehavior<SVGSVGElement, unknown> | null = null
 let linkSel: d3.Selection<SVGLineElement, SimLink, SVGGElement, unknown> | null = null
 let linkLabelSel: d3.Selection<SVGTextElement, SimLink, SVGGElement, unknown> | null = null
 let nodeSel: d3.Selection<SVGGElement, SimNode, SVGGElement, unknown> | null = null
+// Bridge edges: dashed connectors drawn between two *visible* nodes that are only
+// linked through a chain of currently-hidden nodes, so a filtered view still shows
+// how the surviving nodes relate (e.g. a work item back to the aircraft) instead
+// of collapsing into disconnected islands. Recomputed from the active filter.
+let bridgeLayer: d3.Selection<SVGGElement, unknown, null, undefined> | null = null
+let bridgeSel: d3.Selection<SVGLineElement, SimLink, SVGGElement, unknown> | null = null
+let currentBridges: SimLink[] = []
+// Undirected adjacency over every edge and a lookup of the live simulation nodes,
+// both used to discover bridges across hidden-only paths.
+let fullAdj = new Map<string, string[]>()
+let simNodeById = new Map<string, SimNode>()
 
 // Relationship types that form the containment hierarchy (the tree spine).
 const HIERARCHY = ['HAS_SYSTEM', 'HAS_COMPONENT', 'HAS_PART', 'HAS_PHASE', 'HAS_RUNWAY']
 const isHierarchy = (rel: string): boolean => HIERARCHY.includes(rel)
+
+// SDLC lifecycle/provenance edges. Unlike the aircraft containment tree (which is
+// strictly parent → child, so a selection drills *downward*), an SDLC thread has no
+// single direction: a release is a sink that implementation points *into*, a
+// requirement is a source everything derives *from*. So when a node is selected we
+// trace these edges in BOTH directions to reveal its whole lineage — the
+// implementation, tests, evidence and requirements that went into it as well as
+// what it feeds. Actor, compliance-objective and cross-domain seams are deliberately
+// excluded so the trace stays inside one thread and doesn't bleed into the aircraft.
+const LINEAGE = new Set([
+  'DERIVES_FROM',
+  'SATISFIES',
+  'IMPLEMENTS',
+  'VERIFIES',
+  'PRODUCES',
+  'USES_EVIDENCE',
+  'INCLUDES_CLAIM',
+  'MITIGATES',
+  'TRACES_TO_HAZARD',
+  'IMPLEMENTED_BY',
+  'IMPLEMENTS_WORK',
+  'AFFECTS',
+  'RESOLVES',
+  'EXECUTES',
+  'INCLUDED_IN_BASELINE',
+  'HAS_CONFIGURATION_ITEM',
+  'RAISES',
+  'MERGES',
+  'TRIGGERS',
+  'FOUND_BY',
+  'ANALYSES',
+  'REVIEWS',
+  'ASSURES',
+])
+const isLineage = (rel: string): boolean => LINEAGE.has(rel)
+
+// Cross-domain seams (edges whose endpoints sit in different domains, e.g. an
+// SDLC artefact bound to an aircraft system) are drawn as dashed accent lines so
+// the link between the two graphs stands out from intra-domain edges.
+const CROSS_COLOR = '#ffd84d'
+const isCross = (d: SimLink): boolean =>
+  (d.source as SimNode).domain !== (d.target as SimNode).domain
+
+// Dashed bridge connectors (a chain of hidden nodes collapsed to a single line).
+const BRIDGE_COLOR = '#8b97a6'
 
 // Above this size the renderer drops the per-edge text labels (thousands of
 // mostly-hidden <text> nodes repositioned every tick) to stay responsive.
@@ -58,7 +117,13 @@ let savedTransform: d3.ZoomTransform = d3.zoomIdentity
 
 // Per-build derived structure, recomputed on every build().
 let parentMap = new Map<string, string>()
-let outAdj = new Map<string, { t: string; hier: boolean }[]>()
+// Directed adjacency used for selection tracing. Each entry records the relationship
+// class so the traversal can recurse through containment (down only) and lineage
+// (both directions) while treating everything else as an immediate leaf.
+let outAdj = new Map<string, { t: string; hier: boolean; lineage: boolean }[]>()
+// Incoming lineage edges (target → sources), so selecting a sink node (e.g. a
+// release everything is included in) still reaches its provenance.
+let inLineageAdj = new Map<string, string[]>()
 // Node filter key by id, the containment tree (parent → children), the
 // association adjacency (undirected, non-containment edges), and the set of
 // contained node ids. A node stays visible only if it is connected back to a
@@ -84,6 +149,9 @@ function teardown(): void {
   linkSel = null
   linkLabelSel = null
   nodeSel = null
+  bridgeLayer = null
+  bridgeSel = null
+  currentBridges = []
   zoomBehavior = null
 }
 
@@ -145,19 +213,35 @@ function build(): void {
   // The `hier` flag marks containment edges, which alone are followed transitively.
   // The containment tree and association adjacency drive the anchoring below.
   outAdj = new Map()
+  inLineageAdj = new Map()
   hierChildren = new Map()
   assocAdj = new Map()
   hasHierParent = new Set()
+  fullAdj = new Map()
   focusCache = { id: null, set: new Set() }
   const addAssoc = (a: string, b: string): void => {
     const list = assocAdj.get(a)
     if (list) list.push(b)
     else assocAdj.set(a, [b])
   }
+  const addFull = (a: string, b: string): void => {
+    const list = fullAdj.get(a)
+    if (list) list.push(b)
+    else fullAdj.set(a, [b])
+  }
+  const addInLineage = (a: string, b: string): void => {
+    const list = inLineageAdj.get(a)
+    if (list) list.push(b)
+    else inLineageAdj.set(a, [b])
+  }
   for (const l of props.graph.links) {
     const hier = isHierarchy(l.rel)
+    const lineage = isLineage(l.rel)
+    addFull(l.source, l.target)
+    addFull(l.target, l.source)
     if (!outAdj.has(l.source)) outAdj.set(l.source, [])
-    outAdj.get(l.source)!.push({ t: l.target, hier })
+    outAdj.get(l.source)!.push({ t: l.target, hier, lineage })
+    if (lineage) addInLineage(l.target, l.source)
     if (hier) {
       const children = hierChildren.get(l.source)
       if (children) children.push(l.target)
@@ -223,6 +307,7 @@ function build(): void {
     return { ...d, depth: depths.get(d.id) ?? 1, x: seed.x, y: seed.y }
   })
   const nodeMap = new Map(nodes.map((d) => [d.id, d]))
+  simNodeById = nodeMap
   const links: SimLink[] = props.graph.links
     .map((d) => ({ source: nodeMap.get(d.source)!, target: nodeMap.get(d.target)!, rel: d.rel }))
     .filter((d) => d.source && d.target)
@@ -316,7 +401,9 @@ function build(): void {
     .enter()
     .append('line')
     .attr('class', 'link')
-    .attr('stroke', (d) => props.styleFor(typeOf(d.target)).color)
+    .attr('stroke', (d) => (isCross(d) ? CROSS_COLOR : props.styleFor(typeOf(d.target)).color))
+    .attr('stroke-dasharray', (d) => (isCross(d) ? '5 4' : null))
+    .attr('stroke-width', (d) => (isCross(d) ? 1.7 : null))
     .attr('marker-end', (d) => `url(#arrow-${typeOf(d.target)})`)
 
   // Link labels for non-structural edges. Skipped entirely on large graphs, where
@@ -331,8 +418,17 @@ function build(): void {
           .enter()
           .append('text')
           .attr('class', 'link-label')
+          .attr('fill', (d) => (isCross(d) ? CROSS_COLOR : null))
+          .attr('font-size', (d) => (isCross(d) ? 8 : null))
+          .attr('font-weight', (d) => (isCross(d) ? 600 : null))
           .text((d) => d.rel)
       : null
+
+  // Bridge layer sits above the real edges but below the nodes. Populated lazily
+  // by applyVisualState whenever the filter hides intermediate nodes.
+  bridgeLayer = container.append('g').attr('class', 'bridges')
+  bridgeSel = null
+  currentBridges = []
 
   // Track whether a gesture was a drag so the trailing click doesn't select.
   let dragMoved = false
@@ -413,6 +509,8 @@ function build(): void {
       .attr('x2', (d) => d.x2 ?? 0)
       .attr('y2', (d) => d.y2 ?? 0)
 
+    positionBridges()
+
     if (linkLabelSel) {
       linkLabelSel
         .attr('x', (d) => (((d.source as SimNode).x ?? 0) + ((d.target as SimNode).x ?? 0)) / 2)
@@ -434,6 +532,7 @@ function build(): void {
   })
 
   applyVisualState()
+  emitFocusKeys()
 }
 
 function seedFromParent(id: string, W: number, H: number): { x: number; y: number } {
@@ -443,24 +542,37 @@ function seedFromParent(id: string, W: number, H: number): { x: number; y: numbe
   return { x: W / 2 + (Math.random() - 0.5) * 60, y: H / 2 + (Math.random() - 0.5) * 60 }
 }
 
-// The clicked node's downstream focus set, memoised for the active selection.
-// Containment (hierarchy) edges are followed transitively so a subtree fully
-// expands; association edges (USES_AIRCRAFT, FEEDS, OCCURS_AT…) include their
-// immediate target but are not drilled into, keeping the focus scoped.
+// The clicked node's focus set, memoised for the active selection. Three traversal
+// rules combine:
+//   • containment (hierarchy) edges expand transitively *downward* — selecting an
+//     aircraft system reveals its whole component subtree (unchanged behaviour);
+//   • SDLC lineage edges expand transitively in *both* directions — selecting a
+//     release reveals everything included in it, and the implementation, tests,
+//     evidence and requirements behind those, while selecting a requirement reveals
+//     the implementation and verification it drives;
+//   • every other outgoing edge contributes its immediate target only (actors,
+//     compliance objectives, cross-domain seams), so the trace stays scoped to the
+//     selected node's own thread instead of leaking across the whole graph.
 function downstreamSet(id: string): Set<string> {
   if (focusCache.id === id) return focusCache.set
   const set = new Set<string>([id])
   const expanded = new Set<string>([id])
   const queue = [id]
+  const enqueue = (t: string): void => {
+    set.add(t)
+    if (!expanded.has(t)) {
+      expanded.add(t)
+      queue.push(t)
+    }
+  }
   while (queue.length) {
     const cur = queue.shift()!
-    for (const { t, hier } of outAdj.get(cur) ?? []) {
+    for (const { t, hier, lineage } of outAdj.get(cur) ?? []) {
       set.add(t)
-      if (hier && !expanded.has(t)) {
-        expanded.add(t)
-        queue.push(t)
-      }
+      if (hier || lineage) enqueue(t)
     }
+    // Incoming lineage edges: reach the artefacts that feed into this node.
+    for (const s of inLineageAdj.get(cur) ?? []) enqueue(s)
   }
   focusCache = { id, set }
   return set
@@ -502,11 +614,11 @@ function anchoredNodes(active: Set<string>): Set<string> | null {
   return reach
 }
 
-// Single source of truth for all visual emphasis: type filter (fade), the
-// click-selected focus (reveal the node and its downstream subtree). Edges are
-// always drawn but kept faint; selecting a node brightens the edges of its focus
-// subtree and reveals their labels, so the graph stays readable when unselected.
-// Computed from state — never patched incrementally.
+// Single source of truth for all visual emphasis: the type filter governs what is
+// visible (selecting a node first turns on its lineage's types in the sidebar, so
+// the lineage is visible through the normal filter and stays user-deselectable),
+// and the click-selected focus then emphasises that node's lineage within the
+// visible set. Computed from state — never patched incrementally.
 function applyVisualState(): void {
   if (!nodeSel || !linkSel) return
   const active = props.activeKeys
@@ -514,21 +626,28 @@ function applyVisualState(): void {
   const focus = focusId ? downstreamSet(focusId) : null
   const inFocus = (id: string): boolean => !focus || focus.has(id)
 
+  // Anchoring (hide a node when it can't trace a path back to the aircraft root
+  // through visible nodes) governs the operational aircraft hierarchy only — it
+  // is what makes hiding a System cascade to its Components. The SDLC overlay is a
+  // federated graph, not part of that containment tree, so its nodes are shown
+  // whenever their type is active, regardless of which neighbours are hidden.
   const anchored = anchoredNodes(active)
   const typeVisible = (n: SimNode): boolean =>
-    active.has(nodeFilterKey(n)) && (!anchored || anchored.has(n.id))
+    active.has(nodeFilterKey(n)) && (n.domain === 'sdlc' || !anchored || anchored.has(n.id))
   const labelVisible = (n: SimNode): boolean => typeVisible(n)
 
   nodeSel.style('opacity', (d) => {
-    if (!typeVisible(d)) return 0.08
-    if (focusId && !inFocus(d.id)) return 0.08
+    // Visibility always respects the filter so the user can deselect any type,
+    // even while a node is selected. Within the visible set, a selection brightens
+    // its own lineage and fades the rest back so the clicked thread stands out.
+    if (!typeVisible(d)) return focusId ? 0.05 : 0.08
+    if (focusId) return inFocus(d.id) ? 1 : 0.18
     return 1
   })
 
   nodeSel.select<SVGTextElement>('text.node-label').style('opacity', (d) => {
     if (!labelVisible(d)) return 0
-    if (focusId && !inFocus(d.id)) return 0.15
-    return 1
+    return !focusId || inFocus(d.id) ? 1 : 0
   })
 
   // An edge is in focus when a node is selected and both endpoints fall inside
@@ -543,12 +662,15 @@ function applyVisualState(): void {
   linkSel.style('opacity', (d) => {
     const sn = d.source as SimNode
     const tn = d.target as SimNode
+    // The filter wins first: an edge with a hidden endpoint is faded right back.
     if (!typeVisible(sn) || !typeVisible(tn)) return 0.04
-    if (edgeInFocus(d)) return 0.6
+    if (edgeInFocus(d)) return isCross(d) ? 0.95 : 0.6
     // A selection is active but this edge is outside it — fade it well back so the
     // focused subtree stands out; otherwise keep the structural line clearly visible
-    // so every node reads as tethered to its neighbours.
-    return focusId ? 0.05 : 0.4
+    // so every node reads as tethered to its neighbours. Cross-domain seams stay
+    // more prominent in both states so the link between the two graphs is visible.
+    if (focusId) return isCross(d) ? 0.3 : 0.05
+    return isCross(d) ? 0.9 : 0.4
   })
 
   if (linkLabelSel) {
@@ -556,9 +678,126 @@ function applyVisualState(): void {
       const sn = d.source as SimNode
       const tn = d.target as SimNode
       if (!typeVisible(sn) || !typeVisible(tn)) return 0
-      return edgeInFocus(d) ? 0.95 : 0
+      if (edgeInFocus(d)) return 0.95
+      // Cross-domain seam labels are always shown (there are few of them) so the
+      // relationship type between the two graphs is readable at a glance.
+      if (isCross(d)) return 0.95
+      return 0
     })
   }
+
+  // While a node is selected the revealed lineage carries the story; fade the
+  // filter-derived bridge connectors back so they don't compete with it.
+  updateBridges(typeVisible, focusId != null)
+}
+
+// Discover and draw the dashed bridge connectors for the current filter. A bridge
+// links two *visible* nodes whose only connection runs through a connected blob of
+// hidden nodes, so the filtered graph never fragments into islands. We add the
+// minimum set needed: visible nodes already joined through other visible edges (or
+// an earlier bridge) are left alone via a union-find, so bridges appear only where
+// the hidden nodes are genuinely the sole link.
+function updateBridges(typeVisible: (n: SimNode) => boolean, dim = false): void {
+  if (!bridgeLayer) return
+
+  const visible = new Set<string>()
+  for (const [id, n] of simNodeById) if (typeVisible(n)) visible.add(id)
+
+  // Union-find over visible nodes, pre-merged on every visible-to-visible edge.
+  const parent = new Map<string, string>()
+  for (const id of visible) parent.set(id, id)
+  const find = (x: string): string => {
+    let r = x
+    while (parent.get(r) !== r) r = parent.get(r)!
+    while (parent.get(x) !== r) {
+      const nx = parent.get(x)!
+      parent.set(x, r)
+      x = nx
+    }
+    return r
+  }
+  const union = (a: string, b: string): void => {
+    const ra = find(a)
+    const rb = find(b)
+    if (ra !== rb) parent.set(ra, rb)
+  }
+  for (const l of props.graph.links) {
+    if (visible.has(l.source) && visible.has(l.target)) union(l.source, l.target)
+  }
+
+  // Walk each connected component of hidden nodes, collect the visible nodes on its
+  // border, and bridge any pair not already joined.
+  const seen = new Set<string>()
+  const bridges: SimLink[] = []
+  for (const id of simNodeById.keys()) {
+    if (visible.has(id) || seen.has(id)) continue
+    const border = new Set<string>()
+    const queue = [id]
+    seen.add(id)
+    while (queue.length) {
+      const cur = queue.shift()!
+      for (const nb of fullAdj.get(cur) ?? []) {
+        if (visible.has(nb)) border.add(nb)
+        else if (!seen.has(nb)) {
+          seen.add(nb)
+          queue.push(nb)
+        }
+      }
+    }
+    const b = [...border]
+    if (b.length < 2) continue
+    const anchor = b[0]
+    for (let i = 1; i < b.length; i++) {
+      if (find(anchor) !== find(b[i])) {
+        union(anchor, b[i])
+        bridges.push({
+          source: simNodeById.get(anchor)!,
+          target: simNodeById.get(b[i])!,
+          rel: 'BRIDGE',
+        })
+      }
+    }
+  }
+
+  currentBridges = bridges
+  const join = bridgeLayer.selectAll<SVGLineElement, SimLink>('line').data(bridges)
+  join.exit().remove()
+  bridgeSel = join
+    .enter()
+    .append('line')
+    .attr('class', 'bridge')
+    .attr('stroke', BRIDGE_COLOR)
+    .attr('stroke-dasharray', '2 6')
+    .attr('stroke-width', 1.3)
+    .attr('stroke-linecap', 'round')
+    .merge(join)
+  bridgeSel.attr('opacity', dim ? 0.18 : 0.55)
+  positionBridges()
+}
+
+// Position bridge lines, trimmed to each endpoint's circle (no arrowhead).
+function positionBridges(): void {
+  if (!bridgeSel) return
+  for (const d of currentBridges) {
+    const s = d.source as SimNode
+    const t = d.target as SimNode
+    const sx = s.x ?? 0
+    const sy = s.y ?? 0
+    const tx = t.x ?? 0
+    const ty = t.y ?? 0
+    const dist = Math.hypot(tx - sx, ty - sy) || 1
+    const ux = (tx - sx) / dist
+    const uy = (ty - sy) / dist
+    d.x1 = sx + ux * props.styleFor(s.type).size
+    d.y1 = sy + uy * props.styleFor(s.type).size
+    d.x2 = tx - ux * props.styleFor(t.type).size
+    d.y2 = ty - uy * props.styleFor(t.type).size
+  }
+  bridgeSel
+    .attr('x1', (d) => d.x1 ?? 0)
+    .attr('y1', (d) => d.y1 ?? 0)
+    .attr('x2', (d) => d.x2 ?? 0)
+    .attr('y2', (d) => d.y2 ?? 0)
 }
 
 function resetView(): void {
@@ -573,7 +812,7 @@ function resetView(): void {
 // visible canvas. The fit target excludes the fixed side panels (left filter rail,
 // right info panel) and the top header so the selection lands in clear space.
 // These insets mirror the panel sizes in SidebarFilters.vue / InfoPanel.vue.
-const PANEL_LEFT = 220
+const PANEL_LEFT = 280
 const PANEL_RIGHT = 280
 const PANEL_TOP = 56
 function zoomToFocus(id: string): void {
@@ -627,6 +866,23 @@ function onResize(): void {
   }, 180)
 }
 
+// Tell the parent which filter keys the current selection's focus spans, so the
+// sidebar can highlight the node types that took part. Empty when nothing is
+// selected.
+function emitFocusKeys(): void {
+  const id = props.selectedId
+  if (!id) {
+    emit('focus-keys', [])
+    return
+  }
+  const keys = new Set<string>()
+  for (const nid of downstreamSet(id)) {
+    const k = nodeKeyById.get(nid)
+    if (k != null) keys.add(k)
+  }
+  emit('focus-keys', [...keys])
+}
+
 defineExpose({ resetView })
 
 onMounted(() => {
@@ -660,6 +916,7 @@ watch(
   () => props.selectedId,
   (id) => {
     applyVisualState()
+    emitFocusKeys()
     if (id) zoomToFocus(id)
   },
 )

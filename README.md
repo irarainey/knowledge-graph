@@ -5,7 +5,7 @@ A proof-of-concept for displaying and querying a knowledge graph of a **Cessna 1
 There are two front ends, both under [`frontend/`](frontend):
 
 - a **Vue** SPA (`frontend/graph-renderer/`) that renders the interactive knowledge
-  graph directly from the `data/knowledge-graph.json` export, and
+  graph directly from the `data/aircraft-knowledge-graph.json` export, and
 - a **Streamlit** chat UI (`frontend/chat-ui/`) for asking natural-language questions of
   the backend, with answers **streamed** token-by-token.
 
@@ -13,7 +13,7 @@ There are two front ends, both under [`frontend/`](frontend):
 
 ```
               ┌──────────────────────────────────────────────┐
-              │       data/knowledge-graph.json (export)     │
+              │       data/aircraft-knowledge-graph.json (export)     │
               └───────────────┬───────────────┬──────────────┘
        fetch /data (static)   │               │  scripts/import-data.sh
                               ▼               ▼
@@ -37,15 +37,17 @@ There are two front ends, both under [`frontend/`](frontend):
                                        └───────────────┘
 ```
 
-Both front ends are driven by the **same** `data/knowledge-graph.json`: the Vue app
+Both front ends are driven by the **same** `data/aircraft-knowledge-graph.json`: the Vue app
 fetches it directly to render the graph, while `scripts/import-data.sh` loads it into
 Neo4j so the backend can retrieve from the graph. The Vue renderer is a **static client**
 — it does not call the backend; only the Streamlit UI does. (The Streamlit sidebar also
 links out to the Vue renderer and the Neo4j browser, opening each in a new tab.)
 
 - **Graph renderer** (`frontend/graph-renderer/`) — Vue 3 / TypeScript SPA that renders
-  the knowledge graph from the static `data/knowledge-graph.json` export (no backend
-  dependency). Uses pnpm. Runs on <http://localhost:5173>.
+  the knowledge graph from the static `data/aircraft-knowledge-graph.json` export (no backend
+  dependency). It also overlays an example **SDLC (software lifecycle / assurance) graph**
+  from `data/sdlc-knowledge-graph.json` so you can visualise how the engineering lifecycle
+  relates to the operational aircraft. Uses pnpm. Runs on <http://localhost:5173>.
 - **Chat UI** (`frontend/chat-ui/`) — Python chat front end for the backend's
   `/ask` endpoint with live token streaming and a per-answer debug panel. Uses uv.
   Runs on <http://localhost:8501>. Sidebar buttons open the Vue graph renderer and the
@@ -151,7 +153,7 @@ This launches the same three processes in the foreground — press `Ctrl-C` once
 
 ## Importing data into Neo4j
 
-The knowledge graph is stored in `data/knowledge-graph.json` (a Neo4j/APOC-style
+The knowledge graph is stored in `data/aircraft-knowledge-graph.json` (a Neo4j/APOC-style
 export). To load it into Neo4j:
 
 1. Start Neo4j (if it isn't already running):
@@ -178,6 +180,32 @@ The import is idempotent, so re-running with the default (upsert) mode is safe.
 Use `--clear` after removing or renaming nodes/relationships to get a clean
 reload. See [backend/README.md](backend/README.md) for the underlying command and
 additional options.
+
+## Visualising the SDLC overlay
+
+The Vue graph renderer loads two graphs and merges them:
+
+- `data/aircraft-knowledge-graph.json` — the **operational** aircraft graph (systems,
+  components, flights, aerodromes…).
+- `data/sdlc-knowledge-graph.json` — an example **SDLC / assurance** graph: a
+  flight-control DO-178C thread (requirements → design → code → verification →
+  evidence → compliance claim → certification objective, plus hazards, safety
+  controls, work items, a release baseline and a CI pipeline run). Its companion
+  semantic-tier artefact is `data/sdlc-ontology.ttl`.
+
+The two graphs are joined by **cross-domain seams** — edges whose endpoints sit in
+different domains. They bind a lifecycle artefact to a live aircraft entity, for
+example `SYS-FCS-001 -[ALLOCATED_TO]-> flightControls`, `SWC-FCS-001 -[REALISES]->
+flightControls`, `HAZ-FCS-001 -[ENDANGERS]-> flightControls` and
+`BASE-FCS-R1 -[INSTALLED_ON]-> G-ECHO`. The renderer draws these seams as dashed
+amber lines with always-on labels so the relationship between the two domains
+stands out. A **Domains** toggle in the sidebar shows or hides each domain in one
+click; individual node types remain toggleable underneath. The concepts behind the
+two-tier model are described in
+[docs/sdlc-knowledge-graph-guide.md](docs/sdlc-knowledge-graph-guide.md).
+
+The SDLC graph references real aircraft node ids, so it is purely additive — the
+operational graph, the Streamlit chat UI and the Neo4j import are unaffected by it.
 
 ## Querying the graph over HTTP
 

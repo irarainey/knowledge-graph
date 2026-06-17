@@ -35,11 +35,18 @@ export interface RawGraph {
 }
 
 // ── Internal model ──────────────────────────────────────────────────────────
+// A domain groups nodes by the graph file they came from: the operational
+// aircraft graph or the SDLC (software lifecycle / assurance) graph. Edges whose
+// endpoints sit in different domains are the cross-domain seams the renderer
+// highlights.
+export type Domain = 'aircraft' | 'sdlc'
+
 export interface GraphNode {
   id: string
   type: string
   sub: string | null
   label: string
+  domain: Domain
   props: Record<string, unknown>
 }
 
