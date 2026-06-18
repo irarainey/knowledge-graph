@@ -9,6 +9,19 @@ set -e
 # relative backend/ and frontend/ paths below resolve correctly.
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# The Copilot CLI state directory (~/.copilot) is a persistent named volume (see
+# .devcontainer/devcontainer.json) so sessions survive container rebuilds. A freshly
+# created volume is owned by root, which would stop the CLI writing to it, so make sure
+# the vscode user owns it. Also drop the throwaway logs that would otherwise accumulate
+# on the volume across rebuilds (session history lives in session-store.db / session-state/).
+COPILOT_DIR="$HOME/.copilot"
+mkdir -p "$COPILOT_DIR"
+if [ "$(stat -c %U "$COPILOT_DIR")" != "$(id -un)" ]; then
+    echo "🔐 Taking ownership of $COPILOT_DIR (persistent volume)..."
+    sudo chown -R "$(id -un):$(id -gn)" "$COPILOT_DIR"
+fi
+rm -rf "$COPILOT_DIR/logs"
+
 # Install GitHub Copilot CLI if not present
 if ! command -v github-copilot-cli &> /dev/null && ! command -v copilot &> /dev/null; then
     echo "🤖 Installing GitHub Copilot CLI..."

@@ -2,6 +2,13 @@
   "name": "Knowledge Graph",
   "image": "mcr.microsoft.com/devcontainers/python:3.13-bookworm",
   "runArgs": ["--network=host"],
+  "mounts": [
+    {
+      "source": "kg-copilot-cli-state",
+      "target": "/home/vscode/.copilot",
+      "type": "volume"
+    }
+  ],
   "features": {
     "ghcr.io/devcontainers-extra/features/uv:1": {},
     "ghcr.io/devcontainers/features/node:1": {
