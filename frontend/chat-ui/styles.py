@@ -42,6 +42,10 @@ html, body, [class*="css"], button, input, textarea {
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-gutter: stable;
+    /* Disable browser scroll anchoring inside the chat scroll container. Combined with
+       Streamlit's scroll-to-bottom behaviour, anchoring fights any late height change
+       (e.g. a debug panel re-rendering) and the input bar visibly jitters up and down. */
+    overflow-anchor: none;
 }
 h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.01em; }
 
@@ -76,6 +80,47 @@ details.llm-payload > summary {
     font-size: 0.78rem;
     font-weight: 600;
     color: #6b7280;
+}
+
+/* Retrieved-rows table in the debug panel. A static HTML table (not st.dataframe) so it
+   has a fixed height from first paint — no async reflow that would jitter the chat
+   scroll container. The wrapper scrolls for wide/long result sets. */
+.kg-records {
+    max-height: 18rem;
+    overflow: auto;
+    margin: 0.2rem 0 0.5rem 0;
+    border: 1px solid rgba(128, 128, 128, 0.25);
+    border-radius: 4px;
+}
+.kg-records table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.78rem;
+}
+.kg-records th,
+.kg-records td {
+    border: 1px solid rgba(128, 128, 128, 0.18);
+    padding: 0.2rem 0.45rem;
+    text-align: left;
+    white-space: nowrap;
+}
+.kg-records th { font-weight: 600; background: rgba(128, 128, 128, 0.08); }
+
+/* Cypher code blocks in the debug panel. The generated query is one very long line, so
+   st.code gives it a horizontal scroll box that wobbles as the page scrolls. Wrap long
+   lines instead (no horizontal scroll), disable scroll anchoring, and contain layout so
+   the block stays put while the chat container scrolls. Streamlit styles the <pre>/<code>
+   via runtime styled-components, so the wrap needs !important to win. Scoped to the
+   expander so other code blocks are unaffected. */
+[data-testid="stExpander"] [data-testid="stCode"] {
+    overflow-anchor: none;
+    contain: layout paint;
+}
+[data-testid="stExpander"] [data-testid="stCode"] pre,
+[data-testid="stExpander"] [data-testid="stCode"] code {
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
 }
 </style>
 """

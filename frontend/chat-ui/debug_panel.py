@@ -37,6 +37,31 @@ def _md_table(headers: list[str], rows: list[list[str]]) -> str:
     return "\n".join(lines)
 
 
+def _records_table(records: list[dict[str, Any]]) -> str:
+    """Render retrieved rows as a static HTML table for the debug panel.
+
+    Deliberately a plain HTML table rather than ``st.dataframe``: the dataframe component
+    mounts asynchronously and reports its height *after* first paint. Inside Streamlit's
+    scroll-to-bottom chat container that late height change makes the page jump — most
+    visibly on the second question, when earlier turns' debug panels re-render and the
+    container keeps re-scrolling. A static table has a fixed height from first paint, so
+    there is no post-render reflow and no scroll jitter.
+    """
+    # Column order is the first-seen order of keys across all rows (rows may differ).
+    columns: list[str] = []
+    for row in records:
+        for key in row:
+            if key not in columns:
+                columns.append(key)
+
+    def cell(value: Any) -> str:
+        return html.escape("" if value is None else str(value))
+
+    head = "".join(f"<th>{cell(col)}</th>" for col in columns)
+    body = "".join("<tr>" + "".join(f"<td>{cell(row.get(col))}</td>" for col in columns) + "</tr>" for row in records)
+    return f'<div class="kg-records"><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
+
+
 def _payload_details(summary: str, messages: list[dict[str, Any]]) -> str:
     """Build a collapsed native HTML ``<details>`` panel for a (large) LLM request.
 
@@ -144,7 +169,7 @@ def render_debug(
             st.caption("No query was built (the request may have been refused by policy).")
         st.caption(f"⏱ {_fmt_ms(durations.get('graph_query'))} ms · {_fmt_int(stats.get('record_count') or len(records))} rows")
         if records:
-            st.dataframe(records, use_container_width=True, hide_index=True)
+            st.html(_records_table(records))
         else:
             st.caption("No rows were retrieved.")
 
