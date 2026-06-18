@@ -102,6 +102,8 @@ The chat UI needs no secrets of its own; Azure OpenAI credentials live in `backe
   backend answers from the graph **as it existed on that date** — the version of each
   versioned entity that was valid then, and only the events (flights) that had already
   occurred.
-- Sidebar with a **New conversation** button, one-click **example questions**, and
-  shortcut buttons to **open the graph renderer** (Vue app) and **open the Neo4j
+- Sidebar with a **New conversation** button, one-click **example questions** (spanning the
+  operational aircraft graph and the engineering/SDLC graph plus cross-domain seams between
+  them — the engineering and cross-domain examples need the **Software Engineer** identity),
+  and shortcut buttons to **open the graph renderer** (Vue app) and **open the Neo4j
   browser** in a new tab.

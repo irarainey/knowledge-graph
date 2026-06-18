@@ -245,6 +245,25 @@ def _require_visible(store: PolicyStore, principal: Principal, entity: str, fiel
         raise AuthorizationError(f"Field '{field}' on '{entity}' is not permitted for this identity.")
 
 
+# String comparisons where lower-casing both operands is the desired semantics. Ordering
+# comparisons (>, >=, <, <=) are excluded: they are used for dates/numbers where casing is
+# irrelevant and a toLower() wrapper would only obscure intent.
+_CASE_INSENSITIVE_OPS = frozenset({Comparator.EQ, Comparator.NE, Comparator.CONTAINS, Comparator.STARTS_WITH, Comparator.ENDS_WITH})
+
+
+def _comparison_predicate(var: str, field: str, op: Comparator, param: str, value: FilterValue) -> str:
+    """Build one parameterised comparison predicate for ``var.field <op> $param``.
+
+    String equality/containment is made case-insensitive by lower-casing both operands, so a
+    question's casing need not match the stored value exactly (e.g. ``"flight control"`` still
+    matches ``"Flight Control Requirement"``). Non-string values and ordering comparisons are
+    emitted verbatim.
+    """
+    if isinstance(value, str) and op in _CASE_INSENSITIVE_OPS:
+        return f"toLower({var}.`{field}`) {op.value} toLower(${param})"
+    return f"{var}.`{field}` {op.value} ${param}"
+
+
 def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *, as_of: str | None = None) -> BuiltQuery:
     """Validate ``intent`` against policy and build parameterised, read-only Cypher.
 
@@ -325,7 +344,7 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
         field = _safe_identifier(flt_field, "field")
         param = f"p{index}"
         parameters[param] = flt.value
-        predicate = f"n.`{field}` {flt.op.value} ${param}"
+        predicate = _comparison_predicate("n", field, flt.op, param, flt.value)
         # A filter on a clearance-gated field must not let classified rows be discovered by
         # their protected values (e.g. finding a military flight by its destination), so it
         # only matches rows within the principal's clearance.
@@ -374,7 +393,7 @@ def build_query(intent: QueryIntent, principal: Principal, store: PolicyStore, *
                 param_counter[0] += 1
                 param = f"p{param_counter[0] - 1}"
                 parameters[param] = hop_flt.value
-                predicate = f"{var}.`{safe_field}` {hop_flt.op.value} ${param}"
+                predicate = _comparison_predicate(var, safe_field, hop_flt.op, param, hop_flt.value)
                 if has_gated and store.is_field_clearance_gated(principal, target, hop_field):
                     predicate = f"({classification_predicate(var)} AND {predicate})"
                 conditions.append(predicate)

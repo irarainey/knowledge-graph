@@ -37,11 +37,13 @@ There are two front ends, both under [`frontend/`](frontend):
                                        └───────────────┘
 ```
 
-Both front ends are driven by the **same** `data/aircraft-knowledge-graph.json`: the Vue app
-fetches it directly to render the graph, while `scripts/import-data.sh` loads it into
-Neo4j so the backend can retrieve from the graph. The Vue renderer is a **static client**
-— it does not call the backend; only the Streamlit UI does. (The Streamlit sidebar also
-links out to the Vue renderer and the Neo4j browser, opening each in a new tab.)
+Both front ends are driven by the same exports under `data/`: the operational
+`data/aircraft-knowledge-graph.json` plus the `data/sdlc-knowledge-graph.json` engineering
+overlay. The Vue app fetches both directly to render the merged graph, while the import
+scripts load them into Neo4j (aircraft first, then the SDLC overlay) so the backend can
+retrieve from either domain. The Vue renderer is a **static client** — it does not call the
+backend; only the Streamlit UI does. (The Streamlit sidebar also links out to the Vue
+renderer and the Neo4j browser, opening each in a new tab.)
 
 - **Graph renderer** (`frontend/graph-renderer/`) — Vue 3 / TypeScript SPA that renders
   the knowledge graph from the static `data/aircraft-knowledge-graph.json` export (no backend
@@ -61,8 +63,8 @@ links out to the Vue renderer and the Neo4j browser, opening each in a new tab.)
   checksum-verified excerpt of a **document body** held outside the graph). Authorization is
   enforced outside the LLM for both. A deterministic relevance guardrail (no extra LLM call)
   rejects off-topic questions up front. Uses uv. Runs on <http://localhost:8080>.
-- **Neo4j** — Graph database running as a Docker container, storing the aircraft's nodes
-  and relationships.
+- **Neo4j** — Graph database running as a Docker container, storing the aircraft's
+  operational nodes and the SDLC / engineering overlay, with their relationships.
 
 ### Request workflow
 
@@ -153,8 +155,9 @@ This launches the same three processes in the foreground — press `Ctrl-C` once
 
 ## Importing data into Neo4j
 
-The knowledge graph is stored in `data/aircraft-knowledge-graph.json` (a Neo4j/APOC-style
-export). To load it into Neo4j:
+The knowledge graph is stored as two Neo4j/APOC-style exports: the operational aircraft
+graph in `data/aircraft-knowledge-graph.json` and the SDLC / engineering overlay in
+`data/sdlc-knowledge-graph.json`. To load them into Neo4j:
 
 1. Start Neo4j (if it isn't already running):
 
@@ -169,16 +172,27 @@ export). To load it into Neo4j:
    cp backend/.env.example backend/.env
    ```
 
-3. Run the import:
+3. Run the import. The graph spans two domains — the **operational** aircraft graph and
+   the **SDLC / engineering** overlay — loaded from two files. Import the aircraft graph
+   **first**, then the SDLC overlay, so the overlay's cross-domain edges resolve:
 
    ```bash
-   scripts/import-data.sh            # update / upsert (adds new, updates existing)
-   scripts/import-data.sh --clear    # delete everything first, then import
+   scripts/import-data.sh            # aircraft graph: update / upsert (adds new, updates existing)
+   scripts/import-data.sh --clear    # aircraft graph: delete everything first, then import
+   ```
+
+   The aircraft graph is imported by default. To load (or refresh) the SDLC overlay and to
+   do a clean full reload of both, use the backend's poe tasks:
+
+   ```bash
+   cd backend
+   uv run poe import-sdlc            # import the SDLC overlay (run AFTER the aircraft graph)
+   uv run poe import-all             # wipe, then import aircraft graph followed by SDLC overlay
    ```
 
 The import is idempotent, so re-running with the default (upsert) mode is safe.
-Use `--clear` after removing or renaming nodes/relationships to get a clean
-reload. See [backend/README.md](backend/README.md) for the underlying command and
+Use `--clear` (or `import-all`) after removing or renaming nodes/relationships to get a
+clean reload. See [backend/README.md](backend/README.md) for the underlying command and
 additional options.
 
 ## Visualising the SDLC overlay
@@ -204,8 +218,13 @@ click; individual node types remain toggleable underneath. The concepts behind t
 two-tier model are described in
 [docs/sdlc-knowledge-graph-guide.md](docs/sdlc-knowledge-graph-guide.md).
 
-The SDLC graph references real aircraft node ids, so it is purely additive — the
-operational graph, the Streamlit chat UI and the Neo4j import are unaffected by it.
+The SDLC graph references real aircraft node ids. In the Vue renderer it is purely
+additive — an overlay on the operational graph. It is **also imported into Neo4j**
+(after the operational graph, so its cross-domain edges resolve) and is **queryable
+through the chat UI / `/ask`** by the **Software Engineer** identity, which is granted the
+engineering entities in the access policy. See [Importing data into
+Neo4j](#importing-data-into-neo4j) for the import order and the
+[backend README](backend/README.md#authorization-model) for the identity grants.
 
 ## Querying the graph over HTTP
 

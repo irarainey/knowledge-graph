@@ -280,7 +280,11 @@ Step by step, in `src/agents/knowledge_graph_agent.py`:
    classified rows stay visible with only the gated fields nulled (see
    [Clearance-gated categories](#clearance-gated-categories)). Values are
    always parameterised; labels/fields come only from the controlled catalogue and are
-   identifier-validated before interpolation. A denied intent records an audit denial and
+   identifier-validated before interpolation. String comparisons (`=`, `<>`, `CONTAINS`,
+   `STARTS WITH`, `ENDS WITH`) are **case-insensitive** — both operands are wrapped in
+   `toLower(...)` — so a question's casing need not match the stored value exactly (e.g.
+   "flight control" still matches "Flight Control Requirement"); ordering comparisons and
+   non-string values are emitted verbatim. A denied intent records an audit denial and
    returns a refusal string the agent relays — it never raises a 500.
 
 5. **Read-only enforcement.** The built query is re-checked by `assert_safe_cypher`
@@ -308,7 +312,10 @@ Step by step, in `src/agents/knowledge_graph_agent.py`:
    tool's rows. Its system prompt (`STRUCTURED_AGENT_SYSTEM_PROMPT`) instructs it to always
    call the tool, choose only entities/fields from the scoped catalogue, answer **only**
    from the retrieved rows, say so when the data has no answer (or the request was refused
-   by policy), report numbers **exactly**, and reply in **plain text**.
+   by policy), report numbers **exactly**, and reply in **plain text**. It is also told, when
+   filtering on a name/title field, to use only the distinctive name (not append the
+   entity-type noun such as "baseline"/"claim"), to rely on the case-insensitive matching
+   above, and to prefer `CONTAINS` when unsure of the exact stored name.
 
 8. **Response assembly (`ask`).** The synchronous query inside the tool runs in a worker
    thread (`asyncio.to_thread`) so the FastAPI event loop stays responsive. The built Cypher

@@ -242,7 +242,10 @@ def test_filter_on_gated_field_cannot_discover_classified_rows() -> None:
         filters=[Filter(field="destinationAerodrome", op=Comparator.EQ, value="EGLL")],
     )
     built = build_query(intent, MAINTENANCE, STORE)
-    assert "(n.classification IS NULL OR n.classification IN $__authz_classifications) AND n.`destinationAerodrome` = $p0)" in built.cypher
+    assert (
+        "(n.classification IS NULL OR n.classification IN $__authz_classifications) "
+        "AND toLower(n.`destinationAerodrome`) = toLower($p0))" in built.cypher
+    )
     assert built.parameters["p0"] == "EGLL"
 
 
@@ -405,7 +408,7 @@ def test_filter_on_name_companion_field_is_canonicalised_to_code() -> None:
     )
     # The filter targets the real code field (guarded for the gated route category), not the
     # synthetic name companion — so the query builds instead of being denied.
-    assert "n.`departureAerodrome` = $p0" in built.cypher
+    assert "toLower(n.`departureAerodrome`) = toLower($p0)" in built.cypher
     assert "departureAerodromeName" not in built.cypher
 
 
@@ -432,7 +435,7 @@ def test_traverse_emits_nested_exists_constraint_on_anchor() -> None:
     )
     assert "MATCH (n:`Hazard`)" in built.cypher
     assert "EXISTS { MATCH (n)-[:`ENDANGERS`]->(t0:`System`)" in built.cypher
-    assert "t0.`name` = $p0" in built.cypher
+    assert "toLower(t0.`name`) = toLower($p0)" in built.cypher
     # Only the anchor's fields are returned — the hop node is never projected.
     assert built.returned_fields == ["hazardIdentifier", "hazardCriticality"]
     assert "t0.`name` AS" not in built.cypher
@@ -526,7 +529,7 @@ def test_traverse_multi_hop_nests_exists() -> None:
     )
     assert "EXISTS { MATCH (n)-[:`IMPLEMENTED_BY`]->(t0:`PullRequest`)" in built.cypher
     assert "EXISTS { MATCH (t0)-[:`MERGES`]->(t1:`CodeModule`)" in built.cypher
-    assert "t1.`name` = $p0" in built.cypher
+    assert "toLower(t1.`name`) = toLower($p0)" in built.cypher
 
 
 def test_traverse_applies_classification_filter_to_hop_nodes() -> None:
@@ -556,7 +559,7 @@ def test_traverse_hop_params_do_not_collide_with_anchor_filters() -> None:
         ENGINEER,
         STORE,
     )
-    assert "n.`criticality` = $p0" in built.cypher
-    assert "t0.`name` = $p1" in built.cypher
+    assert "toLower(n.`criticality`) = toLower($p0)" in built.cypher
+    assert "toLower(t0.`name`) = toLower($p1)" in built.cypher
     assert built.parameters["p0"] == "Catastrophic"
     assert built.parameters["p1"] == "Fuel System"

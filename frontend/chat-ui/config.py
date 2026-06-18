@@ -42,9 +42,21 @@ CONNECT_TIMEOUT_SECONDS = 10
 READ_TIMEOUT_SECONDS = 180
 
 EXAMPLE_QUESTIONS = [
+    # Operational (aircraft) graph — answerable by most identities.
     "How many flying hours has the engine had since 2025-01-01?",
     "How much ground distance has the front tyre covered between 2025-01-01 and 2026-05-31?",
     "Which aerodromes has the aircraft flown to?",
     "What components make up the fuel system?",
     "What does the POH say about the never-exceed speed?",
+    # Engineering / SDLC graph — select the "Software Engineer" identity to query these.
+    "Which software requirements derive from the flight control system requirement?",
+    "What is the test result for the FuelQuantityEstimator?",
+    "Which safety control mitigates the Gear Collapse On Landing hazard?",
+    "What is the status of the GearSequencer Edge-case Defect?",
+    "How many software requirements are at assurance level DAL-A?",
+    "Which DO-178C certification objectives does the Fuel Monitoring Verification Complete claim comply with?",
+    # Cross-domain seams — link the engineering lifecycle to the live aircraft.
+    "Which aircraft is the Landing Gear Release R1 baseline installed on?",
+    "Which software component realises the flight control system?",
+    "Which hazard endangers the fuel system?",
 ]

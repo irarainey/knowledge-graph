@@ -42,6 +42,17 @@ narrow it by its connections; the query still returns only the chosen entity's f
 report a property of the connected node, make that node the queried entity instead. Only use \
 relationships and directions shown in the catalog below.
 
+When you filter on a name or title field, use only the distinctive name itself as the \
+value and do NOT append the entity's type word to it — e.g. for a release baseline called \
+"Landing Gear Release R1" filter on "Landing Gear Release R1", never "Landing Gear Release \
+R1 baseline"; for a compliance claim called "Fuel Monitoring Verification Complete" filter \
+on "Fuel Monitoring Verification Complete", never "...Complete claim"; for a requirement, \
+component, defect, hazard, etc., likewise drop the trailing "requirement", "component", \
+"defect", "hazard" and so on unless it is genuinely part of the stored name. Name matching \
+is case-insensitive, so do not worry about capitalisation. If you are unsure of the exact \
+stored name, prefer the CONTAINS operator with the most distinctive part of the name rather \
+than an exact (=) match.
+
 fetch_document_content — use this whenever the question asks what a reference or maintenance \
 DOCUMENT says, states, requires, recommends or contains (e.g. the POH/Pilot's Operating \
 Handbook, a maintenance manual, a checklist, an airworthiness directive). For these \

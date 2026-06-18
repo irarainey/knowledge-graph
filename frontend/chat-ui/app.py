@@ -206,6 +206,7 @@ def main() -> None:
 
         st.divider()
         st.caption("Example questions")
+        st.caption("Engineering/SDLC and cross-domain questions need the **Software Engineer** identity.")
         for example in EXAMPLE_QUESTIONS:
             if st.button(example, use_container_width=True):
                 st.session_state.pending_question = example
