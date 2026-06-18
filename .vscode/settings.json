@@ -4,6 +4,15 @@
   // first-party modules are imported by their top-level names (e.g. `neo4j_client`,
   // `agents`, `common`, `import_graph`). Mirror that here so Pylance resolves them
   // when the workspace root is the repository root.
-  "python.analysis.extraPaths": ["backend/src", "backend/scripts"],
+  //
+  // The Streamlit chat UI (frontend/chat-ui) is a SEPARATE uv project with its own
+  // virtualenv, so its third-party packages (e.g. `streamlit`) live there, not in
+  // backend/.venv (the default interpreter below). Add its site-packages so the
+  // language server resolves those imports too.
+  "python.analysis.extraPaths": [
+    "backend/src",
+    "backend/scripts",
+    "frontend/chat-ui/.venv/lib/python3.13/site-packages"
+  ],
   "python.defaultInterpreterPath": "backend/.venv/bin/python"
 }
