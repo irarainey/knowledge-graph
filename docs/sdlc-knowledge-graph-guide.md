@@ -21,11 +21,20 @@ Nodes represent heterogeneous lifecycle entities. In the ontology they form a cl
 - **Requirements:** System, Software, Safety, Interface
 - **Architecture & code:** Design Element, Interface Specification, Software Component, Code Module
 - **Verification artefacts:** Test Case, Test Procedure, Test Result, Review Record, Static Analysis Result
+- **Validation artefacts:** Validation Record — confirms a requirement is the *right* requirement (matches stakeholder/operational need), as distinct from verification
 - **Assurance artefacts:** Evidence, Certification Objective, Compliance Claim, Assurance Case
 - **Safety:** Hazard, Safety Control
 - **Work management & CI:** Work Item, Change Request, Defect, Pull Request, Pipeline Run
 - **Configuration & release:** Configuration Item, Release Baseline
 - **Actors:** Role, Team, Person
+
+These node types are deliberately shaped around the **V-model** that ARP4754A codifies for aircraft/systems development:
+
+- **Left leg (decomposition):** System Requirement → Software/Interface Requirement (`derivesFrom`) → Architecture Element/Software Component (`satisfies`/`implements`).
+- **Base (implementation):** Code Module.
+- **Right leg (integration climbing back up):** Test Case/Test Result/Review Record/Static Analysis Result (`verifies`), at both the software-requirement level and, mirroring the left leg, the system-requirement level (system integration testing).
+- **Apex (validation):** Validation Record (`validates`) confirms the top-level System Requirement against operational need — this is the ARP4754A validation activity, and it is the "closing" edge of the V, distinct from and complementary to verification.
+- **Safety thread (runs alongside the whole V, per ARP4761):** Hazard → Safety Control (`mitigates`), plus `derivesAssuranceLevel` from Hazard to the Requirement whose DAL that hazard's failure-condition classification determines.
 
 Lifecycle state (e.g. Draft, Approved, Baselined) is **not** a node type — it is carried as a `status` property on each entity, alongside other shared properties such as `identifier`, `title`, `assuranceLevel` (e.g. DAL-A), `criticality`, and `version`.
 
@@ -48,12 +57,14 @@ Relationships encode meaning. The core traceability and assurance edges are:
 - **ALLOCATED_TO:** a requirement is allocated to an architecture element
 - **IMPLEMENTS / IMPLEMENTED_BY:** code-to-requirement (inverse pair)
 - **VERIFIES / VERIFIED_BY:** verification artefact to requirement (inverse pair)
+- **VALIDATES:** a validation record confirms a requirement against stakeholder/operational need — the apex-of-the-V edge, complementary to (not a substitute for) `VERIFIES`
 - **PRODUCES:** activity / entity outputs
 - **REVIEWED_BY:** an entity is reviewed by a review record
 - **USES_EVIDENCE:** a compliance claim draws on evidence
 - **CLAIMS_COMPLIANCE_WITH:** a compliance claim addresses a certification objective
 - **MITIGATES:** a safety control mitigates a hazard
 - **TRACES_TO_HAZARD:** a requirement traces to a hazard
+- **DERIVES_ASSURANCE_LEVEL:** a hazard's failure-condition classification is the traceable source of a requirement's assigned Development Assurance Level (DAL), per ARP4754A/ARP4761 — without this edge, `assuranceLevel` is an unexplained property rather than a derived, auditable value
 - **AFFECTED_BY / CHANGES:** an entity is affected by a change request
 - **RESOLVES:** a change request resolves a defect
 - **OWNED_BY / ASSIGNED_TO:** ownership and work assignment to actors
@@ -67,7 +78,7 @@ The ontology defines several of these as inverse pairs (e.g. `implements`/`imple
 
 Core value is end-to-end traceability:
 
-SystemRequirement → SoftwareRequirement → Design → Code → Test → Evidence.
+SystemRequirement → SoftwareRequirement → Design → Code → Test → Evidence, with a ValidationRecord closing the loop back to SystemRequirement (`validates`) to confirm the top of the V was the right target in the first place.
 
 A missing required relationship represents a potential assurance gap. Whether it is a compliance failure depends on lifecycle state, applicability, criticality, process rules, and baseline context.
 

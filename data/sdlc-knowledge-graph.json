@@ -1,7 +1,7 @@
 {
   "metadata": {
     "name": "Aerospace SDLC Knowledge Graph (demo)",
-    "description": "Multiple DO-178C assurance threads (flight control, landing gear, fuel) linked to the operational aircraft graph.",
+    "description": "Multiple DO-178C assurance threads (flight control, landing gear, fuel) shaped as a V-model: system/software requirements decomposition and design on the left leg, implementation at the base, verification climbing the right leg (software and system level), and validation records at the apex confirming system requirements against operational need per ARP4754A. Linked to the operational aircraft graph.",
     "schemaVersion": "0.2.0-demo",
     "domain": "sdlc"
   },
@@ -1191,6 +1191,185 @@
         "name": "Fuel Monitoring Engineer",
         "identifier": "PERSON-FUEL"
       }
+    },
+    {
+      "id": "VAL-FCS-001",
+      "labels": [
+        "ValidationArtifact",
+        "ValidationRecord"
+      ],
+      "properties": {
+        "name": "Flight Control Requirement Validation",
+        "identifier": "VAL-FCS-001",
+        "description": "The flight control system's pitch-limiting behaviour matches the certified flight envelope agreed with the operator/regulator.",
+        "validationMethod": "Analysis",
+        "status": "Validated"
+      }
+    },
+    {
+      "id": "TC-FCS-SYS-001",
+      "labels": [
+        "VerificationArtifact",
+        "TestCase"
+      ],
+      "properties": {
+        "name": "Flight Control System Integration Test",
+        "identifier": "TC-FCS-SYS-001",
+        "description": "System-level integration test confirming commanded pitch rate stays within the certified envelope across the integrated flight control system.",
+        "status": "Executed"
+      }
+    },
+    {
+      "id": "TR-FCS-SYS-001",
+      "labels": [
+        "VerificationArtifact",
+        "TestResult"
+      ],
+      "properties": {
+        "name": "Flight Control System Integration Test Result",
+        "identifier": "TR-FCS-SYS-001",
+        "resultStatus": "Passed"
+      }
+    },
+    {
+      "id": "EVD-FCS-SYS-001",
+      "labels": [
+        "AssuranceArtifact",
+        "Evidence"
+      ],
+      "properties": {
+        "name": "Flight Control System Integration Test Evidence",
+        "identifier": "EVD-FCS-SYS-001",
+        "sourceSystem": "Test Management"
+      }
+    },
+    {
+      "id": "VAL-LGS-001",
+      "labels": [
+        "ValidationArtifact",
+        "ValidationRecord"
+      ],
+      "properties": {
+        "name": "Landing Gear Requirement Validation",
+        "identifier": "VAL-LGS-001",
+        "description": "The landing gear system safely sequences retraction and extension as intended by the operational concept of use.",
+        "validationMethod": "Analysis",
+        "status": "Validated"
+      }
+    },
+    {
+      "id": "TC-LGS-SYS-001",
+      "labels": [
+        "VerificationArtifact",
+        "TestCase"
+      ],
+      "properties": {
+        "name": "Landing Gear System Integration Test",
+        "identifier": "TC-LGS-SYS-001",
+        "description": "System-level integration test confirming safe gear retraction/extension sequencing on the integrated landing gear system.",
+        "status": "Executed"
+      }
+    },
+    {
+      "id": "TR-LGS-SYS-001",
+      "labels": [
+        "VerificationArtifact",
+        "TestResult"
+      ],
+      "properties": {
+        "name": "Landing Gear System Integration Test Result",
+        "identifier": "TR-LGS-SYS-001",
+        "resultStatus": "Passed"
+      }
+    },
+    {
+      "id": "EVD-LGS-SYS-001",
+      "labels": [
+        "AssuranceArtifact",
+        "Evidence"
+      ],
+      "properties": {
+        "name": "Landing Gear System Integration Test Evidence",
+        "identifier": "EVD-LGS-SYS-001",
+        "sourceSystem": "Test Management"
+      }
+    },
+    {
+      "id": "VAL-FUEL-001",
+      "labels": [
+        "ValidationArtifact",
+        "ValidationRecord"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring Requirement Validation",
+        "identifier": "VAL-FUEL-001",
+        "description": "The fuel monitoring system computes and displays usable fuel quantity consistent with pilot operational need.",
+        "validationMethod": "Analysis",
+        "status": "Validated"
+      }
+    },
+    {
+      "id": "TC-FUEL-SYS-001",
+      "labels": [
+        "VerificationArtifact",
+        "TestCase"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring System Integration Test",
+        "identifier": "TC-FUEL-SYS-001",
+        "description": "System-level integration test confirming computed and displayed usable fuel quantity accuracy on the integrated fuel monitoring system.",
+        "status": "Executed"
+      }
+    },
+    {
+      "id": "TR-FUEL-SYS-001",
+      "labels": [
+        "VerificationArtifact",
+        "TestResult"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring System Integration Test Result",
+        "identifier": "TR-FUEL-SYS-001",
+        "resultStatus": "Passed"
+      }
+    },
+    {
+      "id": "EVD-FUEL-SYS-001",
+      "labels": [
+        "AssuranceArtifact",
+        "Evidence"
+      ],
+      "properties": {
+        "name": "Fuel Monitoring System Integration Test Evidence",
+        "identifier": "EVD-FUEL-SYS-001",
+        "sourceSystem": "Test Management"
+      }
+    },
+    {
+      "id": "OBJ-ARP-VAL",
+      "labels": [
+        "AssuranceArtifact",
+        "CertificationObjective"
+      ],
+      "properties": {
+        "name": "ARP4754A Requirements Validation",
+        "identifier": "OBJ-ARP-VAL",
+        "description": "System/item requirements are shown to be correct and complete with respect to the operational need (validation, apex of the V-model).",
+        "assuranceLevel": "System"
+      }
+    },
+    {
+      "id": "OBJ-ARP-DAL",
+      "labels": [
+        "AssuranceArtifact",
+        "CertificationObjective"
+      ],
+      "properties": {
+        "name": "ARP4754A Assurance Level Assignment",
+        "identifier": "OBJ-ARP-DAL",
+        "description": "Development Assurance Level is assigned to each requirement based on the safety assessment's failure-condition classification and is allocated top-down.",
+        "assuranceLevel": "System"
+      }
     }
   ],
   "relationships": [
@@ -2231,6 +2410,156 @@
       "type": "APPROVES",
       "startNode": "PERSON-DER",
       "endNode": "CASE-FUEL-001"
+    },
+    {
+      "id": "val-fcs-1",
+      "type": "VALIDATES",
+      "startNode": "VAL-FCS-001",
+      "endNode": "SYS-FCS-001"
+    },
+    {
+      "id": "dal-fcs-1",
+      "type": "DERIVES_ASSURANCE_LEVEL",
+      "startNode": "HAZ-FCS-001",
+      "endNode": "SYS-FCS-001"
+    },
+    {
+      "id": "sysver-fcs-1",
+      "type": "VERIFIES",
+      "startNode": "TC-FCS-SYS-001",
+      "endNode": "SYS-FCS-001"
+    },
+    {
+      "id": "sysver-fcs-2",
+      "type": "PRODUCES",
+      "startNode": "TC-FCS-SYS-001",
+      "endNode": "TR-FCS-SYS-001"
+    },
+    {
+      "id": "sysver-fcs-3",
+      "type": "PRODUCES",
+      "startNode": "TR-FCS-SYS-001",
+      "endNode": "EVD-FCS-SYS-001"
+    },
+    {
+      "id": "sysver-fcs-4",
+      "type": "USES_EVIDENCE",
+      "startNode": "CLAIM-FCS-001",
+      "endNode": "EVD-FCS-SYS-001"
+    },
+    {
+      "id": "sysver-fcs-5",
+      "type": "EXECUTES",
+      "startNode": "PIPE-FCS",
+      "endNode": "TC-FCS-SYS-001"
+    },
+    {
+      "id": "val-lgs-1",
+      "type": "VALIDATES",
+      "startNode": "VAL-LGS-001",
+      "endNode": "SYS-LGS-001"
+    },
+    {
+      "id": "dal-lgs-1",
+      "type": "DERIVES_ASSURANCE_LEVEL",
+      "startNode": "HAZ-LGS-001",
+      "endNode": "SYS-LGS-001"
+    },
+    {
+      "id": "sysver-lgs-1",
+      "type": "VERIFIES",
+      "startNode": "TC-LGS-SYS-001",
+      "endNode": "SYS-LGS-001"
+    },
+    {
+      "id": "sysver-lgs-2",
+      "type": "PRODUCES",
+      "startNode": "TC-LGS-SYS-001",
+      "endNode": "TR-LGS-SYS-001"
+    },
+    {
+      "id": "sysver-lgs-3",
+      "type": "PRODUCES",
+      "startNode": "TR-LGS-SYS-001",
+      "endNode": "EVD-LGS-SYS-001"
+    },
+    {
+      "id": "sysver-lgs-4",
+      "type": "USES_EVIDENCE",
+      "startNode": "CLAIM-LGS-001",
+      "endNode": "EVD-LGS-SYS-001"
+    },
+    {
+      "id": "val-fuel-1",
+      "type": "VALIDATES",
+      "startNode": "VAL-FUEL-001",
+      "endNode": "SYS-FUEL-001"
+    },
+    {
+      "id": "dal-fuel-1",
+      "type": "DERIVES_ASSURANCE_LEVEL",
+      "startNode": "HAZ-FUEL-001",
+      "endNode": "SYS-FUEL-001"
+    },
+    {
+      "id": "sysver-fuel-1",
+      "type": "VERIFIES",
+      "startNode": "TC-FUEL-SYS-001",
+      "endNode": "SYS-FUEL-001"
+    },
+    {
+      "id": "sysver-fuel-2",
+      "type": "PRODUCES",
+      "startNode": "TC-FUEL-SYS-001",
+      "endNode": "TR-FUEL-SYS-001"
+    },
+    {
+      "id": "sysver-fuel-3",
+      "type": "PRODUCES",
+      "startNode": "TR-FUEL-SYS-001",
+      "endNode": "EVD-FUEL-SYS-001"
+    },
+    {
+      "id": "sysver-fuel-4",
+      "type": "USES_EVIDENCE",
+      "startNode": "CLAIM-FUEL-001",
+      "endNode": "EVD-FUEL-SYS-001"
+    },
+    {
+      "id": "arpobj-fcs-1",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-FCS-001",
+      "endNode": "OBJ-ARP-VAL"
+    },
+    {
+      "id": "arpobj-fcs-2",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-FCS-001",
+      "endNode": "OBJ-ARP-DAL"
+    },
+    {
+      "id": "arpobj-lgs-1",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-LGS-001",
+      "endNode": "OBJ-ARP-VAL"
+    },
+    {
+      "id": "arpobj-lgs-2",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-LGS-001",
+      "endNode": "OBJ-ARP-DAL"
+    },
+    {
+      "id": "arpobj-fuel-1",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-FUEL-001",
+      "endNode": "OBJ-ARP-VAL"
+    },
+    {
+      "id": "arpobj-fuel-2",
+      "type": "CLAIMS_COMPLIANCE_WITH",
+      "startNode": "CLAIM-FUEL-001",
+      "endNode": "OBJ-ARP-DAL"
     }
   ]
 }

@@ -53,6 +53,13 @@ sdlc:CertificationObjective a owl:Class ; rdfs:subClassOf sdlc:AssuranceArtifact
 sdlc:ComplianceClaim a owl:Class ; rdfs:subClassOf sdlc:AssuranceArtifact ; rdfs:label "Compliance Claim"@en .
 sdlc:AssuranceCase a owl:Class ; rdfs:subClassOf sdlc:AssuranceArtifact ; rdfs:label "Assurance Case"@en .
 
+# ── Validation ───────────────────────────────────────────────
+# Apex of the V-model: confirms a requirement is the *right* requirement
+# (matches stakeholder/operational need), as distinct from verification
+# (confirms the requirement was implemented *correctly*), per ARP4754A.
+sdlc:ValidationArtifact a owl:Class ; rdfs:subClassOf sdlc:LifecycleEntity ; rdfs:label "Validation Artefact"@en .
+sdlc:ValidationRecord a owl:Class ; rdfs:subClassOf sdlc:ValidationArtifact ; rdfs:label "Validation Record"@en .
+
 # ── Safety ───────────────────────────────────────────────────
 sdlc:SafetyArtifact a owl:Class ; rdfs:subClassOf sdlc:LifecycleEntity ; rdfs:label "Safety Artefact"@en .
 sdlc:Hazard a owl:Class ; rdfs:subClassOf sdlc:SafetyArtifact ; rdfs:label "Hazard"@en .
@@ -88,6 +95,9 @@ sdlc:satisfies a owl:ObjectProperty ; rdfs:label "satisfies"@en ;
 sdlc:implements a owl:ObjectProperty ; rdfs:label "implements"@en .
 sdlc:verifies a owl:ObjectProperty ; rdfs:label "verifies"@en ;
     rdfs:domain sdlc:VerificationArtifact ; rdfs:range sdlc:Requirement .
+sdlc:validates a owl:ObjectProperty ; rdfs:label "validates"@en ;
+    rdfs:comment "Apex-of-the-V property: a validation record confirms a requirement against stakeholder/operational need (ARP4754A validation, as distinct from verification)."@en ;
+    rdfs:domain sdlc:ValidationArtifact ; rdfs:range sdlc:Requirement .
 sdlc:produces a owl:ObjectProperty ; rdfs:label "produces"@en .
 sdlc:reviews a owl:ObjectProperty ; rdfs:label "reviews"@en ;
     rdfs:domain sdlc:ReviewRecord .
@@ -103,6 +113,9 @@ sdlc:mitigates a owl:ObjectProperty ; rdfs:label "mitigates"@en ;
     rdfs:domain sdlc:SafetyControl ; rdfs:range sdlc:Hazard .
 sdlc:tracesToHazard a owl:ObjectProperty ; rdfs:label "traces to hazard"@en ;
     rdfs:range sdlc:Hazard .
+sdlc:derivesAssuranceLevel a owl:ObjectProperty ; rdfs:label "derives assurance level"@en ;
+    rdfs:comment "ARP4754A/ARP4761 traceability seam: a hazard's failure-condition classification is the source of a requirement's assigned Development Assurance Level (DAL), rather than the DAL being an unexplained property."@en ;
+    rdfs:domain sdlc:Hazard ; rdfs:range sdlc:Requirement .
 sdlc:implementedBy a owl:ObjectProperty ; rdfs:label "implemented by"@en .
 sdlc:implementsWork a owl:ObjectProperty ; rdfs:label "implements work"@en ;
     rdfs:domain sdlc:WorkItem .
@@ -178,3 +191,5 @@ sdlc:sourceSystem a owl:DatatypeProperty ; rdfs:label "source system"@en ; rdfs:
 sdlc:resultStatus a owl:DatatypeProperty ; rdfs:label "result status"@en ; rdfs:range xsd:string .
 sdlc:baselineTag a owl:DatatypeProperty ; rdfs:label "baseline tag"@en ; rdfs:range xsd:string .
 sdlc:commitSha a owl:DatatypeProperty ; rdfs:label "commit SHA"@en ; rdfs:range xsd:string .
+sdlc:validationMethod a owl:DatatypeProperty ; rdfs:label "validation method"@en ; rdfs:range xsd:string ;
+    rdfs:comment "ARP4754A validation method, e.g. Test, Analysis, Inspection, Demonstration, Similarity."@en .
