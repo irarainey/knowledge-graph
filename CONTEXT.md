@@ -49,6 +49,15 @@ contradict it, rather than working around it.
 - `CRITICAL` — Document bodies are never exposed to the LLM by reference.
   The `storageRef`/blob URI must never reach the model, logs, or audit
   output. See [ADR-0006](docs/adr/0006-externalized-document-storage.md).
+- `CRITICAL` — A clearance-gated category redacts a classified row's fields
+  field-by-field instead of hiding the whole row. This is opt-in and
+  off by default: never grant it, or widen what it exposes, without an
+  explicit per-identity need-to-know justification.
+  See [ADR-0004](docs/adr/0004-clearance-gated-categories.md).
+- `CRITICAL` — Identity is client-selected, not authenticated. Never treat
+  the `user` field as a verified claim, and always reset conversation state
+  on identity switch (prevents cross-identity memory leakage).
+  See [ADR-0007](docs/adr/0007-selected-identity-not-authentication.md).
 - `CRITICAL` — Frontend package management is pnpm only — never npm or yarn.
 - `IMPORTANT` — This is a local-running PoC only. No Neo4j Enterprise
   licence — Community Edition is the only option in scope, not a
