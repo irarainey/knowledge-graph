@@ -130,6 +130,12 @@ cd frontend/graph-renderer
 pnpm install
 ```
 
+> **Note:** `frontend/graph-renderer/.npmrc` pins the npm registry to the
+> Microsoft CFS-protected feed (`https://packagefeedproxy.microsoft.io/npm/`).
+> Company-managed devices block direct access to the public npm registry, so
+> pnpm must pull packages through this feed. Do not change it back to the
+> public registry.
+
 See [backend/README.md](backend/README.md) and [frontend/chat-ui/README.md](frontend/chat-ui/README.md) for component-specific details.
 
 ## Running everything
