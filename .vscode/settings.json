@@ -14,5 +14,13 @@
     "backend/scripts",
     "frontend/chat-ui/.venv/lib/python3.13/site-packages"
   ],
-  "python.defaultInterpreterPath": "backend/.venv/bin/python"
+  "python.defaultInterpreterPath": "backend/.venv/bin/python",
+  "remote.portsAttributes": {
+    "7687": {
+      "onAutoForward": "ignore"
+    },
+    "7474": {
+      "onAutoForward": "ignore"
+    }
+  }
 }
